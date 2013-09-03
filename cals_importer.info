@@ -1,0 +1,4 @@
+name = CALS MarcXML Importer
+description = Ingests MarcXML records, creating Repository Item nodes.
+core = 7.x
+package = --cals
