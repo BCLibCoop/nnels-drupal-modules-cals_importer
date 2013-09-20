@@ -6,8 +6,6 @@
 ini_set('memory_limit', '512M');
 ini_set('max_execution_time', '600'); 
 
-//http://69.27.107.137/cals/staging/admin/content/cals/batch-update-s3-paths/5432
-
 //NAME_SPACE = "http://www.loc.gov/MARC21/slim";
 define("NAME_SPACE", "http://www.loc.gov/MARC21/slim");
 
@@ -22,8 +20,6 @@ module_load_include('inc', 'entity', 'includes/entity.controller');
  */
 function cals_importer_menu() {
 	$items = array();
-
-
 	 /* 
 	$items['node/%node/parse-marcxml-all'] = array(
     'access arguments' => array('administer site configuration'),
@@ -46,11 +42,15 @@ function cals_importer_menu() {
 	
 	);
 	*/
+	
+	
+	
 	//http://me/cals_staging/admin/content/cals/batch-update-s3-paths/5429
+	
 	$items['admin/content/cals/batch-update-s3-paths/%'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_batch_update_s3_paths',
-    'title' => 'Update S3 Paths',
+    'title' => t('Update S3 Paths'),
     'page arguments' => array(4),  
 		'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
@@ -60,7 +60,7 @@ function cals_importer_menu() {
 	$items['node/%node/parse-marcxml-new'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_import_skeletal_records',
-    'title' => 'Parse MARC (new only)',
+    'title' => t('Create new Repo Items (stubs)'),
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
 		'page arguments' => array(1),
@@ -70,7 +70,7 @@ function cals_importer_menu() {
 	$items['node/%node/parse-record'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_importer_update_repository_item',
-    'title' => 'Parse MARC/XML',
+    'title' => t('Parse MARC/XML'),
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
 		'page arguments' => array(1),
@@ -80,7 +80,7 @@ function cals_importer_menu() {
 	$items['node/%node/parse-access-rights'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_parse_licensed_access',
-    'title' => 'Parse 506 (access)',
+    'title' => t('Parse 506 (access)'),
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
 		'page arguments' => array(1),
@@ -191,10 +191,14 @@ function _cals_load_records($file) {
 		return simplexml_load_file($file);
 }
 
+
+
 /**
  * one time script to import / create skeletal marc records
+ *
+ * @param $node
+ *   the node passed to the parser
  */
-
 function _cals_import_skeletal_records($node) {
 	$max = 50; //clear buffer, etc.
 
@@ -204,7 +208,7 @@ function _cals_import_skeletal_records($node) {
 		$arr_tax[$v->name] = $k;
 	} 
 	$file = drupal_realpath($node->field_marc_xml_file[LANGUAGE_NONE][0]['uri']); // FILE_FOLDER . ;
-	$xml = _cals_load_records($file);
+	$xml = simplexml_load_file($file);
 	
 	$num_records = count($xml->children(NAME_SPACE));
 	
@@ -235,7 +239,6 @@ function _cals_import_skeletal_records($node) {
  
 			if($num < 10000) {
 				
-				
 	 			if($new_record || $n->title != $arr['repos']['title'] || empty($n->field_xml_string)) {
 					$n->status = 0;
 					$n->title = $arr['repos']['title'];
@@ -264,10 +267,7 @@ function _cals_import_skeletal_records($node) {
 	$vars = array("items" => $parsed, "title" => "parsed list: {$num_records} records", "type" => "ol", "attributes" => array());
 		
 	drupal_set_message(theme_item_list($vars));
-	//drupal_goto("node/" . $node->nid);
-	$output = '';	
-	return $output;
- 
+	drupal_goto("node/" . $node->nid);
 
 }  
 
@@ -277,15 +277,20 @@ function _cals_import_skeletal_records($node) {
  */
 
 function _cals_importer_update_repository_item($node) {
-	_cals_importer_update_repository_items(&$node);
+	_cals_importer_update_repository_items($node);
 	drupal_goto("node/" . $node->nid);
 
 }
 
 
 /**
- * this is the main marc parser; runs via batch api
- */
+ * invoked via batch api view
+ *
+ * @param $entity
+ *   the node passed to the parser
+ *
+ */  
+ 
 function _cals_importer_update_repository_items(&$entity, $context = array()) {
 	if (isset($entity->nid)) {
     $node = node_load($entity->nid);
@@ -294,8 +299,7 @@ function _cals_importer_update_repository_items(&$entity, $context = array()) {
 	  if (in_array($node->type, $content_types)  ) {
 	    _cals_parse_record_details($node);
 	    drupal_set_message("{$node->title} MARC XML file parsed and saved.");
-	
-	  }
+		}
 	  else{
 			drupal_set_message("Invalid selection: not a repos item");
 	  
@@ -358,7 +362,6 @@ function _cals_parse_system_control_number($node) {
 	
 		foreach($tmp as $me) {
 			$val = (string) $me;
-			//printPre("val = $val");
 			$node->field_system_control_number[LANGUAGE_NONE][]['value'] = $val;	
 			drupal_set_message("{$node->title} System Control Numbers updated.");
 
@@ -436,11 +439,17 @@ $node->field_xml_string[LANGUAGE_NONE][0]['value'] .
 }
 
 
-
-
 /**
- * this is the main marc parser; runs 
- */
+ * The main MARC parser
+ *
+ * @param $node
+ *   the node passed to the parser
+ *
+ * @return
+ *   an array. 
+ *
+ */ 
+ 
 function _cals_parse_record_details($node) {
 	foreach(taxonomy_get_vocabularies() as $k => $v) {
 		$arr_tax[$v->name] = $k;
@@ -468,7 +477,6 @@ function _cals_parse_record_details($node) {
 	//to do - replace with $record[0] ... forget the syntax, argh!!
 	foreach($xml->children(NAME_SPACE) as $record) {
 		$arr = _cals_get_array_from_xml($record);
-		//printAndDie($arr);
 	
 	}
   $node->title = _cals_get_truncated_value($arr['repos']['title'], 250);				
@@ -541,7 +549,22 @@ function _cals_get_title_from_xml($record) {
 	return $arr;
 	
 }
-
+/**
+ * Maps MARC tag to Drupal Field
+ *
+ * its a big switch block: could probably replace with a $map array and run
+ * more efficiently, but some tags require additional logic
+ *
+ * @param $record
+ *   the tag derived from the xml file
+ *
+ * @param $arr
+ *   the big arr
+ *
+ * @return
+ *   an array. Could replace w/ a reference
+ *
+ */
 function _cals_get_array_from_xml($record) {
 	$me = array(
 			"leader" => (string) $record->children(NAME_SPACE)->leader,
@@ -561,22 +584,28 @@ function _cals_get_array_from_xml($record) {
 	
 	//loop thru controlfield
 	foreach($record->children(NAME_SPACE)->controlfield as $controlfield) {
-		$tags['tag'] = (string) $controlfield->attributes()->tag;
+		$tag = (string) $controlfield->attributes()->tag;
+		$tags['tag'] = $tag;
 		$tags['ind1'] = (string) $controlfield->attributes()->ind1;
 		$tags['ind2'] = (string) $controlfield->attributes()->ind2;
 		$tags['code']	= '';
 		$tags['str'] = (string) $controlfield;
+		
+		
+		if($tag == '008') printPre($tags);
+		$me = get_value_from_tag($tags, $me);
+		//dpm($me);
 
-	
-		$me = get_value_from_tag($datafield, $me);
 	}	
-
+	
 	//loop thru datafields
 	foreach($record->children(NAME_SPACE)->datafield as $datafield) {
-		$tags['tag'] = (string) $datafield->attributes()->tag;
+		$tag = (string) $datafield->attributes()->tag;
+		$tags['tag'] = $tag;
 		$tags['ind1'] = (string) $datafield->attributes()->ind1;
 		$tags['ind2'] = (string) $datafield->attributes()->ind2;
-
+	
+		
 		foreach($datafield as $subfield) {
 			$tags['code']	= (string) $subfield->attributes()->code;
 			$tags['str'] = (string) $subfield;
@@ -584,20 +613,31 @@ function _cals_get_array_from_xml($record) {
 			if( strlen($tags['str'])) {
 				$me = get_value_from_tag($tags, $me);
 			}
-			break;
  
 		}
-		//printAndDie($datafield, $map);
 	}	
+
 	
 	return $me;
 
 }
+
+
 /**
- * this maps tags to drupal fields
- * via a big switch block.
- * Could probably replace with a $map array and run
+ * Maps MARC tag to Drupal Field
+ *
+ * its a big switch block: could probably replace with a $map array and run
  * more efficiently, but some tags require additional logic
+ *
+ * @param $tag
+ *   the tag derived from the xml file
+ *
+ * @param $arr
+ *   the big arr
+ *
+ * @return
+ *   an array. Could replace w/ a reference
+ *
  */
 function get_value_from_tag($tags, $arr) {
 	$code = '';
@@ -608,12 +648,18 @@ function get_value_from_tag($tags, $arr) {
 	foreach($tags as $k => $v) {
  		${$k} = $v;
 	}
+
+	
 	switch($tag) {
-		
+			//creators / contributors
 			case 100:
 				if ($code == 'a') $arr['repos']['field_dc_creator'][] =  $str;
 				break;
-
+			case 700:
+				if ($code == 'a') $arr['repos']['field_dc_contributor'][] =  $str;
+				break;
+				
+			//main title	
 			case 245:
 				if($code == 'a') $arr['repos']['title'] =  $str;
 				if($code == 'b') $arr['repos']['title'] .=  " " .  $str;
@@ -621,16 +667,17 @@ function get_value_from_tag($tags, $arr) {
 				
 				break;
 			case 264:
-	 
 				if ($code == 'b') $arr['repos']['field_publisher'][] = $str;
+				
 				if( $code == 'c' ) {
+					/* redundant - 008 field?	
 					$arr['fc']['field_date'][] = 
 						array(
 							"field_qualifier_date" => "Issued", 
 							"field_dc_date" => _cals_get_iso_date($str)
 						);
+					*/		
 					}
-		 
 				break;				
 			//titles			
 
@@ -651,21 +698,15 @@ function get_value_from_tag($tags, $arr) {
 			case 246:
 				if($code == 'a') $arr['repos']['title_alternative'][] = $str;
 				break;	
-	
-		
 			/**
 			* TYPES (inc. Genre): 
 			*   655 0 = lcsh; 7 = Specified; 4 = not specified
 			*   leader 06/07
+			* 
+			* <marc:datafield tag="655" ind1=" " ind2="4"><marc:subfield code="a">Autobiography.</marc:subfield></marc:datafield>
 			*/					
-	
-			/*
-					<marc:datafield tag="655" ind1=" " ind2="4"><marc:subfield code="a">Autobiography.</marc:subfield></marc:datafield>
-	
-			
-			*/
-			case 655:
 
+			case 655:
 				if( ($ind1 == 0 || $ind2 == 0) && $code == 'a' ) {
 					$arr['repos_tf']['field_genre'][] = array("scheme" => "lcsh", "value" => $str);
 					$arr['repos']['field_keyword_index'][] = _cals_get_truncated_value($str, 250);	
@@ -684,33 +725,30 @@ function get_value_from_tag($tags, $arr) {
 			//subjects
 			//to do: find a way to compress this code and 650... v. redundant!
 			case 600:
-					if($code == 'a') {
-						$str = _cals_get_truncated_value($str, 250);
-						if(!isset($arr['fc']['field_dc_subject'])) $arr['fc']['field_dc_subject'] = array();
-						if(!isset($arr['repos']['field_keyword_index'])) $arr['repos']['field_keyword_index'] = array();
-						$entries = $str; //explode(".", $str);
-						
-						if(!in_array($str, $arr['repos']['field_keyword_index'] )) {
-						
-							$arr['repos']['field_keyword_index'][] = $str; 
-							$arr['fc']['field_dc_subject'][] =_cals_get_subject_value($str, $ind2);
-
-						}
+				if($code == 'a') {
+					$str = _cals_get_truncated_value($str, 250);
+					if(!isset($arr['fc']['field_dc_subject'])) $arr['fc']['field_dc_subject'] = array();
+					if(!isset($arr['repos']['field_keyword_index'])) $arr['repos']['field_keyword_index'] = array();
+					$entries = $str; //explode(".", $str);
+					
+					if(!in_array($str, $arr['repos']['field_keyword_index'] )) {
+						$arr['repos']['field_keyword_index'][] = $str; 
+						$arr['fc']['field_dc_subject'][] =_cals_get_subject_value($str, $ind2);
+					}
 
 
-						
-					}	
-			
+					
+				}	
+		
 				break;
 			
 			case 650:
 				/**
-				<marc:datafield tag="650" ind1=" " ind2="0">
-					<marc:subfield code="a">Ukrainian Canadians</marc:subfield>
-					<marc:subfield code="v">Fiction.</marc:subfield>
-				</marc:datafield>					
-				
-				*/
+				 *<marc:datafield tag="650" ind1=" " ind2="0">
+				 * <marc:subfield code="a">Ukrainian Canadians</marc:subfield>
+				 * <marc:subfield code="v">Fiction.</marc:subfield>
+				 * </marc:datafield>
+ 				*/
 									
 					$codes = array("a", "x", "v", "y", "z");
 					if (in_array($code, $codes)) { 
@@ -756,6 +794,8 @@ function get_value_from_tag($tags, $arr) {
 				$d = _cals_get_iso_date(substr($str, 7, 4));
 				
 				$arr['fc']['field_date'][] = array("field_qualifier_date" => "Issued", "field_dc_date" => _cals_get_iso_date($d) );
+				
+				//printAndDie($arr);
 				
 				$arr['fc']['field_dc_coverage'][] = array(
 							"field_value" => substr($str, 15, 3), 
@@ -915,7 +955,8 @@ function get_value_from_tag($tags, $arr) {
 			*/	
 
 				
-			case 800: case 830:
+			case 800: 
+			case 830:
 				if($code == 'a') 	{
 					$arr['fc']['field_dc_relation'][] = array("value" => $str, "type" => 'IsPartOf');
 				}
@@ -945,10 +986,10 @@ function get_value_from_tag($tags, $arr) {
 						"field_agency_type" => "", 
 						"value" => $str,
 					);
-					//printAndDie((string) $datafield);
 				break;
 									
 			case "040":
+			
 				$tmp = _cals_importer_get_array_cataloging_agency();
 				if (array_key_exists($code, $tmp)) {
 					$arr['fc']['field_cataloguing_agency'][] = 
@@ -970,6 +1011,13 @@ function get_value_from_tag($tags, $arr) {
 }
 
 
+/**
+ * Get an array of cataloging agencies
+ *
+ * @return
+ *   an array of cataloging agencies
+ */
+
 function _cals_importer_get_array_cataloging_agency() {
 	/*
 	1|Original Cataloguing agency (NR)
@@ -987,9 +1035,15 @@ function _cals_importer_get_array_cataloging_agency() {
 
 }
  
-
-function _cals_importer_get_string($val) {
-	$val = (string)$val[0];
+/** 
+ * @param $arr
+ *   the value (array) returned by 
+ *
+ * @return
+ *   $val, a string
+ */
+function _cals_importer_get_string($arr) {
+	$val = (string)$arr[0];
 	return htmlspecialchars(trim($val));
 }
 
@@ -1056,7 +1110,7 @@ function _cals_update_s3_path($node) {
 	
 	}
 	node_save($node);
-	return "here!";
+	return "yah!";
 
 }
 
@@ -1072,14 +1126,19 @@ function _cals_get_node_by_sysnum($num) {
 	foreach($rs as $row) {
 		$nid = $row->entity_id;
 		//drupal_set_message("nid = $nid / num = $num");
-		//printPre($row);
 	}
 	return $nid;
 }
-
-
+/**
+ * Invokes Drupal's batch api to update S3 paths
+ * 
+ * @param $nid
+ *   the node id
+ */
+ 
 function _cals_batch_update_s3_paths($nid) {
   global $user;
+  //get array
 	$arr = _cals_get_array_csv($nid);
 	
 	$batch = array(
@@ -1094,11 +1153,21 @@ function _cals_batch_update_s3_paths($nid) {
 	);
 		($batch);
   batch_set($batch);
- 	//printAndDie($batch);
 	batch_process('admin/content/cals/s3-record-sets');
 }
 
-
+/**
+ * The main batch process to update S3 paths
+ *	 
+ * @param $nid
+ *   the node id
+ * @param $arr
+ *   the array of data from the csv attached to the S3 recordset
+ *
+ * @return
+ *   $val, a string
+ */
+ 
 function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
   $limit = 10;
   // Get Count of products
@@ -1158,18 +1227,10 @@ function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
   }
 }
 
-function _cals_save_node_s3_path($data, &$context) {
-
-
-
-
-
-}
-
-
+ 
 
 /**
- * Finish of batch
+ * Finish batch
  */
 function _cals_batch_update_s3_path_finished($success, $results, $operations) {
 	if ($success) {
@@ -1181,6 +1242,17 @@ function _cals_batch_update_s3_path_finished($success, $results, $operations) {
   drupal_set_message($message);
   //watchdog('update', 's3 paths updated');
 }
+
+
+/**
+ * Reads CSV file; returns array
+ *
+ * @param $nid
+ *   The node id with the CSV attachment
+ *
+ * @return
+ *   an array.
+ */
 
 function _cals_get_array_csv($nid) {
 	$node = node_load($nid);
