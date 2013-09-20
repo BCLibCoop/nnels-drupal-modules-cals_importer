@@ -6,7 +6,6 @@
 ini_set('memory_limit', '512M');
 ini_set('max_execution_time', '600'); 
 
-//NAME_SPACE = "http://www.loc.gov/MARC21/slim";
 define("NAME_SPACE", "http://www.loc.gov/MARC21/slim");
 
 //require these files...
@@ -44,8 +43,14 @@ function cals_importer_menu() {
 	*/
 	
 	
-	
-	//http://me/cals_staging/admin/content/cals/batch-update-s3-paths/5429
+
+/**
+ * Parses S3 sets, can be invoked directly - e.g:
+ * http://me/cals_staging/admin/content/cals/batch-update-s3-paths/5429
+ *
+ * See: content/cals/s3-record-sets
+ * 
+ */		
 	
 	$items['admin/content/cals/batch-update-s3-paths/%'] = array(
     'access arguments' => array('administer site configuration'),
@@ -89,6 +94,7 @@ function cals_importer_menu() {
 	);	
 	
 	
+	//to deprecate next round of development?
 	
 	/*
 	$items['node/%node/parse-sys-control-num'] = array(
@@ -1097,6 +1103,7 @@ function _cals_importer_xml2php($xml) {
 
 
 /********************/
+//to deprecate??
 
 function _cals_update_s3_path($node) {
 	$paths = array();
@@ -1114,7 +1121,13 @@ function _cals_update_s3_path($node) {
 
 }
 
-
+/**
+ * Helper function to return the nid for a given system number (MARC)
+ * 
+ * @param $num
+ *   the system number
+ */
+ 
 function _cals_get_node_by_sysnum($num) {
 	$nid = 0;
 	$rs = db_query(
@@ -1138,7 +1151,8 @@ function _cals_get_node_by_sysnum($num) {
  
 function _cals_batch_update_s3_paths($nid) {
   global $user;
-  //get array
+  
+  //get array from csv file. Pass this into the initial batch
 	$arr = _cals_get_array_csv($nid);
 	
 	$batch = array(
