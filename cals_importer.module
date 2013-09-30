@@ -155,10 +155,6 @@ function cals_importer_action_info() {
 }
 
 
-
-
-
-
 /**
  * Implementation of hook_menu_alter().
  * Remember to clear the menu cache after adding/editing this function.
@@ -190,17 +186,9 @@ function _cals_importer_tab_checker() {
 	return FALSE;
 }
 
-/**
- * local wrapper function to load records; not really required
- */
-function _cals_load_records($file) {
-		return simplexml_load_file($file);
-}
-
-
 
 /**
- * one time script to import / create skeletal marc records
+ * import / create skeletal marc records, i.e., just the title
  *
  * @param $node
  *   the node passed to the parser
@@ -209,7 +197,7 @@ function _cals_import_skeletal_records($node) {
 	$max = 50; //clear buffer, etc.
 
 	global $user;
-	module_load_include('inc', 'entity', 'includes/entity.controller');
+	//module_load_include('inc', 'entity', 'includes/entity.controller');
 	foreach(taxonomy_get_vocabularies() as $k => $v) {
 		$arr_tax[$v->name] = $k;
 	} 
@@ -350,7 +338,6 @@ function _cals_parse_system_control_number($node) {
 
 	$xml = '';
 	if(!isset($node->field_xml_string[LANGUAGE_NONE]) ) return ''; //get out of here if not xml string
-
 	if(isset($node->field_xml_string[LANGUAGE_NONE])) {
 		$str = '<?xml version="1.0" encoding="UTF-8"?>
 <marc:collection xmlns:marc="http://www.loc.gov/MARC21/slim" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd">' . 
@@ -359,8 +346,10 @@ function _cals_parse_system_control_number($node) {
 		$xml = simplexml_load_string($str, null, 0, 'marc', true);
 		$xml->registerXPathNamespace("marc", NAME_SPACE);
 	}
-	$tmp = $xml->xpath("//marc:datafield[@tag='035']/marc:subfield[@code='a']");
 	
+	
+	$tmp = $xml->xpath("//marc:datafield[@tag='035']/marc:subfield[@code='a']");
+
 	//$tmp = $xml->xpath("//marc:datafield[@tag='035']");
 	unset($node->field_system_control_number);
 	
@@ -474,27 +463,47 @@ function _cals_parse_record_details($node) {
 		$xml = simplexml_load_string($str, null, 0, 'marc', true);
 		$xml->registerXPathNamespace("marc", NAME_SPACE);
 	}
+
+	
 	//if(!strlen($xml)) return "no xml!";
 	$arr = array();
 	
-	//set file access to "Open Access"
-	$arr['repos']['field_access_restrictions'][0] = 0;
+	//let's grab date issued
+	$date_issued =  _cals_get_date_issued($xml);
+	
+	if(!empty($date_issued)) $arr['fc']['field_date'][] = array("field_qualifier_date" => "Issued", "field_dc_date" => $date_issued);
+
+	//descriptions
+	_cals_get_descriptors_from_marc($arr, $xml);
+
+		//grabs some of the generic fields, e.g., titles, uri, publisher number, etc.
+	_cals_get_commom_fields_from_marc($arr, $xml);
+
+	//subjects
+	_cals_get_subject_from_marc($arr, $xml);
+	
+	//genre
+	_cals_get_genre_from_marc($arr, $xml);
+	
 
 	//to do - replace with $record[0] ... forget the syntax, argh!!
 	foreach($xml->children(NAME_SPACE) as $record) {
-		$arr = _cals_get_array_from_xml($record);
-	
+		_cals_get_array_from_xml($record, $arr);
 	}
+	//set file access to "Open Access"
+	$arr['repos']['field_access_restrictions'][0] = 0;
+	
   $node->title = _cals_get_truncated_value($arr['repos']['title'], 250);				
 
 	//delete the field collections so we have a fairly stripped down node if reparsing
 	$node = _cals_delete_existing_field_collection_items($node, array_keys($arr['fc']));
 	$node->status = 1;
 	foreach($arr['repos'] as $k => $v) {
-		//$n->
+
 		if(is_array($v)) {
 			//clean up existing values so we don't append
 			$node->{$k}[LANGUAGE_NONE] = array();
+			
 			//populate fields
 			foreach($v as $k2 => $v2) {
 				if(strlen($v2)) $node->{$k}[LANGUAGE_NONE][]['value'] = $v2;
@@ -505,7 +514,7 @@ function _cals_parse_record_details($node) {
 		}
 
 	} 
-	
+
 	//genre
 	if(array_key_exists("repos_tf", $arr) ) {
 		foreach($arr['repos_tf']['field_genre'] as $k => $v) {
@@ -518,9 +527,42 @@ function _cals_parse_record_details($node) {
 	}
 	//save the populated node
 	node_save($node);
+	
 	//populate the field collections
 	_cals_add_entity_values2($node, $arr_tax, $arr['fc']);
 	
+}
+
+
+function _cals_get_subjects($xml) {
+	
+	//let's grab the date issued!
+	$have_date = FALSE;
+	$date = '';
+	$tmp = $xml->xpath("//marc:datafield[@tag='008']");
+	if(count($tmp)) {
+		$str = (string) $tmp[0];
+		return _cals_get_date_from_008($str);
+	}
+	if($have_date === FALSE) {
+		$tmp = $xml->xpath("//marc:datafield[@tag='264']/marc:subfield[@code='c']");
+		if(count($tmp)) {
+			$str = (string) $tmp[0];
+			return _cals_get_iso_date($str);
+		}
+				
+	} 
+	if($have_date === FALSE) {
+		$tmp = $xml->xpath("//marc:datafield[@tag='260']/marc:subfield[@code='c']");
+		if(count($tmp)) {
+			$str = (string) $tmp[0];
+			return _cals_get_iso_date($str);
+		}
+				
+	} 
+	return $date;
+
+
 }
 
 
@@ -555,467 +597,6 @@ function _cals_get_title_from_xml($record) {
 	return $arr;
 	
 }
-/**
- * Maps MARC tag to Drupal Field
- *
- * its a big switch block: could probably replace with a $map array and run
- * more efficiently, but some tags require additional logic
- *
- * @param $record
- *   the tag derived from the xml file
- *
- * @param $arr
- *   the big arr
- *
- * @return
- *   an array. Could replace w/ a reference
- *
- */
-function _cals_get_array_from_xml($record) {
-	$me = array(
-			"leader" => (string) $record->children(NAME_SPACE)->leader,
-	);
-
-	//leader field
-	$leader = (string) $record->children(NAME_SPACE)->leader;
-	
-
-	$type = substr($leader, 6, 1);
-	if($type != '') 	$arr['repos']['field_dc_type'][] = $type;
- 
-	/*
-	http://www.oclc.org/bibformats/en/fixedfield/006.html
-	*/
-	
-	
-	//loop thru controlfield
-	foreach($record->children(NAME_SPACE)->controlfield as $controlfield) {
-		$tag = (string) $controlfield->attributes()->tag;
-		$tags['tag'] = $tag;
-		$tags['ind1'] = (string) $controlfield->attributes()->ind1;
-		$tags['ind2'] = (string) $controlfield->attributes()->ind2;
-		$tags['code']	= '';
-		$tags['str'] = (string) $controlfield;
-		
-		
-		if($tag == '008') printPre($tags);
-		$me = get_value_from_tag($tags, $me);
-		//dpm($me);
-
-	}	
-	
-	//loop thru datafields
-	foreach($record->children(NAME_SPACE)->datafield as $datafield) {
-		$tag = (string) $datafield->attributes()->tag;
-		$tags['tag'] = $tag;
-		$tags['ind1'] = (string) $datafield->attributes()->ind1;
-		$tags['ind2'] = (string) $datafield->attributes()->ind2;
-	
-		
-		foreach($datafield as $subfield) {
-			$tags['code']	= (string) $subfield->attributes()->code;
-			$tags['str'] = (string) $subfield;
-
-			if( strlen($tags['str'])) {
-				$me = get_value_from_tag($tags, $me);
-			}
- 
-		}
-	}	
-
-	
-	return $me;
-
-}
-
-
-/**
- * Maps MARC tag to Drupal Field
- *
- * its a big switch block: could probably replace with a $map array and run
- * more efficiently, but some tags require additional logic
- *
- * @param $tag
- *   the tag derived from the xml file
- *
- * @param $arr
- *   the big arr
- *
- * @return
- *   an array. Could replace w/ a reference
- *
- */
-function get_value_from_tag($tags, $arr) {
-	$code = '';
-	$ind1 = '';
-	$ind2 = '';
-	$tag = '';
-	$str = '';
-	foreach($tags as $k => $v) {
- 		${$k} = $v;
-	}
-
-	
-	switch($tag) {
-			//creators / contributors
-			case 100:
-				if ($code == 'a') $arr['repos']['field_dc_creator'][] =  $str;
-				break;
-			case 700:
-				if ($code == 'a') $arr['repos']['field_dc_contributor'][] =  $str;
-				break;
-				
-			//main title	
-			case 245:
-				if($code == 'a') $arr['repos']['title'] =  $str;
-				if($code == 'b') $arr['repos']['title'] .=  " " .  $str;
-	 
-				
-				break;
-			case 264:
-				if ($code == 'b') $arr['repos']['field_publisher'][] = $str;
-				
-				if( $code == 'c' ) {
-					/* redundant - 008 field?	
-					$arr['fc']['field_date'][] = 
-						array(
-							"field_qualifier_date" => "Issued", 
-							"field_dc_date" => _cals_get_iso_date($str)
-						);
-					*/		
-					}
-				break;				
-			//titles			
-
-			//uniform titles: 130 0# $a, 730  0# $a	
-			case 130:
-			case 730:
-				if($code == 'a' ) $arr['repos']['title_alternative'][] = $str;
-				break;					
-	
-			/**
-			* alt titles: 
-			*   240 ind 10 $a	
-			*   246 ind 13 $a
-			*   210?
-			*   242?
-			*/	
-			case 240:
-			case 246:
-				if($code == 'a') $arr['repos']['title_alternative'][] = $str;
-				break;	
-			/**
-			* TYPES (inc. Genre): 
-			*   655 0 = lcsh; 7 = Specified; 4 = not specified
-			*   leader 06/07
-			* 
-			* <marc:datafield tag="655" ind1=" " ind2="4"><marc:subfield code="a">Autobiography.</marc:subfield></marc:datafield>
-			*/					
-
-			case 655:
-				if( ($ind1 == 0 || $ind2 == 0) && $code == 'a' ) {
-					$arr['repos_tf']['field_genre'][] = array("scheme" => "lcsh", "value" => $str);
-					$arr['repos']['field_keyword_index'][] = _cals_get_truncated_value($str, 250);	
-				}
-				break;	
-
-	
-			
-			/**
-			* SUBJECTS: 
-			*   600 10 $a	
-			*   610 20 $a	
-			*   630 00 $alx	
-			*   650 #0 $azvxy: indicator 0 = lcsh; 6 = Répertoire de vedettes-matièr
-			*/					
-			//subjects
-			//to do: find a way to compress this code and 650... v. redundant!
-			case 600:
-				if($code == 'a') {
-					$str = _cals_get_truncated_value($str, 250);
-					if(!isset($arr['fc']['field_dc_subject'])) $arr['fc']['field_dc_subject'] = array();
-					if(!isset($arr['repos']['field_keyword_index'])) $arr['repos']['field_keyword_index'] = array();
-					$entries = $str; //explode(".", $str);
-					
-					if(!in_array($str, $arr['repos']['field_keyword_index'] )) {
-						$arr['repos']['field_keyword_index'][] = $str; 
-						$arr['fc']['field_dc_subject'][] =_cals_get_subject_value($str, $ind2);
-					}
-
-
-					
-				}	
-		
-				break;
-			
-			case 650:
-				/**
-				 *<marc:datafield tag="650" ind1=" " ind2="0">
-				 * <marc:subfield code="a">Ukrainian Canadians</marc:subfield>
-				 * <marc:subfield code="v">Fiction.</marc:subfield>
-				 * </marc:datafield>
- 				*/
-									
-					$codes = array("a", "x", "v", "y", "z");
-					if (in_array($code, $codes)) { 
-						$str = _cals_get_truncated_value($str, 250);
-						if(!isset($arr['fc']['field_dc_subject'])) $arr['fc']['field_dc_subject'] = array();
-						if(!isset($arr['repos']['field_keyword_index'])) $arr['repos']['field_keyword_index'] = array();
-						//let's split multiple subject entries that are joined by a period.
-						$entries = $str; // explode(".", $str);
-						//$arr['repos']['field_keyword_index'] = _cals_get_keyword_index_values($arr['repos']['field_keyword_index'], $entries);
-						if(!in_array($str, $arr['repos']['field_keyword_index'] )) {
-						
-							$arr['repos']['field_keyword_index'][] = $str; 
-							$arr['fc']['field_dc_subject'][] =_cals_get_subject_value($str, $ind2);
-
-						}
-
-						
-						/*
-						foreach($entries as $entry) {
-							$entry = _cals_get_truncated_value($str, 250);
-							if(strlen(trim($entry)) && (!in_array($entry, $arr['repos']['field_keyword_index'])))) {
-								
-								$arr['repos']['field_keyword_index'][] = trim($entry);
-							}
-						}
-						*/
-					}	
-				break;
- 
-	
-	
-			/**
-			* COVERAGE.SPATIAL: 
-			*   651 #0 $a: Geo Name indicator 0 = lcsh; 6 = Répertoire de vedettes-matièr
-			*   043 Geographic Code iso 3166
-			*   044 Country of publishing
-			*   008/15-17 prov country of publishing : http://www.loc.gov/marc/countries/
-			*/	
- 					
-			case "008":
-				//$str = (string) $datafield;
-				
-				$d = _cals_get_iso_date(substr($str, 7, 4));
-				
-				$arr['fc']['field_date'][] = array("field_qualifier_date" => "Issued", "field_dc_date" => _cals_get_iso_date($d) );
-				
-				//printAndDie($arr);
-				
-				$arr['fc']['field_dc_coverage'][] = array(
-							"field_value" => substr($str, 15, 3), 
-							"field_dc_coverage_type" => "Spatial",
-							"field_dc_coverage_scheme" => "http://www.loc.gov/marc/countries",
-							"field_marc_tag" => $tag,
-				);
-				
-				$aud = substr($str, 22, 1);
-				if(strlen($aud)) $arr['repos']['field_audience'][] = $aud;
-				break;
-		
-		
-							
-			case "043":
-			case "044":
-					
-					$arr['fc']['field_dc_coverage'][] = array(
-								"field_value" => $str, 
-								"field_dc_coverage_type" => "Spatial",
-								"field_dc_coverage_scheme" => "ISO 3166",
-								"field_marc_tag" => $tag,
-					);
-
-				break;	
-			
-			case 651:
-					if($code == 'a') {
-						$arr['fc']['field_dc_coverage'][] = array(
-							"field_value" => $str, 
-							"field_dc_coverage_type" => "Spatial",
-							"field_dc_coverage_scheme" => "lcsh",
-							"field_marc_tag" => $tag,
-						);
-						//lets add this to the keyword index?
-						$arr['repos']['field_keyword_index'][] = $str;
-
-					}	
-				break;	
-
-	
-			/**
-			* RIGHTS: 
-			*   506 $ad	= access_rights
-			*   540 $ad	= access_rights
-			*   542 $d	= rights_holder
-			*/					
-			case 540:	
-				if($code == 'a' || $code == 'd' ) $arr['repos']['field_access_rights'][] = $str;
-				break;
-							
-			case 506:
-				if($code == 'a' || $code == 'd' ) $arr['repos']['field_access_rights'][] = $str;
-				//if 506 includes the word "restricted", set the file access to licensed (1); else set to open (0).
-				//default is 0. 
-				$tmp = strpos(strtolower($str),"restricted");
-				$arr['repos']['field_access_restrictions'][0] = (is_numeric($tmp)) ? 1 : 0;	
-				
-				break;
-			case 542:					
-				if($code == 'd' ) $arr['repos']['field_rights_holder'][] = $str;
-				break;
-				
-			/**
-			* IDENTIFIERS: 
-			*   028 $a	= publisher number
-			*   028 $b (producer)
-			*   035	## $a system control number
-			*   035 ## $a dcterms;Oclc 035 $a(OCoLC)153910628
-			*   856 4# $u .URI - use for primary URL, alt URLS, DOI	
-			*   534 ## $z ISBN	
-			*/					
-			case "028":
-				if($code == 'a') $arr['identifier']['publisher_number'] = $str;
-				if($code == 'b') $arr['identifier']['producer'] = $str;
-				break;	
-				
-			case "035":
-
-				if($code == 'a') {
-					$str = (string)$str;
-					
-					if(strpos($str, "(OCoLC)")) {
-						$arr['repos']["field_oclc_number"][] = $str;
-					}
-					else {
-						$arr['repos']["field_system_control_number"][] = $str;
-
-					}
-				} 
-				break;	
-				
-			case 534:
-					if($code == 'z') 	$arr['repos']['field_isbn'][] = $str;
-				break;
-
-			case 856:
-					if($code == 'u') 	$arr['repos']['field_uri'][] = $str;
-				break;
-		
-			//body field; description
-			case 520:
-				if($code == 'a') 	{
-					//to do - rewrite this more efficiently!!
-					if(isset($arr['repos']['body'][0])) {
-						$arr['repos']['body'][0] .= $str;
-					}
-					else {
-						$arr['repos']['body'][0] = $str;
-					}
-				}
-
-				break;
-								
-			/**
-			* DESCRIPTIONS: 
-			*   028 $a	= publisher number
-			*
-			*
-			*   534 ## $z ISBN	
-			*/	
-				/*
-				<marc:datafield tag="500" ind1=" " ind2=" ">
-					<marc:subfield code="1"> sound disc [Daisy book]:</marc:subfield>
-				</marc:datafield>
-				*/
-				case 500:
-				case 504: 
-				case 505: 
-				case 511:
-				case 516:
-				
-				case 533:
-				case 538:
-				case 586:
-				case 595:
-				case 598:
-				case 599:
-				case 541:
-						$val = trim($str);
-						$arr['fc']['field_dc_description'][] = array(
-							"type" => _cals_get_description_type($tag), 
-							"value" => $val,
-							"num_char" => strlen($val),
-						);
-					break;
-	
-	
-			/**
-			* RELATIONS: 
-			*   800 $a	= IsPartOf
-			*   830 $a	= IsPartOf
-			*   530 $a	= IsFormatOf
-			*   800 $a	= IsPartOf
-			*   800 $a	= IsPartOf
-			*
-			*/	
-
-				
-			case 800: 
-			case 830:
-				if($code == 'a') 	{
-					$arr['fc']['field_dc_relation'][] = array("value" => $str, "type" => 'IsPartOf');
-				}
-			
-				break;		
-			case 760:
-				$arr['fc']['field_dc_relation'][] = array("value" => $str, "type" => 'IsPartOf');
-				break;		
-
-					
-			case 530:	
-				if($code == 'a') 	{
-					$arr['fc']['field_dc_relation'][] = array("value" => $str, "type" => 'IsPartOf');
-				}
-				
-				break;
-			/**
-			* CATALOGUING AGENCY: 
-			*   040 $a	= Original Cataloguing agency (NR)
-			*   040 $b = cataloguing_language
-			*   040 $c = transcribing_agency
-			*   040 $d = modifying_agency
-			*/
-			case "003":
-				$arr['fc']['field_cataloguing_agency'][] = 
-					array(
-						"field_agency_type" => "", 
-						"value" => $str,
-					);
-				break;
-									
-			case "040":
-			
-				$tmp = _cals_importer_get_array_cataloging_agency();
-				if (array_key_exists($code, $tmp)) {
-					$arr['fc']['field_cataloguing_agency'][] = 
-						array(
-							"field_agency_type" => $tmp[$code], 
-							"value" => $str
-						);
-				
-				}
-				break;
-
-
-
-	
-								
-	}	//end switch
-	return $arr;	
-
-}
-
 
 /**
  * Get an array of cataloging agencies

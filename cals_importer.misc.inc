@@ -13,22 +13,57 @@ function _cals_entity_wrapper($arr) {
 
 }
 
-function _cals_get_entity_value($key, $arr, $arr_tax) {
-
+function _cals_get_date_values($arr) {
 	$values = array();
+	foreach(array("008", "264", "260") as $key) {
+		if(array_key_exists($key, $arr)) {
+		
+		
+			printAndDie($arr, $key);
+			
+		}
 	
+	}
+	foreach($arr as $k => $v) {
+		if(!isset($dates) ) {
+			$dates[$v['field_qualifier_date']] = 0;
+		}
+		
+		$dates[$v['field_qualifier_date']]++;
+		$allow = ($dates[$v['field_qualifier_date']] == 1) ? TRUE : FALSE;
+
+		//"field_qualifier_date" => "Issued", "field_dc_date"
+		
+		if($allow) {
+		
+		
+			$values[] = array(
+			  'field_name' =>  "field_date",
+			  'field_dc_date' => array(
+			    LANGUAGE_NONE => array(array('value' => $v['field_dc_date']) ),
+			  ),
+			  'field_qualifier_date' => array(
+			    LANGUAGE_NONE => array(array('value' => $v['field_qualifier_date']) ),
+			  ),
+			  
+			);
 	
+		}		
+	
+	}
+
+}
+
+function _cals_get_entity_value($key, $arr, $arr_tax) {
+	
+	$values = array();
 	
 	foreach($arr as $k => $v) {
 	
 		switch($key) {
-		
-		
 			case "field_date":
 				if(!isset($dates) ) {
-				
 					$dates[$v['field_qualifier_date']] = 0;
-					
 				}
 				
 				$dates[$v['field_qualifier_date']]++;
@@ -192,14 +227,24 @@ function _cals_delete_existing_field_collection_items($node,$keys) {
 
 
 }
-
+/**
+ * Populates Field Collection values
+ *
+ * @param $node
+ *   the node passed to the parser
+ * @param $arr_tax
+ *   taxonomy values
+ * @param $arr
+ *   array of field collection values
+ *
+ * @return
+ *   an array. 
+ *
+ */ 
 function _cals_add_entity_values2( $node, $arr_tax, $arr ) {
-
-	foreach($arr as $k => $v) {
 	
+	foreach($arr as $k => $v) {
 		$values = array();
-
-
 		//run thru a switch so we can isolate fields that still
 		//need to be worked on. Later, can remove switch?	
 		switch($k) {
@@ -215,11 +260,13 @@ function _cals_add_entity_values2( $node, $arr_tax, $arr ) {
 				//printPre("ya", $v);
 				break;
 			
-					
-		
 			case "field_datex":
+				//order of priority 008, 264, 260
+				$values = _cals_get_date_values($v);
+				
+
 			
-				printAndDie($arr);
+				printAndDie($k, $v, $arr_tax);
 				break;
 		
 			default:
@@ -248,23 +295,8 @@ function _cals_add_entity_values2( $node, $arr_tax, $arr ) {
 			}		
 			
 		}
-		else {
-			//$nn = node_load(92);
-			//$e = entity_load('field_collection_item', array(212));
-			//printAndDie($values, $e, $nn);
-		
-		
-		}
-		
-
-		
-	
-	
-		
-	
 	}
 	
-	//printAndDie("here", $arr);
 		
 
 }
@@ -443,10 +475,55 @@ function _cals_get_tid_by_name($vid, $name) {
 
 }
 
+function _cals_get_iso_year($value) {
+	$value = (string) $value;
+	
+	$value = str_replace(array(".", "c"), "", $value);
+	
+	if(strlen($value) == 4 && is_numeric($value)) return $value;
+
+
+	//parse dates like 2013/01/01 and 01/01/2013
+	if(strlen($value) == 10) {
+		
+		$tmp = explode("/", $value);
+		if(count($tmp) == 3){
+			foreach($tmp as $newvalue) {
+				if(strlen($newvalue) == 4 && is_numeric($newvalue)) return $newvalue;
+
+			}
+		}
+		
+		$tmp = explode("-", $value);
+		if(count($tmp) == 3){
+			foreach($tmp as $newvalue) {
+				if(strlen($newvalue) == 4 && is_numeric($newvalue)) return $newvalue;
+			}
+		}
+	
+	}
+
+	
+	
+	return $value;
+
+}
+
+
 function _cals_get_iso_date($value) {
 	$value = (string) $value;
 	
 	$value = str_replace(array(".", "c"), "", $value);
+	
+	printPre($value);
+	//if the separator is a slash (/), then the American m/d/y is assumed. 
+	$value = strtotime($value);
+	printPre($value);
+	
+	$value = date("Y-m-d", $value);
+	//$value = strtotime($value);
+	
+	printAndDie($value);
 	//$value = str_replace("c", "", $value);
 	
 	
@@ -454,34 +531,6 @@ function _cals_get_iso_date($value) {
 
 }
 
-function _cals_get_description_type($tag) {
-
-	$tmp =	array( 
-		500 => '', 
-		//504 => "Bibliography",
-		505 => "tableofcontents",
-		520 => 'abstract',
-		/*
-		511 => 'Performer',
-		516 => 'Type of file',
-		
-		533 => 'Reproduction',
-		538 => 'System Details / Requirements',
-		586 => 'Awards Notes', 
-		595 => 'Extent of Original', 
-		598 => 'Keywords, Local',
-		599 => 'Local Notes',
-		541 => 'Accrual Method',
-		*/
-	);
-	
-	if(array_key_exists($tag, $tmp)) return $tmp[$tag];
-	return "";
-
-
-
-
-}
 
 
 function _cals_get_keyword_index_values($arr, $entries) {
