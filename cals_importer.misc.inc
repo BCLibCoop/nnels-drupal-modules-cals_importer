@@ -1,4 +1,24 @@
 <?php
+
+
+/**
+ * Loads XML string from node.
+ */
+
+function _cals_get_xml_string($value) {
+
+	$str = '<?xml version="1.0" encoding="UTF-8"?>
+<marc:collection xmlns:marc="http://www.loc.gov/MARC21/slim" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd">' . 
+  $value .
+'</marc:collection>';
+	$xml = simplexml_load_string($str, null, 0, 'marc', true);
+	$xml->registerXPathNamespace("marc", NAME_SPACE);
+
+	return $xml;
+
+}
+
+
 function _cals_entity_wrapper($arr) {
 	
 	$node = new EntityDrupalWrapper('node', 1);
@@ -53,6 +73,14 @@ function _cals_get_date_values($arr) {
 	}
 
 }
+
+/**
+ *
+ * @todo
+ *   Document this function. Important... 
+ *
+ */ 
+ 
 
 function _cals_get_entity_value($key, $arr, $arr_tax) {
 	
@@ -255,19 +283,10 @@ function _cals_add_entity_values2( $node, $arr_tax, $arr ) {
 			case "field_dc_description":
 			case "field_dc_coverage":
 			case "field_date":
-
 				$values = _cals_get_entity_value($k, $v, $arr_tax);
 				//printPre("ya", $v);
 				break;
-			
-			case "field_datex":
-				//order of priority 008, 264, 260
-				$values = _cals_get_date_values($v);
-				
 
-			
-				printAndDie($k, $v, $arr_tax);
-				break;
 		
 			default:
 				printAndDie($k, $v);
@@ -276,158 +295,26 @@ function _cals_add_entity_values2( $node, $arr_tax, $arr ) {
 			
 		
 		}
-		if($k != 'field_dc_subjectx') {
-			if(count($values)) {
-				foreach ($values as $value) {
-					if(is_array($value)) {
-						//printPre($n->title, $k, $value);
-
-						$e = entity_create('field_collection_item', $value);
-						// Attach the field_collection entity to the application node.
-						$e->setHostEntity('node', $node);
-						// Save the entity. 
-						$e->save();	
-					
-					}
-				
+		
+		if(count($values)) {
+			foreach ($values as $value) {
+				if(is_array($value)) {
+					$e = entity_create('field_collection_item', $value);
+					// Attach the field_collection entity to the application node.
+					$e->setHostEntity('node', $node);
+					// Save the entity. 
+					$e->save();	
 				}
-			//printPre($k,$values);	
-			}		
+			}
+		}		
 			
-		}
+
 	}
 	
 		
 
 }
 
-
-function _cals_deprecated_yyy() {
-
-		$arr2 = array("subject", "cat_agency", "description");
-			//$arr2 = array("subject");
-			
-			foreach($arr2 as $key) {
-			
-				//printAndDie($arr2, $arr);
-				if(isset($arr[$key])) {
-				
-					foreach($arr[$key] as $k => $v) {
-						_cals_add_entity_values($n, $key, $v, $arr_tax);
-					}
-				}
-				
-			}
-			
-
-}
-
- 
-function _cals_add_entity_values($node, $fieldname, $v, $arr_tax) {
-	$values = array();
-	$n2 = node_load(47);
-	//printAndDie($n2);
-	
-	switch($fieldname) {
-		case "description":
-			$values = array(
-			  'field_name' => 'field_dc_description',
-			  'field_dc_description_type' => array(
-			    LANGUAGE_NONE => array(array('value' => $v['type'])),
-			  ),
-			  'field_value' => array(
-			    LANGUAGE_NONE => array(array('value' => $v['value'])),
-			  ),
-			  
-			);
-			//$values['field_dc_description_type2'][LANGUAGE_NONE][0]['value'] = $v['type'];
-			//$values['field_value2'][LANGUAGE_NONE][0]['value'] = $v['value'];
-			 
-			 
-			//$values['field_dc_description_type'][LANGUAGE_NONE][$delta][]
-			
-			
-			//printAndDie($values);
-			break;
-			
-		case "cat_agency":
-			$values = array(
-				'field_name' => "field_cataloguing_agency",
-	 
-			);
-			
-			$values['field_value'][LANGUAGE_NONE][]['value'] = "yahoo";
-		
-			break;	
-			
-		case "type":
-			$vid = $arr_tax['Genre'];
-			$name = $v['value'];
-			
-			$arr['type'][] = array("type" => "genre", "scheme" => "lcsh", "value" => "Black humor (Literature)");
-
-			
-			$values = array(
-			  'field_name' => 'field_dc_subject',
-			  'field_dc_subject_value' => array(
-			    LANGUAGE_NONE => array(array('tid' => $tid)),
-			  ),  
-
-			  
-			);
-			
-			break;
-		case "subject":
-		
-			$vid = $arr_tax['Subject'];
-			$name = $v['value'];
-			// Get the term's ID.
-			$tid = _cals_get_tid_by_name($vid, $name);
-			
-
-			$values = array(
-			  'field_name' => 'field_dc_subject',
-			  'field_dc_subject_value' => array(
-			    LANGUAGE_NONE => array(array('tid' => $tid)),
-			  ),  
-
-			  
-			);
-			
-			if(isset($v['scheme']) && $v['scheme'] != 'undefined' && $v['scheme'] != '') {
-				$values['field_dc_subject_scheme'][LANGUAGE_NONE]['value'] = $v['scheme'];
-			}
-			break;
-	
- 
-	
-	
-	
-	
-	}//end switch
-
-	$e = entity_create('field_collection_item', $values);
-	
-	  // Attach the field_collection entity to the application node. This has to
-	  // happen separately so that it actually works -- you can't just specify
-	  // this via the $values array.
-	
-	//printAndDie($node);  
-	  
-	$e->setHostEntity('node', $node);
-
-	
-	  // Save the entity. Since it's attached to the right application node, this
-	  // will both create the field_collection entity and update the application
-	  // node to point to the new field_activity_log record.
-	$e->save();				
-	/*
-	$delta = 2;			
-	$node->field_dc_description[LANGUAGE_NONE][$delta]['value'] = $entity->item_id;
-	$node->field_dc_description[LANGUAGE_NONE][$delta]['revision_id'] = $entity->revision_id;
-	*/
-	
-}
 
 function _cals_get_nid_by_title($title) {
 	$type = "repository_item";

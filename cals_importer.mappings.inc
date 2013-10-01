@@ -61,6 +61,12 @@ function _cals_get_genre_from_marc(&$arr, $xml) {
 		foreach($tmp as $me) {
 			$value = (string) $me[0];
 			if(!empty($value) ) {
+				//if not set, add these two arrays
+				if(!isset($arr['repos']['field_keyword_index'])) {
+					$arr['repos']['field_keyword_index'] = array(); 
+					$arr['fc']['field_dc_subject'] = array();
+				} 
+			
 				$arr['repos_tf']['field_genre'][] = array("scheme" => "lcsh", "value" => $value);
 				$arr['repos']['field_keyword_index'][] = _cals_get_truncated_value($value, 250);
 			}
@@ -473,18 +479,15 @@ function _cals_get_value_from_tag($tags, &$arr) {
 				$aud = substr($str, 22, 1);
 				if(strlen($aud)) $arr['repos']['field_audience'][] = $aud;
 				break;
-		
-		
-							
+
 			case "043":
 			case "044":
-					
-					$arr['fc']['field_dc_coverage'][] = array(
-								"field_value" => $str, 
-								"field_dc_coverage_type" => "Spatial",
-								"field_dc_coverage_scheme" => "ISO 3166",
-								"field_marc_tag" => $tag,
-					);
+				$arr['fc']['field_dc_coverage'][] = array(
+							"field_value" => $str, 
+							"field_dc_coverage_type" => "Spatial",
+							"field_dc_coverage_scheme" => "ISO 3166",
+							"field_marc_tag" => $tag,
+				);
 
 				break;	
 			
@@ -539,20 +542,15 @@ function _cals_get_value_from_tag($tags, &$arr) {
 
 				if($code == 'a') {
 					$str = (string)$str;
-					
 					if(strpos($str, "(OCoLC)")) {
 						$arr['repos']["field_oclc_number"][] = $str;
 					}
 					else {
 						$arr['repos']["field_system_control_number"][] = $str;
-
 					}
 				} 
 				break;	
 
-
-
-		
 			//body field; description
 			case 520:
 				if($code == 'a') 	{
@@ -602,5 +600,4 @@ function _cals_get_value_from_tag($tags, &$arr) {
 								
 	}	//end switch
 
-}
-
+}// end function

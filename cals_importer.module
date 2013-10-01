@@ -8,6 +8,9 @@ ini_set('max_execution_time', '600');
 
 define("NAME_SPACE", "http://www.loc.gov/MARC21/slim");
 
+libxml_use_internal_errors(true);
+
+
 //require these files...
 require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.misc.inc");
 require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.mappings.inc");
@@ -124,6 +127,8 @@ function cals_importer_menu() {
 
 }
 
+
+
 /**
  * Implements action_info().
  */
@@ -195,7 +200,7 @@ function _cals_importer_tab_checker() {
  */
 function _cals_import_skeletal_records($node) {
 	$max = 50; //clear buffer, etc.
-
+	
 	global $user;
 	//module_load_include('inc', 'entity', 'includes/entity.controller');
 	foreach(taxonomy_get_vocabularies() as $k => $v) {
@@ -204,7 +209,19 @@ function _cals_import_skeletal_records($node) {
 	$file = drupal_realpath($node->field_marc_xml_file[LANGUAGE_NONE][0]['uri']); // FILE_FOLDER . ;
 	$xml = simplexml_load_file($file);
 	
-	$num_records = count($xml->children(NAME_SPACE));
+	if (!$xml) {
+	  $errors = libxml_get_errors();
+	  foreach ($errors as $error) {
+	  	dsm($error);
+	  }
+		drupal_goto("node/" . $node->nid);
+	  //libxml_clear_errors();
+	  return;
+	}
+
+
+	
+	
 	
 	$num = 0;
 	$parsed = array();//track some details re. the parsing
@@ -267,11 +284,20 @@ function _cals_import_skeletal_records($node) {
 
 
 /**
- * this allows us to avoid reference issues...
+ * Simple wrapper to call main parser; if preferred, can invoke batch api instead. 
  */
 
 function _cals_importer_update_repository_item($node) {
-	_cals_importer_update_repository_items($node);
+
+	_cals_parse_record_details($node);
+	drupal_set_message("{$node->title} MARC XML file parsed and saved.");
+	
+	//can also push this thru the batch api instead. To do so, comment out above and uncomment
+	//the following function call.
+	
+	//_cals_importer_update_repository_items($node);
+
+	//take user back to main node page
 	drupal_goto("node/" . $node->nid);
 
 }
@@ -294,9 +320,8 @@ function _cals_importer_update_repository_items(&$entity, $context = array()) {
 	    _cals_parse_record_details($node);
 	    drupal_set_message("{$node->title} MARC XML file parsed and saved.");
 		}
-	  else{
+	  else {
 			drupal_set_message("Invalid selection: not a repos item");
-	  
 	  }
 
   }//end main if
@@ -336,18 +361,11 @@ function _cals_importer_update_system_control_numbers(&$entity, $context = array
 
 function _cals_parse_system_control_number($node) {
 
-	$xml = '';
+
 	if(!isset($node->field_xml_string[LANGUAGE_NONE]) ) return ''; //get out of here if not xml string
-	if(isset($node->field_xml_string[LANGUAGE_NONE])) {
-		$str = '<?xml version="1.0" encoding="UTF-8"?>
-<marc:collection xmlns:marc="http://www.loc.gov/MARC21/slim" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd">' . 
-	$node->field_xml_string[LANGUAGE_NONE][0]['value'] .
-	'</marc:collection>';
-		$xml = simplexml_load_string($str, null, 0, 'marc', true);
-		$xml->registerXPathNamespace("marc", NAME_SPACE);
-	}
-	
-	
+	if(isset($node->field_xml_string[LANGUAGE_NONE])) 
+	  $xml = _cals_get_xml_string($node->field_xml_string[LANGUAGE_NONE][0]['value']);
+
 	$tmp = $xml->xpath("//marc:datafield[@tag='035']/marc:subfield[@code='a']");
 
 	//$tmp = $xml->xpath("//marc:datafield[@tag='035']");
@@ -359,7 +377,6 @@ function _cals_parse_system_control_number($node) {
 			$val = (string) $me;
 			$node->field_system_control_number[LANGUAGE_NONE][]['value'] = $val;	
 			drupal_set_message("{$node->title} System Control Numbers updated.");
-
 		}
 	
 	}
@@ -375,7 +392,7 @@ function _cals_parse_system_control_number($node) {
 
 
 /**
- * update Access Restrictions
+ * update Access Restrictions, i.e., 506 field
  */
 
 function _cals_importer_update_licensed_access(&$entity, $context = array()) {
@@ -384,14 +401,10 @@ function _cals_importer_update_licensed_access(&$entity, $context = array()) {
 		//safety check to make sure we're parsing repos items!!    
 		$content_types = array('repository_item');
 	  if (in_array($node->type, $content_types)  ) {
-
 	    _cals_parse_licensed_access($node);
-	    
-	
 	  }
 	  else{
 			drupal_set_message("Invalid selection: not a repos item");
-	  
 	  }
 
   }//end main if
@@ -399,6 +412,8 @@ function _cals_importer_update_licensed_access(&$entity, $context = array()) {
 	return "";
   
 }
+
+
 
 /**
  * load node, pull out "restrictions". Separating it this way allows us to also include
@@ -408,14 +423,9 @@ function _cals_importer_update_licensed_access(&$entity, $context = array()) {
 function _cals_parse_licensed_access($node) {
 
 	if(!isset($node->field_xml_string[LANGUAGE_NONE]) ) return ''; //get out of here if not xml string
-	
-	$str = '<?xml version="1.0" encoding="UTF-8"?>
-<marc:collection xmlns:marc="http://www.loc.gov/MARC21/slim" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd">' . 
-$node->field_xml_string[LANGUAGE_NONE][0]['value'] .
-'</marc:collection>';
-	$xml = simplexml_load_string($str, null, 0, 'marc', true);
-	$xml->registerXPathNamespace("marc", NAME_SPACE);
 
+	$xml = _cals_get_xml_string($node->field_xml_string[LANGUAGE_NONE][0]['value']); 
+	
 	$str = 'xyz';//placeholder string
 	$tmp = $xml->xpath("//marc:datafield[@tag='506']/marc:subfield[@code='a']");
 	if(!count($tmp)) {
@@ -446,23 +456,20 @@ $node->field_xml_string[LANGUAGE_NONE][0]['value'] .
  */ 
  
 function _cals_parse_record_details($node) {
-	foreach(taxonomy_get_vocabularies() as $k => $v) {
-		$arr_tax[$v->name] = $k;
-	} 
+
 
 	$xml = '';
 	if(!isset($node->field_xml_string[LANGUAGE_NONE]) ) return ''; //get out of here if not xml string
 
-	if(isset($node->field_xml_string[LANGUAGE_NONE])) {
- 		
-		$str = '<?xml version="1.0" encoding="UTF-8"?>
-<marc:collection xmlns:marc="http://www.loc.gov/MARC21/slim" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd">' . 
-	$node->field_xml_string[LANGUAGE_NONE][0]['value'] .
-	'</marc:collection>';
+	if(isset($node->field_xml_string[LANGUAGE_NONE])) 
+	  $xml = _cals_get_xml_string($node->field_xml_string[LANGUAGE_NONE][0]['value']);
+		
+
 	
-		$xml = simplexml_load_string($str, null, 0, 'marc', true);
-		$xml->registerXPathNamespace("marc", NAME_SPACE);
-	}
+	//create an array of taxonomies to be used in parsing field collections, etc.
+	foreach(taxonomy_get_vocabularies() as $k => $v) {
+		$arr_tax[$v->name] = $k;
+	} 
 
 	
 	//if(!strlen($xml)) return "no xml!";
@@ -471,7 +478,8 @@ function _cals_parse_record_details($node) {
 	//let's grab date issued
 	$date_issued =  _cals_get_date_issued($xml);
 	
-	if(!empty($date_issued)) $arr['fc']['field_date'][] = array("field_qualifier_date" => "Issued", "field_dc_date" => $date_issued);
+	if(!empty($date_issued)) 
+	  $arr['fc']['field_date'][] = array("field_qualifier_date" => "Issued", "field_dc_date" => $date_issued);
 
 	//descriptions
 	_cals_get_descriptors_from_marc($arr, $xml);
@@ -486,7 +494,7 @@ function _cals_parse_record_details($node) {
 	_cals_get_genre_from_marc($arr, $xml);
 	
 
-	//to do - replace with $record[0] ... forget the syntax, argh!!
+	//get the rest of the fields by looping thru the record
 	foreach($xml->children(NAME_SPACE) as $record) {
 		_cals_get_array_from_xml($record, $arr);
 	}
