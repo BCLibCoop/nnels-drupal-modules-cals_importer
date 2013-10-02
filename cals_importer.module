@@ -201,42 +201,39 @@ function _cals_importer_tab_checker() {
 function _cals_import_skeletal_records($node) {
 	$max = 50; //clear buffer, etc.
 	
+	
 	global $user;
 	//module_load_include('inc', 'entity', 'includes/entity.controller');
 	foreach(taxonomy_get_vocabularies() as $k => $v) {
 		$arr_tax[$v->name] = $k;
 	} 
 	$file = drupal_realpath($node->field_marc_xml_file[LANGUAGE_NONE][0]['uri']); // FILE_FOLDER . ;
+	//to track errors
+	libxml_use_internal_errors(true);
+	//load file
 	$xml = simplexml_load_file($file);
 	
-	if (!$xml) {
-	  $errors = libxml_get_errors();
-	  foreach ($errors as $error) {
-	  	dsm($error);
-	  }
-		drupal_goto("node/" . $node->nid);
-	  //libxml_clear_errors();
-	  return;
-	}
+	if($xml===FALSE) {
+		drupal_set_message("oops, could not parse the file. Might not be valid xml?", "error");
+	   foreach(libxml_get_errors() as $error) {
+        drupal_set_message($error->message, "error");
+    }
+    drupal_goto("node/" . $node->nid);
+	} 
 
-
-	
-	
-	
 	$num = 0;
 	$parsed = array();//track some details re. the parsing
 	
 	foreach($xml->children(NAME_SPACE) as $record) {
-
 		$arr = _cals_get_title_from_xml($record);
+
+
 		if(!isset($arr['repos']['title']) || strlen($arr['repos']['title']) == 0) return "Oops, there's a missing title in this record set!";
-		
 			$new_record = TRUE;
 			if(isset($node->field_parsed_nodes[LANGUAGE_NONE][$num]) ) {
 				$new_record = FALSE;
 				$n = node_load($node->field_parsed_nodes[LANGUAGE_NONE][$num]['nid']);
 				$n->changed = time();
- 
 			}
 			else {
 				$n = new StdClass();
@@ -246,10 +243,10 @@ function _cals_import_skeletal_records($node) {
 				// Get the term's ID.
 
 			}
+			//we'll add string to xml field.
 			$arr['xml_record'] = $record->saveXML();
- 
+
 			if($num < 10000) {
-				
 	 			if($new_record || $n->title != $arr['repos']['title'] || empty($n->field_xml_string)) {
 					$n->status = 0;
 					$n->title = $arr['repos']['title'];
@@ -275,7 +272,7 @@ function _cals_import_skeletal_records($node) {
 	//save one last time.
 	node_save($node);
 
-	$vars = array("items" => $parsed, "title" => "parsed list: {$num_records} records", "type" => "ol", "attributes" => array());
+	$vars = array("items" => $parsed, "title" => "parsed list: {$num} records", "type" => "ol", "attributes" => array());
 		
 	drupal_set_message(theme_item_list($vars));
 	drupal_goto("node/" . $node->nid);
