@@ -455,3 +455,63 @@ function _cals_get_subject_value($value, $ind) {
 	return array("scheme" => "undefined", "value" => (string) $value);
 
 }
+
+
+/* * *********** Helper / output FUNCTIONS **************** */
+
+function printPre() {
+
+    $num = func_num_args();
+    $args = func_get_args();
+
+    echo '<hr><blockquote>';
+
+    for ($i = 0; $i < $num; $i++) {
+        //$my = var_export($args[$i],true);
+        echo '<pre>'; print_r($args[$i]); echo'</pre>';
+    }
+
+    echo '</blockquote>';
+
+
+    //print("<hr><blockquote><pre>"); print_r($tmp);
+    print("</pre></blockquote>");
+}
+
+function printAndDie() {
+    $num = func_num_args();
+    $args = func_get_args();
+
+    echo '<div class="indented">';
+
+    for ($i = 0; $i < $num; $i++) {
+        //$my = var_export($args[$i],true);
+        echo '<pre>';  print_r($args[$i]);  echo'</pre>';
+    }
+    echo '</div>';
+    die;
+}
+function printSQL($sql) {
+	$sql = trim($sql);
+	$sql = preg_replace( '/\s+/', ' ', $sql );	
+	$sql = str_replace("{", "", $sql);
+	$sql = str_replace("}", "", $sql);
+	$sql = str_replace("\n", "", $sql);
+
+	$sql = str_replace("FROM", "\n" . "from", $sql);
+	$sql = str_replace("left join", "\n" . "left join", $sql);
+	$sql = str_replace("inner join", "\n" . "inner join", $sql);
+	$sql = str_replace("and", "\n" . "&nbsp; &nbsp; " . "and", $sql);
+
+	$sql = str_replace("where", "\n" . "where", $sql);
+	$sql = str_replace("order by", "\n" . "order by", $sql);
+	
+	return printPre(trim($sql));
+
+}
+function printInNiceFormat($tmp) {
+    //$my = var_export($tmp, true);
+    return print("<pre>");
+    print_r($tmp);
+    print("<pre>");
+} 
