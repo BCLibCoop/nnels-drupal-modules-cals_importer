@@ -21,26 +21,29 @@ function _cals_get_date_issued($xml) {
 	
 	//let's grab the date issued
 
-	$tmp = $xml->xpath("//marc:datafield[@tag='008']");
-	if(count($tmp) == 1) {
+	$tmp = $xml->xpath("//marc:controlfield[@tag='008']");
+	if(count($tmp) >= 1) {
 		$str = (string) $tmp[0];
-		return _cals_get_iso_year($str);
+		$str = substr($str, 7, 4);
+		if(is_numeric($str)) return _cals_get_iso_year($str);
 	}
 
 	$tmp = $xml->xpath("//marc:datafield[@tag='264']/marc:subfield[@code='c']");
 	if(count($tmp) >= 1) {
 		$str = (string) $tmp[0];
+
 		return _cals_get_iso_year($str);
 	}
 
 	$tmp = $xml->xpath("//marc:datafield[@tag='260']/marc:subfield[@code='c']");
-	if(count($tmp) == 1) {
+	if(count($tmp) >= 1) {
 		$str = (string) $tmp[0];
+
 		return _cals_get_iso_year($str);
 	}
  
  
-	return $date;
+	return '';
 
 
 }
