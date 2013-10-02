@@ -389,7 +389,7 @@ function _cals_get_array_from_xml($record, &$arr) {
 		$tags['str'] = (string) $controlfield;
 		
 		
-		if($tag == '008') printPre($tags);
+		if($tag == '008')  
 		_cals_get_value_from_tag($tags, $arr);
 		//dpm($me);
 
@@ -465,13 +465,7 @@ function _cals_get_value_from_tag($tags, &$arr) {
  					
 			case "008":
 				//$str = (string) $datafield;
-				
-				/*
-				$d = _cals_get_iso_date(substr($str, 7, 4));
-				$arr['fc']['field_date'][$tag] = array("field_qualifier_date" => "Issued", "field_dc_date" => _cals_get_iso_date($d) );
-				
-				printAndDie($arr);
-				*/
+ 
 				$arr['fc']['field_dc_coverage'][] = array(
 							"field_value" => substr($str, 15, 3), 
 							"field_dc_coverage_type" => "Spatial",

@@ -204,7 +204,7 @@ function _cals_importer_tab_checker() {
 	//todo - change to permission
 	if( user_access('parse s3 paths') && arg(0) == 'node') {
 		$n = node_load(arg(1));
-		RETURN ($n->type == 'record_set' && (count($n->field_parsed_nodes) == 0) ) ? TRUE : FALSE;
+		RETURN ($n->type == 'record_set') ? TRUE : FALSE;
 	}
 	return FALSE;
 }
@@ -304,13 +304,13 @@ function _cals_import_skeletal_records($node) {
 
 function _cals_importer_update_repository_item($node) {
 
-	_cals_parse_record_details($node);
-	drupal_set_message("{$node->title} MARC XML file parsed and saved.");
+	//_cals_parse_record_details($node);
+	//drupal_set_message("{$node->title} MARC XML file parsed and saved.");
 	
 	//can also push this thru the batch api instead. To do so, comment out above and uncomment
 	//the following function call.
 	
-	//_cals_importer_update_repository_items($node);
+	_cals_importer_update_repository_items($node);
 
 	//take user back to main node page
 	drupal_goto("node/" . $node->nid);
@@ -485,6 +485,8 @@ function _cals_parse_record_details($node) {
 	//if(!strlen($xml)) return "no xml!";
 	$arr = array();
 	
+	//set file access to "Open Access"
+	$arr['repos']['field_access_restrictions'][0] = 0;
 	//let's grab date issued
 	$date_issued =  _cals_get_date_issued($xml);
 	
@@ -507,8 +509,6 @@ function _cals_parse_record_details($node) {
 	foreach($xml->children(NAME_SPACE) as $record) {
 		_cals_get_array_from_xml($record, $arr);
 	}
-	//set file access to "Open Access"
-	$arr['repos']['field_access_restrictions'][0] = 0;
 	
   $node->title = _cals_get_truncated_value($arr['repos']['title'], 250);				
 

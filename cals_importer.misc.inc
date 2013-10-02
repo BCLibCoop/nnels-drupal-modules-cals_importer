@@ -33,7 +33,7 @@ function _cals_entity_wrapper($arr) {
 
 }
 
-function _cals_get_date_values($arr) {
+function _cals_get_date_valuesxxxx($arr) {
 	$values = array();
 	foreach(array("008", "264", "260") as $key) {
 		if(array_key_exists($key, $arr)) {
@@ -402,18 +402,11 @@ function _cals_get_iso_date($value) {
 	
 	$value = str_replace(array(".", "c"), "", $value);
 	
-	printPre($value);
-	//if the separator is a slash (/), then the American m/d/y is assumed. 
+ 	//if the separator is a slash (/), then the American m/d/y is assumed. 
 	$value = strtotime($value);
-	printPre($value);
-	
+ 	
 	$value = date("Y-m-d", $value);
-	//$value = strtotime($value);
-	
-	printAndDie($value);
-	//$value = str_replace("c", "", $value);
-	
-	
+ 
 	return $value;
 
 }
