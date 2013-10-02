@@ -491,6 +491,10 @@ function _cals_get_value_from_tag($tags, &$arr) {
 
 				break;	
 			
+			case 264:
+				if($code == 'a' || $code == 'b' ) $arr['repos']['field_publisher'][] = $str;
+				break;	
+
 			case 651:
 					if($code == 'a') {
 						$arr['fc']['field_dc_coverage'][] = array(

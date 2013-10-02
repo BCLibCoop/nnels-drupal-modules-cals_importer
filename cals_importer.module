@@ -6,10 +6,8 @@
 ini_set('memory_limit', '512M');
 ini_set('max_execution_time', '600'); 
 
+//the MARC namespace
 define("NAME_SPACE", "http://www.loc.gov/MARC21/slim");
-
-libxml_use_internal_errors(true);
-
 
 //require these files...
 require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.misc.inc");
@@ -68,11 +66,12 @@ function cals_importer_menu() {
 	$items['node/%node/parse-marcxml-new'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_import_skeletal_records',
-    'title' => t('Create new Repo Items (stubs)'),
+    'title' => t('Generate new stub repo entries'),
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
 		'page arguments' => array(1),
 		'weight' => 100,
+		'access arguments' => array('parse s3 paths'),
 	
 	);
 	$items['node/%node/parse-record'] = array(
@@ -125,6 +124,25 @@ function cals_importer_menu() {
 	
  	return $items; 
 
+}
+/**
+ * Implements hook_permission().
+ */
+function cals_importer_permission() {
+  return array(
+    'parse s3 paths' => array(
+      'title' => t('Parse S3 paths'),
+      'description' => t('Parse S3 Paths.'),
+    ),
+    'parse marc records' => array(
+      'title' => t('Parse MARC records'),
+      'description' => t(''),
+    ),
+    'parse 506' => array(
+      'title' => t('Parse / Update 506 entries'),
+      'description' => t(''),
+    ),
+  );
 }
 
 
@@ -184,9 +202,9 @@ function _cals_importer_tab_checker_parse_record() {
 function _cals_importer_tab_checker() {
 	global $user;
 	//todo - change to permission
-	if( ($user->uid == 1 || $user->uid == 10 ) && arg(0) == 'node') {
+	if( user_access('parse s3 paths') && arg(0) == 'node') {
 		$n = node_load(arg(1));
-		RETURN ($n->type == 'record_set') ? TRUE : FALSE;
+		RETURN ($n->type == 'record_set' && (count($n->field_parsed_nodes) == 0) ) ? TRUE : FALSE;
 	}
 	return FALSE;
 }
