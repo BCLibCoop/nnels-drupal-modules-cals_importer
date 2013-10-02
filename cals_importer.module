@@ -451,7 +451,6 @@ function _cals_parse_licensed_access($node) {
 	$tmp = strpos(strtolower($str),"restricted");
 	$node->field_access_restrictions[LANGUAGE_NONE][0]['value'] = (is_numeric($tmp)) ? 1 : 0;	
 		
-	//printAndDie($node->field_access_restrictions);
 	node_save($node);
 	drupal_set_message("{$node->title} Access Restriction updated.");
 	return '';	
@@ -491,7 +490,6 @@ function _cals_parse_record_details($node) {
 	
 	if(!empty($date_issued)) 
 	  $arr['fc']['field_date'][] = array("field_qualifier_date" => "Issued", "field_dc_date" => $date_issued);
-	printAndDie($arr);
 	//descriptions
 	_cals_get_descriptors_from_marc($arr, $xml);
 
