@@ -256,8 +256,13 @@ function _cals_get_isbn_sysnums_from_marc(&$arr, $xml) {
 		$val = (string) trim($me[0]);
 		//replace ";" to ","	
 		$val = str_replace(";", ",", $val);
+
+		if(strpos($val, "[")) $val = trim(substr($val, 0, strpos($val, "[") ));
+		if(strpos($val, "(")) $val = trim(substr($val, 0, strpos($val, "(") ));
+
 		//in case its multi valued
 		$tmp2 = explode(",", $val);
+
 		foreach($tmp2 as $val2) {
 			$arr['repos']['field_isbn'][] = trim($val2);
 		}
