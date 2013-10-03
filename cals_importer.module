@@ -95,6 +95,16 @@ function cals_importer_menu() {
 	
 	);	
 	
+	$items['admin/content/cals/update-isbn-length'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_increase_field_size',
+    'title' => t('Update ISBN Field Size (admin only)'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'cals_importer.misc.inc',
+		'weight' => 100,
+	
+	);	
+		
 	
 	//to deprecate next round of development?
 	

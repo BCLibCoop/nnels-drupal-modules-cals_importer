@@ -452,6 +452,35 @@ function _cals_get_subject_value($value, $ind) {
 
 /* * *********** Helper / output FUNCTIONS **************** */
 
+
+//http://www.automation-excellence.com/blog/extending-drupal-7-text-field-character-limit
+//e.g., field_isbn, 50
+
+function _cals_increase_field_size($fieldname = "field_isbn", $size = "30") {
+
+	//printAndDie($fieldname, $size);
+
+	$field_to_update = $fieldname; //'field_text_field_to_extend'; //Replace with field slug
+	
+	$new_chars = $size; //'500';  //Replace with extended character limit
+	 
+	$result1 = db_query('ALTER TABLE {field_data_'.$field_to_update.'} CHANGE '.$field_to_update.'_value '.$field_to_update.'_value VARCHAR('.$new_chars.')');
+	$result2 = db_query('ALTER TABLE {field_revision_'.$field_to_update.'} CHANGE '.$field_to_update.'_value '.$field_to_update.'_value VARCHAR('.$new_chars.')');
+	 
+	$result3 = db_query('SELECT CAST(data AS CHAR(10000) CHARACTER SET utf8) data FROM {field_config} WHERE field_name = \''.$field_to_update.'\'');
+	foreach ($result3 as $result) {
+		$data = $result->data;
+	}
+	$data_array = unserialize($data);
+	$data_array['settings']['max_length'] = $new_chars;
+	$new_data = serialize($data_array);
+	 
+	$result4 = db_query('UPDATE {field_config} SET data = :data WHERE field_name = :field', array(':data' => $new_data, ':field' => $field_to_update));
+
+	return $fieldname . " fieldsize increased to " . $size;
+
+}
+
 function printPre() {
 
     $num = func_num_args();
