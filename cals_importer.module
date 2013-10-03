@@ -18,6 +18,7 @@ module_load_include('inc', 'entity', 'includes/entity.controller');
 /**
  * Implements hook_menu().
  */
+  
 function cals_importer_menu() {
 	$items = array();
 	 /* 
@@ -48,6 +49,7 @@ function cals_importer_menu() {
 /**
  * Parses S3 sets, can be invoked directly - e.g:
  * http://me/cals_staging/admin/content/cals/batch-update-s3-paths/5429
+ * 
  *
  * See: content/cals/s3-record-sets
  * 
@@ -811,9 +813,9 @@ function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
   	for($i = 0; $i < $limit; $i++){
           
       $data = $context['sandbox']['arr'][$i];
-		  $bibid = $data[0];
-			$sysnum = $data[1];
-			$path = $data[2];
+		  //$bibid = $data[0];
+			$sysnum = $data[0];
+			$path = $data[1];
 
 			$nid2 = _cals_get_node_by_sysnum($sysnum);
 			
@@ -834,7 +836,7 @@ function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
 				foreach($paths as $path) {
 					$node->field_s3_path[LANGUAGE_NONE][]['value'] = $path;
 				}
-				$node->field_bibid[LANGUAGE_NONE][0]['value'] = $bibid;
+				//$node->field_bibid[LANGUAGE_NONE][0]['value'] = $bibid;
 				node_save($node);
 				$context['results'][] = check_plain($node->title); // Track nodes updated
       	$context['message'] = "updated node " . $node->nid;
@@ -887,7 +889,9 @@ function _cals_get_array_csv($nid) {
 	$row = 1; 	
 	$arr = array();
 	if (($handle = fopen($file, "r")) !== FALSE) {
-	  while (($data = fgetcsv($handle, 1000, "\t")) !== FALSE) {
+	
+	  //while (($data = fgetcsv($handle, 1000, "\t")) !== FALSE) {
+		while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {	
 			if($row > 1 ) {
 				$arr[] = $data;
 			}
