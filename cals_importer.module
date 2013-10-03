@@ -504,6 +504,9 @@ function _cals_parse_record_details($node) {
 	  $arr['fc']['field_date'][] = array("field_qualifier_date" => "Issued", "field_dc_date" => $date_issued);
 	//descriptions
 	_cals_get_descriptors_from_marc($arr, $xml);
+	
+	//isbns
+	_cals_get_isbn_sysnums_from_marc($arr, $xml);
 
 		//grabs some of the generic fields, e.g., titles, uri, publisher number, etc.
 	_cals_get_commom_fields_from_marc($arr, $xml);
@@ -525,6 +528,8 @@ function _cals_parse_record_details($node) {
 	//delete the field collections so we have a fairly stripped down node if reparsing
 	$node = _cals_delete_existing_field_collection_items($node, array_keys($arr['fc']));
 	$node->status = 1;
+	
+	
 	foreach($arr['repos'] as $k => $v) {
 
 		if(is_array($v)) {

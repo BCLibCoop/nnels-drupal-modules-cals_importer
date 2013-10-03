@@ -246,6 +246,25 @@ function _cals_get_description_type($tag) {
 
 }
 
+function _cals_get_isbn_sysnums_from_marc(&$arr, $xml) {
+
+
+//"field_isbn" => array("key" => "repos", "datafield" => 534, "subfield" => "z"),
+	$tmp = $xml->xpath("//marc:datafield[@tag='534']/marc:subfield[@code='z']");
+	foreach($tmp as $me) {
+	
+		$val = (string) trim($me[0]);
+		//replace ";" to ","	
+		$val = str_replace(";", ",", $val);
+		//in case its multi valued
+		$tmp2 = explode(",", $val);
+		foreach($tmp2 as $val2) {
+			$arr['repos']['field_isbn'][] = trim($val2);
+		}
+	}
+	
+}
+
 function _cals_get_commom_fields_from_marc(&$arr, $xml) {
 
 
@@ -266,21 +285,14 @@ function _cals_get_commom_fields_from_marc(&$arr, $xml) {
 			*/
 		"field_title_alternative" => array("key" => "repos", "datafield" => 240, "subfield" => "a"),
 		"field_title_alternative" => array("key" => "repos", "datafield" => 246, "subfield" => "a"),
-				
-
 
 		"field_uri" => array("key" => "repos", "datafield" => 856, "subfield" => "u"),
-		"field_isbn" => array("key" => "repos", "datafield" => 534, "subfield" => "z"),
 
-
- 
 		//identifiers
 		
 		"publisher_number" => array("key" => "identifier", "datafield" => "028", "subfield" => "a"),
 		"producer" => array("key" => "identifier", "datafield" => "028", "subfield" => "a"),
 
-
-	
 			/**
 			* RELATIONS: 
 			*   800 $a	= IsPartOf
@@ -355,9 +367,6 @@ function _cals_get_commom_fields_from_marc(&$arr, $xml) {
 
 
 /**
- *
- * its a big switch block: could probably replace with a $map array and run
- * more efficiently, but some tags require additional logic
  *
  * @param $record
  *   the tag derived from the xml file
@@ -451,10 +460,7 @@ function _cals_get_value_from_tag($tags, &$arr) {
 			case 245:
 				if($code == 'a') $arr['repos']['title'] =  $str;
 				if($code == 'b') $arr['repos']['title'] .=  " " .  $str;
-	 
 
- 
-	
 			/**
 			* COVERAGE.SPATIAL: 
 			*   651 #0 $a: Geo Name indicator 0 = lcsh; 6 = Répertoire de vedettes-matièr
@@ -490,6 +496,11 @@ function _cals_get_value_from_tag($tags, &$arr) {
 			
 			case 264:
 				if($code == 'a' || $code == 'b' ) $arr['repos']['field_publisher'][] = $str;
+				/*
+				if($code == 'a') $arr['repos']['field_publisher'] =  $str;
+				if($code == 'b') $arr['repos']['field_publisher'] .=  " " .  $str;
+				*/
+				
 				break;	
 
 			case 651:
