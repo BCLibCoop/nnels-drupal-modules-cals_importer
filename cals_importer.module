@@ -769,7 +769,16 @@ function _cals_batch_update_s3_paths($nid) {
   
   //get array from csv file. Pass this into the initial batch
 	$arr = _cals_get_array_csv($nid);
+	/*
+	foreach($arr as $v) {
+		$sysnum = $v[0];
+		$nid = _cals_get_node_by_sysnum($sysnum);
+		printPre($nid);
 	
+	}
+	
+	printAndDie($arr);
+	*/
 	$batch = array(
 		'title' => t('Update S3 Paths'),
 		//'operations' => array('_cals_run_batch_update_s3_path', array($nid, $arr) ),
@@ -798,29 +807,35 @@ function _cals_batch_update_s3_paths($nid) {
  */
  
 function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
-  $limit = 10;
+  $limit = 10; //10;
   // Get Count of products
   if (empty($context['sandbox']['progress']) ) {
 		$context['sandbox']['progress'] = 0;
     $context['sandbox']['max'] = count($arr); //count($pids);
     $context['sandbox']['arr'] = $arr;
+    $context['sandbox']['current'] = 0;
     //watchdog('import', 'update s3 paths');
   	//dpm($arr);
   }
- 	
-  if($context['sandbox']['progress'] < $context['sandbox']['max']){
- 
-  	for($i = 0; $i < $limit; $i++){
-          
-      $data = $context['sandbox']['arr'][$i];
+ 	$i = $context['sandbox']['progress'];
+ 	$total = $i + 10;
+ 	if($total > $context['sandbox']['max']) $total = $context['sandbox']['max'];
+	for($i = $context['sandbox']['progress']; $i < $total; $i++){
+	//for($i = 0; $i < $limit; $i++){
+	//if( ($context['sandbox']['progress'] < $context['sandbox']['max']) ){
+		
+		  // && ($context['sandbox']['progress'] <= $context['sandbox']['max'])
+			$current_row = $context['sandbox']['progress'];
+			$data = $context['sandbox']['arr'][$current_row];
+	    
 		  //$bibid = $data[0];
 			$sysnum = $data[0];
 			$path = $data[1];
-
+	
 			$nid2 = _cals_get_node_by_sysnum($sysnum);
 			
 			//drupal_set_message("we get here: nid = $nid | nid2 = $nid2 | $bidid = {$data[0]} | {$data[1]} | {$data[2]}");
-
+	
 			
 			if($nid2 > 0) {
 				$paths = array();
@@ -838,18 +853,20 @@ function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
 				}
 				//$node->field_bibid[LANGUAGE_NONE][0]['value'] = $bibid;
 				node_save($node);
+				drupal_set_message("{$current_row}. updated node " . l($nid2, "node/" . $nid2) . ": " . $node->title);
 				$context['results'][] = check_plain($node->title); // Track nodes updated
-      	$context['message'] = "updated node " . $node->nid;
+	    	$context['message'] = "updated node " . $node->nid;
 			}
 			else {
-				drupal_set_message("could not find {$sysnum}");
+				drupal_set_message("{$current_row}. could not find {$sysnum}");
 			}
-
-      $context['sandbox']['progress']++; // Used to keep track of rows processed
-      array_shift($context['sandbox']['arr']);
- 		}
-  }
-
+	
+	    $context['sandbox']['progress']++; // Used to keep track of rows processed
+	    //array_shift($context['sandbox']['arr']);
+		}
+		
+		
+ 
 
   if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
     $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
