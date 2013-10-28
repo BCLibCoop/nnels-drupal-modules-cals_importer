@@ -12,6 +12,7 @@ define("NAME_SPACE", "http://www.loc.gov/MARC21/slim");
 //require these files...
 require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.misc.inc");
 require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.mappings.inc");
+require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.marcxml.inc");
 
 module_load_include('inc', 'entity', 'includes/entity.controller');
 
@@ -53,9 +54,9 @@ function cals_importer_menu() {
  *
  * See: content/cals/s3-record-sets
  * 
- */		
-	
-	$items['admin/content/cals/batch-update-s3-paths/%'] = array(
+ */
+
+	$items['admin/content/cals/batch-update-s3-paths'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_batch_update_s3_paths',
     'title' => t('Update S3 Paths'),
@@ -65,17 +66,19 @@ function cals_importer_menu() {
 		'weight' => 100,
 	
 	);
+
 	$items['node/%node/parse-marcxml-new'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_import_skeletal_records',
-    'title' => t('Generate new stub repo entries'),
-    'type' => MENU_LOCAL_TASK,
-    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'title' => t("Generate / Update Stub Entries"),
+    'type' => MENU_CALLBACK,
+    //'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
 		'page arguments' => array(1),
 		'weight' => 100,
 		'access arguments' => array('parse s3 paths'),
 	
 	);
+
 	$items['node/%node/parse-record'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_importer_update_repository_item',
@@ -84,8 +87,11 @@ function cals_importer_menu() {
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
 		'page arguments' => array(1),
 		'weight' => 100,
+		'file' => "cals_importer.marcxml.inc",
 	
 	);
+
+	/*
 	$items['node/%node/parse-access-rights'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_parse_licensed_access',
@@ -96,7 +102,12 @@ function cals_importer_menu() {
 		'weight' => 100,
 	
 	);	
+
+
+	 */		
 	
+	/*
+
 	$items['admin/content/cals/update-isbn-length'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_increase_field_size',
@@ -107,6 +118,7 @@ function cals_importer_menu() {
 	
 	);	
 		
+	 */		
 	
 	//to deprecate next round of development?
 	
@@ -146,10 +158,15 @@ function cals_importer_permission() {
       'title' => t('Parse S3 paths'),
       'description' => t('Parse S3 Paths.'),
     ),
+
     'parse marc records' => array(
       'title' => t('Parse MARC records'),
-      'description' => t(''),
     ),
+    
+    'generate repo records' => array(
+      'title' => t('Generate New Repository Items'),
+    ),
+    
     'parse 506' => array(
       'title' => t('Parse / Update 506 entries'),
       'description' => t(''),
@@ -228,15 +245,49 @@ function _cals_importer_tab_checker() {
  * @param $node
  *   the node passed to the parser
  */
+
+function cals_importer_node_view($node, $view_mode, $langcode) {
+  switch ($node->type) {
+    case "record_set":
+     
+     	if(user_access("generate repo records") || user_access("parse marc records") ) {
+
+     		$label = t("Generate new stub Repository Records");
+     		if(count($node->field_parsed_nodes[LANGUAGE_NONE])) {
+	     		$label = t("Update existing Repository Records");
+     		}
+	      $node->content['additional-text'] = array(
+	   			'#markup' => l($label, "node/{$node->nid}/parse-marcxml-new"), '#weight' => 10, 
+				);
+     	}
+			break;
+
+
+  }
+}
+
+/**
+ * import / create skeletal marc records, i.e., just the title
+ *
+ * @param $node
+ *   the node passed to the parser
+ */
 function _cals_import_skeletal_records($node) {
 	$max = 50; //clear buffer, etc.
-	
 	
 	global $user;
 	//module_load_include('inc', 'entity', 'includes/entity.controller');
 	foreach(taxonomy_get_vocabularies() as $k => $v) {
 		$arr_tax[$v->name] = $k;
 	} 
+	
+	$file_s3 = drupal_realpath($node->field_file_csv[LANGUAGE_NONE][0]['uri']); 
+	$arr_s3 = array();
+	if(!empty($file_s3)) {
+	 $arr_s3 = _cals_get_array_csv_by_file($file_s3);
+	
+	}
+	
 	$file = drupal_realpath($node->field_marc_xml_file[LANGUAGE_NONE][0]['uri']); // FILE_FOLDER . ;
 	//to track errors
 	libxml_use_internal_errors(true);
@@ -256,47 +307,66 @@ function _cals_import_skeletal_records($node) {
 	
 	foreach($xml->children(NAME_SPACE) as $record) {
 		$arr = _cals_get_title_from_xml($record);
-
-
+		
+		$result = '';
+		
 		if(!isset($arr['repos']['title']) || strlen($arr['repos']['title']) == 0) return "Oops, there's a missing title in this record set!";
 			$new_record = TRUE;
 			if(isset($node->field_parsed_nodes[LANGUAGE_NONE][$num]) ) {
 				$new_record = FALSE;
 				$n = node_load($node->field_parsed_nodes[LANGUAGE_NONE][$num]['nid']);
 				$n->changed = time();
+				//printPre("EXISTING RECORD");
+				$result .= "Skeletal record updated. ";
+								
 			}
 			else {
 				$n = new StdClass();
 				$n->type = 'repository_item';
 				$n->language = LANGUAGE_NONE;
 				node_object_prepare($n);
+				$result .= "Skeletal record added. ";
 				// Get the term's ID.
 
 			}
+
 			//we'll add string to xml field.
 			$arr['xml_record'] = $record->saveXML();
 
 			if($num < 10000) {
-	 			if($new_record || $n->title != $arr['repos']['title'] || empty($n->field_xml_string)) {
+	 			//if($new_record || $n->title != $arr['repos']['title'] || empty($n->field_xml_string)) {
 					$n->status = 0;
 					$n->title = $arr['repos']['title'];
 					
 					$n->field_xml_string[LANGUAGE_NONE][]['value'] = $arr['xml_record'];
 	
+					if(count($arr_s3)) {
+						if(isset($arr['repos']['field_system_control_number'][0])) {
+							$tmp = $arr['repos']['field_system_control_number'][0];
+							//printAndDie($tmp, $arr_s3);
+							if (array_key_exists($tmp, $arr_s3)) {
+								$n->field_s3_path[LANGUAGE_NONE] = array();
+								$n->field_s3_path[LANGUAGE_NONE][0]['value'] = $arr_s3[$tmp];
+								$result .= "added s3 path.";
+							}
+							
+						}
+					
+					}
+	
 	 				node_save($n);
-					$label = "Skeletal record for Node ID added: ";
-					$label .= $n->nid . ": ";
-					$parsed[] = $label . l("edit", "node/" . $n->nid . "/edit" ) . " | " . 
-						l("view", "node/" . $n->nid) . " - {$n->title}";	
+
+					$result  = l("edit", "node/" . $n->nid . "/edit" ) . " | " . l("view", "node/" . $n->nid) . " - {$n->title}" 
+						. " " . $result;	
 	 				
-	 			}	
+	 			//}	
 				$node->field_parsed_nodes[LANGUAGE_NONE][$num]['nid'] = $n->nid;
 				
  			}	
 			//save every 50 items
 			if (($num % $max) == 0) node_save($node);
 		
-		
+		$parsed[] = $result;
 		$num++;
 	}
 	//save one last time.
@@ -309,53 +379,6 @@ function _cals_import_skeletal_records($node) {
 
 }  
 
-
-/**
- * Simple wrapper to call main parser; if preferred, can invoke batch api instead. 
- */
-
-function _cals_importer_update_repository_item($node) {
-
-	//_cals_parse_record_details($node);
-	//drupal_set_message("{$node->title} MARC XML file parsed and saved.");
-	
-	//can also push this thru the batch api instead. To do so, comment out above and uncomment
-	//the following function call.
-	
-	_cals_importer_update_repository_items($node);
-
-	//take user back to main node page
-	drupal_goto("node/" . $node->nid);
-
-}
-
-
-/**
- * invoked via batch api view
- *
- * @param $entity
- *   the node passed to the parser
- *
- */  
- 
-function _cals_importer_update_repository_items(&$entity, $context = array()) {
-	if (isset($entity->nid)) {
-    $node = node_load($entity->nid);
-		//safety check to make sure we're parsing repos items!!    
-		$content_types = array('repository_item');
-	  if (in_array($node->type, $content_types)  ) {
-	    _cals_parse_record_details($node);
-	    drupal_set_message("{$node->title} MARC XML file parsed and saved.");
-		}
-	  else {
-			drupal_set_message("Invalid selection: not a repos item");
-	  }
-
-  }//end main if
- 
-	return "";
-  
-}
 
 /**
  * update / add system control numbers
@@ -469,105 +492,6 @@ function _cals_parse_licensed_access($node) {
 
 }
 
-
-/**
- * The main MARC parser
- *
- * @param $node
- *   the node passed to the parser
- *
- * @return
- *   an array. 
- *
- */ 
- 
-function _cals_parse_record_details($node) {
-
-	$xml = '';
-	if(!isset($node->field_xml_string[LANGUAGE_NONE]) ) return ''; //get out of here if not xml string
-
-	if(isset($node->field_xml_string[LANGUAGE_NONE])) 
-	  $xml = _cals_get_xml_string($node->field_xml_string[LANGUAGE_NONE][0]['value']);
-
-	//create an array of taxonomies to be used in parsing field collections, etc.
-	foreach(taxonomy_get_vocabularies() as $k => $v) {
-		$arr_tax[$v->name] = $k;
-	} 
-
-	//if(!strlen($xml)) return "no xml!";
-	$arr = array();
-	
-	//set file access to "Open Access"
-	$arr['repos']['field_access_restrictions'][0] = 0;
-	//let's grab date issued
-	$date_issued =  _cals_get_date_issued($xml);
-	
-	if(!empty($date_issued)) 
-	  $arr['fc']['field_date'][] = array("field_qualifier_date" => "Issued", "field_dc_date" => $date_issued);
-	//descriptions
-	_cals_get_descriptors_from_marc($arr, $xml);
-	
-	//isbns
-	_cals_get_isbn_sysnums_from_marc($arr, $xml);
-
-		//grabs some of the generic fields, e.g., titles, uri, publisher number, etc.
-	_cals_get_commom_fields_from_marc($arr, $xml);
-
-	//subjects
-	_cals_get_subject_from_marc($arr, $xml);
-	
-	//genre
-	_cals_get_genre_from_marc($arr, $xml);
-	
-
-	//get the rest of the fields by looping thru the record
-	foreach($xml->children(NAME_SPACE) as $record) {
-		_cals_get_array_from_xml($record, $arr);
-	}
-	
-  $node->title = _cals_get_truncated_value($arr['repos']['title'], 250);				
-
-	//delete the field collections so we have a fairly stripped down node if reparsing
-	$node = _cals_delete_existing_field_collection_items($node, array_keys($arr['fc']));
-	$node->status = 1;
-	
-	
-	foreach($arr['repos'] as $k => $v) {
-
-		if(is_array($v)) {
-			//clean up existing values so we don't append
-			$node->{$k}[LANGUAGE_NONE] = array();
-			
-			//populate fields
-			foreach($v as $k2 => $v2) {
-				if(strlen($v2)) $node->{$k}[LANGUAGE_NONE][]['value'] = $v2;
-			}
-		}
-		else {
-			($k == "title") ? $node->{$k} = $v : $node->{$k}[LANGUAGE_NONE][]['value'] = $v; 
-		}
-
-	} 
-
-	//genre
-	if(array_key_exists("repos_tf", $arr) ) {
-		foreach($arr['repos_tf']['field_genre'] as $k => $v) {
-			$vid = $arr_tax['Genre'];
-			$name = $v['value'];
-			$tid = _cals_get_tid_by_name($vid, $name);
-			$node->field_genre[LANGUAGE_NONE][$k]['tid'] = $tid;
-		}
-	
-	}
-	//save the populated node
-	node_save($node);
-	
-	//populate the field collections
-	_cals_add_entity_values2($node, $arr_tax, $arr['fc']);
-	
-}
-
-
 function _cals_get_subjects($xml) {
 	
 	//let's grab the date issued!
@@ -609,24 +533,39 @@ function _cals_get_title_from_xml($record) {
 		$ind1 = (string) $datafield->attributes()->ind1;
 		$ind2 = (string) $datafield->attributes()->ind2;
  		
- 		switch($tag) {
  		
- 			case 245:
-				foreach($datafield as $subfield) {
-					$code	= (string) $subfield->attributes()->code;
-					$str = trim((string) $subfield);
-					$str = trim($str);
+ 		foreach($datafield as $subfield) {
+			$code	= (string) $subfield->attributes()->code;
+			$str = trim((string) $subfield);
+			$str = trim($str);
+
+ 		
+	 		switch($tag) {
+	 		
+	 			case 245:
 					if($code == 'a') $arr['repos']['title'] =  $str;
 					if($code == 'b') $arr['repos']['title'] .=  " " .  $str;
+					$arr['repos']['title'] = _cals_get_truncated_value($arr['repos']['title'], 250);
 					
-					//$arr['repos']['title'] .=  " " .  $str;
-				}
-				$arr['repos']['title'] = _cals_get_truncated_value($arr['repos']['title'], 250);
-				
-				break;
- 			
- 			
- 		}
+					break;
+					
+				case "035":
+					if($code == 'a') {
+	
+						if(strpos($str, "(OCoLC)")) {
+							$arr['repos']["field_oclc_number"][] = $str;
+						}
+						else {
+							$arr['repos']["field_system_control_number"][] = $str;
+							
+						}
+					} 
+					break;	
+	
+	 			
+	 			
+	 		}
+		}
 	}
 	return $arr;
 	
@@ -766,9 +705,27 @@ function _cals_get_node_by_sysnum($num) {
  
 function _cals_batch_update_s3_paths($nid) {
   global $user;
+  $null_path = "admin/content/cals/s3-record-sets";
+  $msg_file_str = t("Can't parse the S3 file. Please check its structure.");
+  if(empty($nid)) drupal_goto($null_path); //printPre("HEY, empty!");
   
   //get array from csv file. Pass this into the initial batch
 	$arr = _cals_get_array_csv($nid);
+	if(empty($arr)) {
+	  drupal_set_message($msg_file_str);
+	  drupal_goto($null_path);
+	}
+	else {
+		//check first row to ensure well structured.
+		$tmp = strpos($arr[0][1], "s3://");
+		if($tmp === FALSE) {
+		  drupal_set_message($msg_file_str);
+		  drupal_goto($null_path);
+		}
+	}
+	
+	//printAndDie($arr);
+	
 	/*
 	foreach($arr as $v) {
 		$sysnum = $v[0];
@@ -777,7 +734,6 @@ function _cals_batch_update_s3_paths($nid) {
 	
 	}
 	
-	printAndDie($arr);
 	*/
 	$batch = array(
 		'title' => t('Update S3 Paths'),
@@ -899,22 +855,36 @@ function _cals_batch_update_s3_path_finished($success, $results, $operations) {
  * @return
  *   an array.
  */
-
 function _cals_get_array_csv($nid) {
 	$node = node_load($nid);
-	$file = drupal_realpath($node->field_file_csv[LANGUAGE_NONE][0]['uri']);
+	return _cals_get_array_csv_by_file(drupal_realpath($node->field_file_csv[LANGUAGE_NONE][0]['uri']));
+}
+
+/**
+ * Reads CSV file; returns array
+ *
+ * @param $file
+ *   The full filepath
+ *
+ * @return
+ *   an array.
+ */
+
+function _cals_get_array_csv_by_file($file) {
+
 	$row = 1; 	
 	$arr = array();
 	if (($handle = fopen($file, "r")) !== FALSE) {
-	
 	  //while (($data = fgetcsv($handle, 1000, "\t")) !== FALSE) {
 		while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {	
 			if($row > 1 ) {
-				$arr[] = $data;
+				$arr[$data[0]] = $data[1];
 			}
 			$row++;
 	  }
 	  fclose($handle);
 	}
+	
+	
 	return $arr;
 }
