@@ -254,7 +254,7 @@ function cals_importer_node_view($node, $view_mode, $langcode) {
 
      		$label = t("Generate new stub Repository Records");
      		if(count($node->field_parsed_nodes[LANGUAGE_NONE])) {
-	     		$label = t("Update existing Repository Records");
+	     		$label = t("Update existing Repository Records (titles + S3 paths)");
      		}
 	      $node->content['additional-text'] = array(
 	   			'#markup' => l($label, "node/{$node->nid}/parse-marcxml-new"), '#weight' => 10, 
@@ -857,7 +857,23 @@ function _cals_batch_update_s3_path_finished($success, $results, $operations) {
  */
 function _cals_get_array_csv($nid) {
 	$node = node_load($nid);
-	return _cals_get_array_csv_by_file(drupal_realpath($node->field_file_csv[LANGUAGE_NONE][0]['uri']));
+	$file = drupal_realpath($node->field_file_csv[LANGUAGE_NONE][0]['uri']);
+	
+	$row = 1; 	
+	$arr = array();
+	if (($handle = fopen($file, "r")) !== FALSE) {
+	  //while (($data = fgetcsv($handle, 1000, "\t")) !== FALSE) {
+		while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {	
+			if($row > 1 ) {
+				$arr[] = $data;
+			}
+			$row++;
+	  }
+	  fclose($handle);
+	}
+	
+	
+	
 }
 
 /**
