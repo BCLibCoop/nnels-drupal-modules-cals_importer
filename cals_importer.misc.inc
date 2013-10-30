@@ -1,5 +1,25 @@
 <?php
-
+/**
+ * Helper function to return the nid for a given system number (MARC)
+ * 
+ * @param $num
+ *   the system number
+ */
+ 
+function _cals_get_node_by_sysnum($num) {
+	$nid = 0;
+	$rs = db_query(
+		"select *  from {field_data_field_system_control_number} as sysnum 
+			where sysnum.field_system_control_number_value = :sysnum and bundle = :bundle", 
+			array(":sysnum" => $num, ":bundle" => "repository_item") 
+	);
+	
+	foreach($rs as $row) {
+		$nid = $row->entity_id;
+		//drupal_set_message("nid = $nid / num = $num");
+	}
+	return $nid;
+}
 
 /**
  * Loads XML string from node.
