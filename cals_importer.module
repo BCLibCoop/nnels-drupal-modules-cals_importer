@@ -711,6 +711,8 @@ function _cals_batch_update_s3_paths($nid) {
   
   //get array from csv file. Pass this into the initial batch
 	$arr = _cals_get_array_csv($nid);
+	
+	
 	if(empty($arr)) {
 	  drupal_set_message($msg_file_str);
 	  drupal_goto($null_path);
@@ -871,7 +873,7 @@ function _cals_get_array_csv($nid) {
 	  }
 	  fclose($handle);
 	}
-	
+	return $arr;
 	
 	
 }
