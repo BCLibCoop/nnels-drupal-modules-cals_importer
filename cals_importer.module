@@ -265,7 +265,7 @@ function cals_importer_views_query_alter(&$view, &$query) {
 		  		    "value" => $vals,
 		  		    "operator" => "in",
 		  	);	    
-	    
+		  	
 	    }
 	  
 	  	break;
