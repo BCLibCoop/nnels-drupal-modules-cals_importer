@@ -238,6 +238,43 @@ function _cals_importer_tab_checker() {
 	}
 	return FALSE;
 }
+/**
+ * Implements hook_views_query_alter().
+ */
+function cals_importer_views_query_alter(&$view, &$query) {
+	switch($view->name) {
+	  case "repository_item_admin_views":
+	    if($view->current_display == 'page_8') {
+		    //custom query to find duplicate system control numbers  
+		    $vals = array();
+		  	$rs = db_query("select entity_id, field_system_control_number_value
+		  		from {field_data_field_system_control_number} 
+		  		where field_system_control_number_value
+		  		
+		  		in (select field_system_control_number_value 
+		         from {field_data_field_system_control_number}
+		         group by field_system_control_number_value
+		         having count(*) > 1)
+		  		order by field_system_control_number_value");
+		  	foreach($rs as $row) {
+		  		$vals[] = $row->entity_id;
+		  	}
+		
+		  	$query->where[1]['conditions'][1] = array(
+		  		    "field" => "node.nid",
+		  		    "value" => $vals,
+		  		    "operator" => "in",
+		  	);	    
+	    
+	    }
+	  
+	  	break;
+	
+	
+	}//end switch
+
+
+} 
 
 
 /**
@@ -344,7 +381,6 @@ function _cals_import_skeletal_records($node) {
 					if(count($arr_s3)) {
 						if(isset($arr['repos']['field_system_control_number'][0])) {
 							$tmp = $arr['repos']['field_system_control_number'][0];
-							//printAndDie($tmp, $arr_s3);
 							if (array_key_exists($tmp, $arr_s3)) {
 								$n->field_s3_path[LANGUAGE_NONE] = array();
 								$n->field_s3_path[LANGUAGE_NONE][0]['value'] = $arr_s3[$tmp];
