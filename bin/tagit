@@ -1,0 +1,101 @@
+#!/usr/bin/perl
+# Production tagging script 
+# Copyright (2010-2013) Robin H. Johnson <robbat2@gentoo.org>
+#
+# Originally written for IsoHunt internal usage
+# - tag-prefix:production- 
+# - strftime:%Y%m%d-%H%M 
+# Ported for SITKA usage:
+# - tag-prefix:prod/
+# - strftime: %Y%m%dT%H%M%SZ
+#
+# TODO:
+# This should really have some help options!
+
+use Getopt::Long;
+use POSIX qw(strftime);
+use strict;
+use warnings;
+
+my $annotate = 0;
+my $cleanup = 0;
+my $contains = 0;
+my $delete = 0;
+my $file = 0;
+my $force = 0;
+my $list = 0;
+my $msg = 0;
+my $num = 0;
+my $signed = 0;
+my $signkey = 0;
+my $verify = 0;
+# custom options:
+my $debug  = 0;
+my $time_specifier = '@TS';
+my $strftime = '%Y%m%dT%H%M%SZ';
+my $tag_prefix  = 'prod/'; # used with $time_specifier
+my $default_tag = undef;
+
+GetOptions(
+	"annotate|a" => \$annotate,
+	"msg|message|m=s" => \$msg,
+	"file|F=s" => \$file,
+	"signed|s" => \$signed,
+	"local-user|u=s" => \$signkey,
+	"force|f" => \$force,
+	"delete|d" => \$delete,
+	"num|n=i" => \$num,
+	"list|l" => \$list,
+	"contains=s" => \$contains,
+	"cleanup=s" => \$cleanup,
+	"verify|v" => \$verify,
+	# Custom options:
+	"debug" => \$debug,
+	"time-specifier=s" => \$time_specifier,
+	"tag-prefix=s" => \$tag_prefix,
+	"default-tag=s" => \$default_tag,
+) or die "Failed to parse options";
+
+$default_tag = sprintf('%s%s',$tag_prefix, $time_specifier) unless(defined($default_tag));
+
+
+die "You MUST include a message with -m! Your tag should also probably include the $time_specifier time specifier." unless $msg or $file;
+
+my @opts;
+push @opts, "-a" if $annotate;
+push @opts, "-u", $signkey if $signkey;
+push @opts, "-f" if $force;
+push @opts, "-m", $msg if $msg;
+push @opts, "-F", $file if $file;
+
+if($delete) {
+	die "Cannot use -d and other options" if scalar(@opts) > 0;
+	push @opts, "-d";
+}
+if($verify) {
+	die "Cannot use -v and other options" if scalar(@opts) > 0;
+	push @opts, "-v";
+}
+if($list) {
+	die "Cannot use -l and other options" if scalar(@opts) > 0;
+	push @opts, "-n", $num if $num;
+	push @opts, "-l";
+	push @opts, "--contains", $contains if $contains;
+}
+
+if(scalar(@ARGV) == 0) {
+	push @ARGV, $default_tag;
+	print "Appending default tag: $default_tag\n";
+}
+unless(grep { $time_specifier } @ARGV) {
+	warn "Your arguments do NOT contain any time specifier. You should use $time_specifier to denote replacement by time."
+}
+my $ts = strftime "%Y%m%dT%H%M%SZ", gmtime;
+@ARGV = map { $_ =~ s/\@TS/$ts/; $_ } @ARGV;
+
+if($debug) {
+	print "ARGV: ".join(' ',@ARGV)."\n";
+	print "Command: ".join(" ", 'git', 'tag', map { sprintf("'%s'", $_) } @opts, @ARGV )."\n";
+} else {
+	system('git', 'tag', @opts, @ARGV )
+}
