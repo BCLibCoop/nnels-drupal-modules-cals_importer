@@ -153,40 +153,6 @@ function cals_importer_permission() {
 
 
 /**
- * Implement hook_block_view().
- *
- */
-function cals_importer_block_view($block_name = '') {
-  global $user;
-
-  $block = array();
-  switch ($block_name) {
-    case '_cals_importer_extra_login':
-      if ($user->uid == 0) {
-				$block['content']  = 
-				l("Library Users Login", "user/login", array("query" => array("library" => "sils", drupal_get_destination()))) . 
-				" | " . l("Staff Login", "user/login", array("query" => array(drupal_get_destination())));
-      }
-      break;
-  }
-  return $block;
-}
-
-/**
- * Implement hook_block_info().
- *
- */
-function cals_importer_block_info() {
-  $blocks = array();
-  $blocks['_cals_importer_extra_login'] = array(
-    'info' => t('Extra Login Block'),
-    'cache' => DRUPAL_NO_CACHE,
-  );
-  return $blocks;
-}
-
-
-/**
  * Implements action_info().
  */
 function cals_importer_action_info() {
