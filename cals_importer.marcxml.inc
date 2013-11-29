@@ -12,7 +12,6 @@ function _cals_importer_update_repository_item($node) {
 	//can also push this thru the batch api instead. To do so, comment out above and uncomment
 	//the following function call.
 	
-	printAndDie($node);
 	_cals_importer_update_repository_items($node);
 
 	//take user back to main node page
