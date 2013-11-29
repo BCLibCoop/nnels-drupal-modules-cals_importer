@@ -23,39 +23,15 @@ module_load_include('inc', 'entity', 'includes/entity.controller');
   
 function cals_importer_menu() {
 	$items = array();
-	 /* 
-	$items['node/%node/parse-marcxml-all'] = array(
-    'access arguments' => array('administer site configuration'),
-    'page callback' => '_cals_import_marcxml',
-    'title' => 'Parse MARC (all)',
-    'type' => MENU_LOCAL_TASK,
-    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
-		'page arguments' => array(1, "all"),
-		'weight' => 100,
-	
-	);
-	*/
-	/*
-	$items['admin/content/cals/update-s3-paths'] = array(
-    'access arguments' => array('administer site configuration'),
-    'page callback' => '_cals_update_s3_paths',
-    'title' => 'Update S3 Paths',
-    'file' => 'cals_importer.s3paths.inc',
-		'weight' => 100,
-	
-	);
-	*/
-	
-	
 
-/**
- * Parses S3 sets, can be invoked directly - e.g:
- * http://me/cals_staging/admin/content/cals/batch-update-s3-paths/5429
- * 
- *
- * See: content/cals/s3-record-sets
- * 
- */
+
+	/**
+	 * Parses S3 sets, can be invoked directly - e.g:
+	 * http://me/cals_staging/admin/content/cals/batch-update-s3-paths/5429
+	 *
+	 * See: content/cals/s3-record-sets
+	 * 
+	 */
 
 	$items['admin/content/cals/batch-update-s3-paths'] = array(
     'access arguments' => array('administer site configuration'),
@@ -175,6 +151,37 @@ function cals_importer_permission() {
   );
 }
 
+
+/**
+ * Implement hook_block_view().
+ *
+ */
+function cals_importer_block_view($block_name = '') {
+  global $user;
+
+  $block = array();
+  switch ($block_name) {
+    case '_cals_importer_extra_login':
+      if ($user->uid == 0) {
+				$block['content']  = l("Library Users Login", "user/login", array("query" => array("library" => "sils", drupal_get_destination())));
+      }
+      break;
+  }
+  return $block;
+}
+
+/**
+ * Implement hook_block_info().
+ *
+ */
+function cals_importer_block_info() {
+  $blocks = array();
+  $blocks['_cals_importer_extra_login'] = array(
+    'info' => t('Extra Login Block'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
 
 
 /**
