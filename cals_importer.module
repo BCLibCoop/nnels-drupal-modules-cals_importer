@@ -41,6 +41,26 @@ function cals_importer_menu() {
 		'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
 		'weight' => 100,
+	);
+	
+  $items['admin/content/cals/parse-org-emails'] = array(
+    'title' => t('Update Organizational Contact Emails from CSV file'),
+    'access arguments' => array('administer site configuration'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('cals_org_emails_import_form'),
+  	'file' => 'cals_importer.orgs.inc',
+  );
+	
+	$items['admin/content/cals/test-load-org-emails-csv'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_get_array_org_emails',
+    'title' => t("Test Load CSV file"),
+    'type' => MENU_CALLBACK,
+    //'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+		'page arguments' => array(1),
+		'weight' => 100,
+		'access arguments' => array('parse s3 paths'),
+		'file' => 'cals_importer.orgs.inc',
 	
 	);
 
@@ -150,8 +170,6 @@ function cals_importer_permission() {
     ),
   );
 }
-
-
 /**
  * Implements action_info().
  */
@@ -176,6 +194,14 @@ function cals_importer_action_info() {
       'type' => 'node',
       'configurable' => FALSE,
       'triggers' => array('any'),
+    ),
+    //batch update to update org email fields based on J. Schatz's CVS file
+		'_cals_update_org_emails' => array(
+      'label' => t('Update Organization Emails'),
+      'type' => 'node',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+      'file' => 'cals_importer.orgs.inc',
     ),
 
 
@@ -280,6 +306,21 @@ function cals_importer_node_view($node, $view_mode, $langcode) {
 }
 
 /**
+ * initializes new item repos node
+ *
+ * @return $node
+ *   the new skeletal node passed to the parser
+ */
+function _cals_prepare_new_item_repos() {
+
+	new StdClass();
+	$node->type = 'repository_item';
+	$node->language = LANGUAGE_NONE;
+	node_object_prepare($node);
+	return $node;
+}
+
+/**
  * import / create skeletal marc records, i.e., just the title
  *
  * @param $node
@@ -307,6 +348,7 @@ function _cals_import_skeletal_records($node) {
 	//load file
 	$xml = simplexml_load_file($file);
 	
+
 	if($xml===FALSE) {
 		drupal_set_message("oops, could not parse the file. Might not be valid xml?", "error");
 	   foreach(libxml_get_errors() as $error) {
@@ -314,13 +356,12 @@ function _cals_import_skeletal_records($node) {
     }
     drupal_goto("node/" . $node->nid);
 	} 
-
+	
 	$num = 0;
 	$parsed = array();//track some details re. the parsing
 	
 	foreach($xml->children(NAME_SPACE) as $record) {
 		$arr = _cals_get_title_from_xml($record);
-		
 		$result = '';
 		
 		if(!isset($arr['repos']['title']) || strlen($arr['repos']['title']) == 0) return "Oops, there's a missing title in this record set!";
@@ -328,16 +369,21 @@ function _cals_import_skeletal_records($node) {
 			if(isset($node->field_parsed_nodes[LANGUAGE_NONE][$num]) ) {
 				$new_record = FALSE;
 				$n = node_load($node->field_parsed_nodes[LANGUAGE_NONE][$num]['nid']);
-				$n->changed = time();
-				//printPre("EXISTING RECORD");
-				$result .= "Skeletal record updated. ";
+				//added just in case the node reference field is not cleared.
+				if(!isset($n->type) || $n-type != "repository_item") {
+					$n = _cals_prepare_new_item_repos();
+					$result .= "Skeletal record added. ";
+
+				}
+				else {
+					$n->changed = time();
+					$result .= "Skeletal record updated. ";
+				}
+				
 								
 			}
 			else {
-				$n = new StdClass();
-				$n->type = 'repository_item';
-				$n->language = LANGUAGE_NONE;
-				node_object_prepare($n);
+				$n = _cals_prepare_new_item_repos();
 				$result .= "Skeletal record added. ";
 				// Get the term's ID.
 
@@ -365,7 +411,7 @@ function _cals_import_skeletal_records($node) {
 						}
 					
 					}
-	
+					//save the new/existing repository item node	
 	 				node_save($n);
 
 					$result  = l("edit", "node/" . $n->nid . "/edit" ) . " | " . l("view", "node/" . $n->nid) . " - {$n->title}" 
