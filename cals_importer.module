@@ -371,6 +371,7 @@ function _cals_import_skeletal_records($node) {
 				$n = node_load($node->field_parsed_nodes[LANGUAGE_NONE][$num]['nid']);
 				//added just in case the node reference field is not cleared.
 				if(!isset($n->type) || $n-type != "repository_item") {
+					//prepare new node
 					$n = _cals_prepare_new_item_repos();
 					$result .= "Skeletal record added. ";
 
@@ -383,6 +384,7 @@ function _cals_import_skeletal_records($node) {
 								
 			}
 			else {
+				//prepare new node
 				$n = _cals_prepare_new_item_repos();
 				$result .= "Skeletal record added. ";
 				// Get the term's ID.
