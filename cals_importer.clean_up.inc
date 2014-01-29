@@ -4,7 +4,64 @@
  * Invokes Drupal's batch api to normalize various fields (titles, authors, publishers, etc.) 
  * 
  */
+
+
+/**
+ * Simple wrapper so we can invoke from main repos page for testing purposes
+ *
+ * @param $node
+ *   the node passed to the parser
+ */
+function _cals_normalize_title($node) {
+  _cals_normalize_title_entry($node);
+  drupal_goto("node/" . $node->nid);
+
+}
+
+/**
+ * VBO to normalize titles 
+ */
+function _cals_normalize_titles(&$entity, $context = array()) {
+  if (isset($entity->nid)) {
+    $node = node_load($entity->nid);
+    //safety check to make sure we're parsing repos items!!    
+    $content_types = array('repository_item');
+    
+    if (in_array($node->type, $content_types)  ) {
+      _cals_normalize_title_entry($node);
+    }
+    else{
+      drupal_set_message("Invalid selection: not a repos item");
+    }
+
+  }//end main if
  
+  return "";
+  
+}
+
+
+function _cals_normalize_title_entry($node) {
+
+  $save_node = FALSE;
+  $title = rtrim($node->title);
+  $title = rtrim($title, ", /"); 
+  if ($title === $node->title) {
+  	drupal_set_message(t("skipped: " . $title));
+	}
+	else {
+	  $node->title = $title;
+	  node_save($node);
+    drupal_set_message("updated: $title");
+	}
+	
+}  
+ 
+ 
+/**
+ * Publisher
+ *
+ */
  
 function _cals_normalize_publisher($node) {
   _cals_normalize_creator_entry($node);
@@ -145,6 +202,3 @@ function _cals_clean_up_creator_entry($node) {
  
 
 }
-
-
-

@@ -116,6 +116,17 @@ function cals_importer_menu() {
   );
 
 
+  $items['node/%node/normalize-title'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_normalize_title',
+    'file' => "cals_importer.clean_up.inc",
+    'title' => t('Scrub Title'),
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'page arguments' => array(1),
+    'weight' => 150,
+  
+  );
 
 
   /*
@@ -242,10 +253,16 @@ function cals_importer_action_info() {
       'file' => 'cals_importer.orgs.inc',
     ),
 
-
+    //batch update title field, stripping out trailing slashes, etc.
+    '_cals_normalize_titles' => array(
+      'label' => t('CALS: Normalize titles'),
+      'type' => 'node',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),
     //batch update creator field, stripping out trailing periods, commas, etc.
     '_cals_clean_up_creators' => array(
-      'label' => t('CALS: clean-up authors / creators'),
+      'label' => t('CALS: Normalize authors / creators'),
       'type' => 'node',
       'configurable' => FALSE,
       'triggers' => array('any'),
@@ -254,7 +271,7 @@ function cals_importer_action_info() {
 
     //batch update creator field, stripping out trailing periods, commas, etc.
     '_cals_normalize_publishers' => array(
-      'label' => t('CALS: clean-up publishers'),
+      'label' => t('CALS: Normalize publishers'),
       'type' => 'node',
       'configurable' => FALSE,
       'triggers' => array('any'),
@@ -282,19 +299,21 @@ function cals_importer_menu_alter(&$items) {
   $items['node/%node/parse-access-rights']['access callback'] = '_cals_importer_tab_checker_parse_record';
   $items['node/%node/parse-record']['access callback'] = '_cals_importer_tab_checker_parse_record';
   $items['node/%node/parse-marcxml-new']['access callback'] = '_cals_importer_tab_checker';
-  $items['node/%node/normalize-publisher']['access callback'] = '_cals_importer_tab_checker';
-  $items['node/%node/clean-author']['access callback'] = '_cals_importer_tab_checker';
+  $items['node/%node/normalize-publisher']['access callback'] = '_cals_importer_tab_checker_parse_record';
+  $items['node/%node/normalize-title']['access callback'] = '_cals_importer_tab_checker_parse_record';
+  $items['node/%node/clean-author']['access callback'] = '_cals_importer_tab_checker_parse_record';
 
 }
 function _cals_importer_tab_checker_parse_record() {
   global $user;
   //todo - change to permission
-  if( ($user->uid == 1 || $user->uid == 10 ) && arg(0) == 'node') {
+  if( user_access('parse marc records') && arg(0) == 'node') {
     $n = node_load(arg(1));
     RETURN ($n->type == 'repository_item') ? TRUE : FALSE;
   }
   return FALSE;
 }
+
 function _cals_importer_tab_checker() {
   global $user;
   //todo - change to permission
