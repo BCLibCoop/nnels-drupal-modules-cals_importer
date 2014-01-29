@@ -14,7 +14,8 @@ function _cals_dedupe_035(&$entity, $context = array()) {
 	STATIC $tmp = array("sysnum" =>  0, "nid" => 0); //, "nid" => $context['node']->nid) ;
 	
 	//STATIC $nid = $context['node']->nid;
-
+  dpm($tmp);
+  dpm($context['node']);
 	if( $context['node']->field_system_control_number[LANGUAGE_NONE][0]['value'] != $tmp['sysnum'] ) {
 		$tmp['sysnum'] = $context['node']->field_system_control_number[LANGUAGE_NONE][0]['value'];
 		$tmp['nid'] = $context['node']->nid;
