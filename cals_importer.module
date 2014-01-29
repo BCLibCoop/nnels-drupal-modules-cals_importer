@@ -15,6 +15,8 @@ require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.mappin
 require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.marcxml.inc");
 require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.s3paths.inc");
 require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.clean_up.inc");
+require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.deduper.inc");
+
 
 module_load_include('inc', 'entity', 'includes/entity.controller');
 
@@ -258,35 +260,6 @@ function cals_importer_action_info() {
 
   );
 }
-
- 
-function _cals_dedupe_035(&$entity, $context = array()) {
-
-	$nid = $context['node']->nid;
-	
-	STATIC $tmp = array("sysnum" =>  0, "nid" => 0); //, "nid" => $context['node']->nid) ;
-	
-	//STATIC $nid = $context['node']->nid;
-
-	if( $context['node']->field_system_control_number[LANGUAGE_NONE][0]['value'] != $tmp['sysnum'] ) {
-		$tmp['sysnum'] = $context['node']->field_system_control_number[LANGUAGE_NONE][0]['value'];
-		$tmp['nid'] = $context['node']->nid;
-
-	}
-	else {
-		$n = node_load($entity->nid);
-		$n->field_node_succeeded_by[LANGUAGE_NONE][0]['nid'] = $tmp['nid'];
-		$n->status = 0;
-		node_save($n);
-	//	dpm($n);
-		drupal_set_message("node saved!");
-	}
-
-	//dsm($context);
-	
-
-}
-
 
 
 /**
