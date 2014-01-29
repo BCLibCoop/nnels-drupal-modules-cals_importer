@@ -14,6 +14,7 @@ require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.misc.i
 require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.mappings.inc");
 require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.marcxml.inc");
 require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.s3paths.inc");
+require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.clean_up.inc");
 
 module_load_include('inc', 'entity', 'includes/entity.controller');
 
@@ -42,7 +43,7 @@ function cals_importer_menu() {
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
 		'weight' => 100,
 	);
-	
+
   $items['admin/content/cals/parse-org-emails'] = array(
     'title' => t('Update Organizational Contact Emails from CSV file'),
     'access arguments' => array('administer site configuration'),
@@ -87,6 +88,31 @@ function cals_importer_menu() {
 		'file' => "cals_importer.marcxml.inc",
 	
 	);
+
+	$items['node/%node/clean-author'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_clean_up_creator',
+		'file' => "cals_importer.clean_up.inc",
+    'title' => t('Scrub Author'),
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+		'page arguments' => array(1),
+		'weight' => 150,
+	
+	);
+	
+	$items['node/%node/normalize-publisher'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_normalize_publisher',
+		'file' => "cals_importer.clean_up.inc",
+    'title' => t('Scrub Publisher'),
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+		'page arguments' => array(1),
+		'weight' => 150,
+	
+	);
+
 
 	/*
 	$items['node/%node/parse-access-rights'] = array(
@@ -205,8 +231,62 @@ function cals_importer_action_info() {
     ),
 
 
+    //batch update creator field, stripping out trailing periods, commas, etc.
+		'_cals_clean_up_creators' => array(
+      'label' => t('CALS: clean-up authors / creators'),
+      'type' => 'node',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+      //'file' => 'cals_importer.clean_up.inc',
+    ),
+
+    //batch update creator field, stripping out trailing periods, commas, etc.
+		'_cals_normalize_publishers' => array(
+      'label' => t('CALS: clean-up publishers'),
+      'type' => 'node',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),
+
+    //batch dedupe
+		'_cals_dedupe_035' => array(
+      'label' => t('CALS: Dedupe on 035 matches'),
+      'type' => 'node',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),
+
   );
 }
+
+ 
+function _cals_dedupe_035(&$entity, $context = array()) {
+
+	$nid = $context['node']->nid;
+	
+	STATIC $tmp = array("sysnum" =>  0, "nid" => 0); //, "nid" => $context['node']->nid) ;
+	
+	//STATIC $nid = $context['node']->nid;
+
+	if( $context['node']->field_system_control_number[LANGUAGE_NONE][0]['value'] != $tmp['sysnum'] ) {
+		$tmp['sysnum'] = $context['node']->field_system_control_number[LANGUAGE_NONE][0]['value'];
+		$tmp['nid'] = $context['node']->nid;
+
+	}
+	else {
+		$n = node_load($entity->nid);
+		$n->field_node_succeeded_by[LANGUAGE_NONE][0]['nid'] = $tmp['nid'];
+		$n->status = 0;
+		node_save($n);
+	//	dpm($n);
+		drupal_set_message("node saved!");
+	}
+
+	//dsm($context);
+	
+
+}
+
 
 
 /**
@@ -243,7 +323,40 @@ function _cals_importer_tab_checker() {
  * Implements hook_views_query_alter().
  */
 function cals_importer_views_query_alter(&$view, &$query) {
+
 	switch($view->name) {
+	
+		case "repository_items_deduplicate2":
+		
+	    if($view->current_display == 'page') {
+	    	
+	    	$sql = 
+        "SELECT field_data_field_system_control_number.field_system_control_number_value as val
+					FROM field_data_field_system_control_number
+					GROUP BY field_system_control_number_value
+					HAVING COUNT(*) > 1
+					ORDER BY field_system_control_number_value";
+
+				
+
+				$rs = db_query($sql);
+				
+				foreach ($rs as $row) {
+				 	$arr[] = $row->val;
+				}
+				
+				$query->where[1]['conditions'][2] = array(
+					 'field' => "field_data_field_system_control_number.field_system_control_number_value",
+					 'value' => $arr, //array($subq),
+					 'operator' => 'in', 
+					
+					);
+					//printAndDie($query->where);
+	    }
+		
+		
+			break;
+	
 	  case "repository_item_admin_views":
 	    if($view->current_display == 'page_8') {
 		    //custom query to find duplicate system control numbers  
@@ -277,7 +390,19 @@ function cals_importer_views_query_alter(&$view, &$query) {
 
 } 
 
-
+function mymodule_views_query_alter(&$view, &$query) 
+{
+if ($view->name == 'your_view_name') 
+{
+  //$query->set_where_group('OR');
+  //dpm($query, __FUNCTION__);
+  // dpm($view, __FUNCTION__);
+  // $query->where[1]['type']='AND';
+  //$query->where[2]['type']='OR';
+  //$query->group_operator='OR';
+ // $query->add_groupby('node_title');
+}
+}
 /**
  * import / create skeletal marc records, i.e., just the title
  *
