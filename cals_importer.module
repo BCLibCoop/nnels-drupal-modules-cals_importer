@@ -116,6 +116,8 @@ function cals_importer_menu() {
   );
 
 
+
+
   /*
   $items['node/%node/parse-access-rights'] = array(
     'access arguments' => array('administer site configuration'),
@@ -280,6 +282,8 @@ function cals_importer_menu_alter(&$items) {
   $items['node/%node/parse-access-rights']['access callback'] = '_cals_importer_tab_checker_parse_record';
   $items['node/%node/parse-record']['access callback'] = '_cals_importer_tab_checker_parse_record';
   $items['node/%node/parse-marcxml-new']['access callback'] = '_cals_importer_tab_checker';
+  $items['node/%node/normalize-publisher']['access callback'] = '_cals_importer_tab_checker';
+  $items['node/%node/clean-author']['access callback'] = '_cals_importer_tab_checker';
 
 }
 function _cals_importer_tab_checker_parse_record() {
