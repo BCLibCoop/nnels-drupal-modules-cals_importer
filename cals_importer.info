@@ -1,4 +1,4 @@
 name = CALS MarcXML Importer
-description = Ingests MarcXML records, creating Repository Item nodes.
+description = Ingests MarcXML records, creating Repository Item nodes. Also includes functions to facilitate data normalization and de-duping of both Item Repo records and Organizational node records.
 core = 7.x
 package = --cals
