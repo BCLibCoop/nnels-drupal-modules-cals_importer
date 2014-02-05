@@ -6,6 +6,54 @@
  */
 
 
+
+/**
+ * Simple wrapper so we can invoke from main repo node page for testing purposes
+ *
+ * @param $node
+ *   the node passed to the parser
+ */
+
+function _cals_importer_generate_marc_xml_856($node) {
+ 
+	$xml_string =  str_replace("</marc:record>", "", $node->field_xml_string[LANGUAGE_NONE][0]['value']) . 
+	  '<marc:datafield tag="856" ind1="4" ind2="1"><marc:subfield code="u">https://nnels.ca/node/' .  $node->nid .
+	  '</marc:subfield></marc:datafield></marc:record>';
+	
+	
+	/*
+	leave this in case we need to do something fancier on the xml string, eg. replace existing 856 fields, etc.
+		
+	$xml = 
+		'<?xml version="1.0" encoding="UTF-8" ?><marc:collection xmlns:marc="http://www.loc.gov/MARC21/slim" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd">' . $xml_string . '</marc:collection>';
+	//$json = json_encode($xml);
+
+	$sxe = new SimpleXMLElement($xml_string);
+	$sxe->registerXPathNamespace('marc', NAME_SPACE);
+	//$sxe = new SimpleXMLElement($xml);
+	//$sxe->addAttribute('type', 'documentary');
+	
+	$datafield = $sxe->addChild('marc:datafield');
+	$datafield->addAttribute('tag', '856');
+	
+	$subfield = $datafield->addChild('marc:subfield', 'https://nnels.ca/node/' . $node->nid);
+	$subfield->addAttribute("code", "u");
+	$xml2 = $sxe->asXML();
+	$xml2 = str_replace("</", "</marc:", $xml2);
+	$xml2 = str_replace("<", "<marc:", $xml2);
+	$xml2 = str_replace("marc:/marc:", "/marc:", $xml2);
+	$xml2 = str_replace('<marc:?xml version="1.0"?>', '', $xml2);
+	
+	
+	*/
+	$node->field_xml_string_856[LANGUAGE_NONE][0]['value'] = trim($xml_string);
+	node_save($node);
+	
+	drupal_goto("node/" . $node->nid);
+
+}
+
+
 /**
  * Simple wrapper so we can invoke from main repos page for testing purposes
  *

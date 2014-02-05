@@ -38,10 +38,10 @@ function _cals_dedupe_035(&$entity, $context = array()) {
  * 
  */
  
-function _cals_dedupe_library_codes(&$entity, $context = array()) {
+function _cals_dedupe_orgs_by_illcode(&$entity, $context = array()) {
 
 	$nid = $context['node']->nid;
-	$illcode = trim($context['node']->field_system_control_number[LANGUAGE_NONE][0]['value']);
+	$illcode = trim($context['node']->field_library_code[LANGUAGE_NONE][0]['value']);
 	
 	//static variable
 	static $tmp = array("illcode" =>  0, "nid" => 0); //, "nid" => $context['node']->nid) ;

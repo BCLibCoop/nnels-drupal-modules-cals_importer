@@ -129,6 +129,18 @@ function cals_importer_menu() {
   );
 
 
+  $items['node/%node/generate-marc-856'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_importer_generate_marc_xml_856',
+    'file' => "cals_importer.clean_up.inc",
+    'title' => t('Generate MARC 856'),
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'page arguments' => array(1),
+    'weight' => 150,
+  
+  );
+
   /*
   $items['node/%node/parse-access-rights'] = array(
     'access arguments' => array('administer site configuration'),
@@ -192,27 +204,20 @@ function cals_importer_menu() {
  */
 function cals_importer_permission() {
   return array(
-
-
     'dedupe records' => array(
       'title' => t('Dedupe Repo Items'),
       'description' => t('Dedupe Repo Items.'),
     ),
-
-
-    'parse s3 paths' => array(
+   'parse s3 paths' => array(
       'title' => t('Parse S3 paths'),
       'description' => t('Parse S3 Paths.'),
     ),
-
     'parse marc records' => array(
       'title' => t('Parse MARC records'),
     ),
-    
     'generate repo records' => array(
       'title' => t('Generate New Repository Items'),
     ),
-    
     'parse 506' => array(
       'title' => t('Parse / Update 506 entries'),
       'description' => t(''),
@@ -224,12 +229,22 @@ function cals_importer_permission() {
  */
 function cals_importer_action_info() {
   return array(
+    //the main MARC XML parser
     '_cals_importer_update_repository_items' => array(
       'label' => t('Parse MARC XML'),
       'type' => 'node',
       'configurable' => FALSE,
       'triggers' => array('any'),
     ),
+    
+    //bulk update to generate marc xml strings w/ 856 tag
+    '_cals_importer_generate_marc_xml_856' => array(
+      'label' => t('CALS: Generate MARC with 856 strings'),
+      'type' => 'node',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),
+    
     //batch update to just the system control numbers
     '_cals_importer_update_system_control_numbers' => array(
       'label' => t('Update System Control Numbers'),
@@ -277,9 +292,16 @@ function cals_importer_action_info() {
       'triggers' => array('any'),
     ),
 
-    //batch dedupe
+    //batch dedupe marc xml records
     '_cals_dedupe_035' => array(
       'label' => t('CALS: Dedupe on 035 matches'),
+      'type' => 'node',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),
+    //batch dedupe org nodes based on ill code (field_library_code)
+    '_cals_dedupe_orgs_by_illcode' => array(
+      'label' => t('CALS: Dedupe orgs based on ILL Code matches'),
       'type' => 'node',
       'configurable' => FALSE,
       'triggers' => array('any'),
@@ -302,6 +324,7 @@ function cals_importer_menu_alter(&$items) {
   $items['node/%node/normalize-publisher']['access callback'] = '_cals_importer_tab_checker_parse_record';
   $items['node/%node/normalize-title']['access callback'] = '_cals_importer_tab_checker_parse_record';
   $items['node/%node/clean-author']['access callback'] = '_cals_importer_tab_checker_parse_record';
+  $items['node/%node/generate-marc-856']['access callback'] = '_cals_importer_tab_checker_parse_record';
 
 }
 function _cals_importer_tab_checker_parse_record() {
@@ -327,6 +350,7 @@ function _cals_importer_tab_checker() {
  * Implements hook_views_query_alter().
  */
 function cals_importer_views_query_alter(&$view, &$query) {
+
   switch($view->name) {
     case "repository_items_deduplicate2":
     case "repo_items_bulk_deduper":
@@ -375,7 +399,33 @@ function cals_importer_views_query_alter(&$view, &$query) {
       }
     
       break;
-  
+      
+    case "organizations_vbo":
+      if($view->current_display == 'page_2') {
+        //custom query to find duplicate system control numbers  
+        $vals = array();
+        $rs = db_query("select entity_id, field_library_code_value
+          from {field_data_field_library_code} 
+          where field_library_code_value
+          
+          in (select field_library_code_value 
+             from {field_data_field_library_code}
+             group by field_library_code_value
+             having count(*) > 1)
+          order by field_library_code_value");
+        foreach($rs as $row) {
+          $vals[] = $row->entity_id;
+        }
+    
+        $query->where[1]['conditions'][1] = array(
+              "field" => "node.nid",
+              "value" => $vals,
+              "operator" => "in",
+        );      
+        
+      }
+    
+      break;  
   
   }//end switch
 
