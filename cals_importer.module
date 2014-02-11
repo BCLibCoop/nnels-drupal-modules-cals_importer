@@ -3,8 +3,8 @@
 /**
  * set memory limit and max execution times to higher than normal!
  */
-ini_set('memory_limit', '512M');
-ini_set('max_execution_time', '600'); 
+//ini_set('memory_limit', '512M');
+//ini_set('max_execution_time', '600'); 
 
 //the MARC namespace
 define("NAME_SPACE", "http://www.loc.gov/MARC21/slim");
