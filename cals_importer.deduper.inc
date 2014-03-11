@@ -49,15 +49,15 @@ function _cals_dedupe_orgs_by_illcode(&$entity, $context = array()) {
 	if( $illcode === $tmp['illcode'] ) {
 	  //drupal_set_message("YES: sysnum = $sysnum | tmp_sysnum = {$tmp['sysnum']} " );
 		$n = node_load($entity->nid);
-		$n->field_node_succeeded_by[LANGUAGE_NONE][0]['nid'] = $tmp['nid'];
+		$n->field_org_succeeded_by[LANGUAGE_NONE][0]['nid'] = $tmp['nid'];
 		$n->status = 0;
 		node_save($n);
-	//	dpm($n);
+		dpm($n);
 		drupal_set_message("node {$n->title} unpublished.");	
 	}
 	else {
 	  //drupal_set_message("NO: sysnum != $sysnum | tmp_sysnum != {$tmp['sysnum']} " );
-		$tmp['sysnum'] = $sysnum;
+		$tmp['illcode'] = $illcode;
 		$tmp['nid'] = $nid;
 	}
 

@@ -131,7 +131,7 @@ function cals_importer_menu() {
 
   $items['node/%node/generate-marc-856'] = array(
     'access arguments' => array('administer site configuration'),
-    'page callback' => '_cals_importer_generate_marc_xml_856',
+    'page callback' => '_cals_importer_add_856_tag',
     'file' => "cals_importer.clean_up.inc",
     'title' => t('Generate MARC 856'),
     'type' => MENU_LOCAL_TASK,
@@ -488,11 +488,11 @@ function _cals_import_skeletal_records($node) {
   foreach(taxonomy_get_vocabularies() as $k => $v) {
     $arr_tax[$v->name] = $k;
   } 
-  
-  $file_s3 = drupal_realpath($node->field_file_csv[LANGUAGE_NONE][0]['uri']); 
-  $arr_s3 = array();
-  if(!empty($file_s3)) {
-   $arr_s3 = _cals_get_array_csv_by_file($file_s3);
+
+	$arr_s3 = array();
+	if(!empty($node->field_file_csv)) {
+		$file_s3 = drupal_realpath($node->field_file_csv[LANGUAGE_NONE][0]['uri']); 
+   	$arr_s3 = _cals_get_array_csv_by_file($file_s3);
   
   }
   
@@ -568,21 +568,26 @@ function _cals_import_skeletal_records($node) {
           
           }
           //save the new/existing repository item node  
+          $n->field_record_set[LANGUAGE_NONE][0]['nid'] = $node->nid;
+				  $n->field_access_restrictions[LANGUAGE_NONE][0]['value'] = $node->field_access_restrictions[LANGUAGE_NONE][0]['value'];
+				  
           node_save($n);
 
           $result  = l("edit", "node/" . $n->nid . "/edit" ) . " | " . l("view", "node/" . $n->nid) . " - {$n->title}" 
             . " " . $result;  
           
         //} 
-        $node->field_parsed_nodes[LANGUAGE_NONE][$num]['nid'] = $n->nid;
+        //$node->field_parsed_nodes[LANGUAGE_NONE][$num]['nid'] = $n->nid;
         
       } 
       //save every 50 items
-      if (($num % $max) == 0) node_save($node);
+      //if (($num % $max) == 0) node_save($node);
     
     $parsed[] = $result;
     $num++;
   }
+  $node->field_status[LANGUAGE_NONE][0]['value'] = 2;
+  
   //save one last time.
   node_save($node);
 

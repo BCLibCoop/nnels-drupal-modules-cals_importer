@@ -14,44 +14,73 @@
  *   the node passed to the parser
  */
 
-function _cals_importer_generate_marc_xml_856($node) {
- 
-	$xml_string =  str_replace("</marc:record>", "", $node->field_xml_string[LANGUAGE_NONE][0]['value']) . 
-	  '<marc:datafield tag="856" ind1="4" ind2="1"><marc:subfield code="u">https://nnels.ca/node/' .  $node->nid .
-	  '</marc:subfield></marc:datafield></marc:record>';
-	
-	
-	/*
-	leave this in case we need to do something fancier on the xml string, eg. replace existing 856 fields, etc.
-		
-	$xml = 
-		'<?xml version="1.0" encoding="UTF-8" ?><marc:collection xmlns:marc="http://www.loc.gov/MARC21/slim" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd">' . $xml_string . '</marc:collection>';
-	//$json = json_encode($xml);
-
-	$sxe = new SimpleXMLElement($xml_string);
-	$sxe->registerXPathNamespace('marc', NAME_SPACE);
-	//$sxe = new SimpleXMLElement($xml);
-	//$sxe->addAttribute('type', 'documentary');
-	
-	$datafield = $sxe->addChild('marc:datafield');
-	$datafield->addAttribute('tag', '856');
-	
-	$subfield = $datafield->addChild('marc:subfield', 'https://nnels.ca/node/' . $node->nid);
-	$subfield->addAttribute("code", "u");
-	$xml2 = $sxe->asXML();
-	$xml2 = str_replace("</", "</marc:", $xml2);
-	$xml2 = str_replace("<", "<marc:", $xml2);
-	$xml2 = str_replace("marc:/marc:", "/marc:", $xml2);
-	$xml2 = str_replace('<marc:?xml version="1.0"?>', '', $xml2);
-	
-	
-	*/
-	$node->field_xml_string_856[LANGUAGE_NONE][0]['value'] = trim($xml_string);
-	node_save($node);
-	
+function _cals_importer_add_856_tag($node) {
+  _cals_add_856_tag($node);
 	drupal_goto("node/" . $node->nid);
 
 }
+
+
+/**
+ * VBO to add 856 tag to xml strings
+ *
+ * @param $entity
+ *   the node passed to the parser
+ */
+function _cals_importer_generate_marc_xml_856(&$entity, $context = array()) {
+  if (isset($entity->nid)) {
+    $node = node_load($entity->nid);
+    //safety check to make sure we're parsing repos items!!    
+    $content_types = array('repository_item');
+    if (in_array($node->type, $content_types)  ) {
+      _cals_add_856_tag($node);
+    }
+    else{
+      drupal_set_message("Invalid selection: not a repos item");
+    }
+
+  }//end main if
+ 
+  return "";
+  
+}
+
+
+/**
+ * Updates the node with NNELS 856 tag 
+ *
+ * @param $node
+ *   the node passed to the parser
+ *
+ */
+function _cals_add_856_tag($node) {
+
+ 	$xml_string = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
+  $str = '<marc:datafield tag="856" ind1="4" ind2="1"><marc:subfield code="u">https://nnels.ca/node/' .  $node->nid .
+	  '</marc:subfield></marc:datafield>';
+	 
+	//printAndDie($node); 
+	  
+  if(strpos($xml_string, $str) ) {
+    drupal_set_message( t("Did not update XML string for {$node->title}: 856 tag already included") );
+    $node->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] = 1;
+    node_save($node);
+  }
+  else {
+		$xml_string =  str_replace("</marc:record>", "", $xml_string) . $str . '</marc:record>';
+	 
+		$node->field_xml_string[LANGUAGE_NONE][0]['value'] = trim($xml_string);
+    $node->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] = 1;
+		$node->revision = 1;
+		$node->log = "Added NNELS 856 tag to XML String"; // Log message
+	
+		//printAndDie($node);
+		drupal_set_message($node->log . ": " . l("edit {$node->title}", "node/{$node->nid}/edit") );
+		node_save($node);
+  
+  }
+}
+
 
 
 /**
