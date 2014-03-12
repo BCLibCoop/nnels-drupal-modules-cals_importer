@@ -16,6 +16,7 @@ require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.marcxm
 require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.s3paths.inc");
 require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.clean_up.inc");
 require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.deduper.inc");
+require_once(drupal_get_path('module', "cals_importer") . "cals_importer.marcxmlfilebuilder.inc");
 
 
 module_load_include('inc', 'entity', 'includes/entity.controller');
@@ -446,7 +447,7 @@ function cals_importer_node_view($node, $view_mode, $langcode) {
       if(user_access("generate repo records") || user_access("parse marc records") ) {
 
         $label = t("Generate new stub Repository Records");
-        if(count($node->field_parsed_nodes[LANGUAGE_NONE])) {
+        if(count($node->field_parsed_nodes)) {
           $label = t("Update existing Repository Records (titles + S3 paths)");
         }
         $node->content['additional-text'] = array(
