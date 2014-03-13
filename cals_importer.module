@@ -16,9 +16,11 @@ require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.marcxm
 require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.s3paths.inc");
 require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.clean_up.inc");
 require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.deduper.inc");
-require_once(drupal_get_path('module', "cals_importer") . "cals_importer.marcxmlfilebuilder.inc");
+require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.marcxmlfilebuilder.inc");
 
 
+
+//module_load_include("inc", "cals_importer", "cals_importer.marcxmlfilebuilder.inc");
 module_load_include('inc', 'entity', 'includes/entity.controller');
 
 /**
@@ -141,7 +143,18 @@ function cals_importer_menu() {
     'weight' => 150,
   
   );
-
+  
+  $items['node/%node/generate-marc-output'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_importer_generate_marcxml_file',
+    'file' => "cals_importer.marcxmlfilebuilder.inc",
+    'title' => t('Generate MARC Output File'),
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'page arguments' => array(1),
+    'weight' => 200,
+  
+  );
   /*
   $items['node/%node/parse-access-rights'] = array(
     'access arguments' => array('administer site configuration'),
@@ -200,6 +213,8 @@ function cals_importer_menu() {
   return $items; 
 
 }
+
+
 /**
  * Implements hook_permission().
  */
@@ -245,7 +260,15 @@ function cals_importer_action_info() {
       'configurable' => FALSE,
       'triggers' => array('any'),
     ),
-    
+
+  	//batch generate MARC XML files and attach to original recordset
+    '_cals_importer_generate_marcxml_files' => array(
+      'label' => t('CALS: batch generate MARC XML files'),
+      'type' => 'node',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),
+        
     //batch update to just the system control numbers
     '_cals_importer_update_system_control_numbers' => array(
       'label' => t('Update System Control Numbers'),
@@ -308,6 +331,7 @@ function cals_importer_action_info() {
       'triggers' => array('any'),
     ),
 
+  
   );
 }
 
@@ -326,6 +350,7 @@ function cals_importer_menu_alter(&$items) {
   $items['node/%node/normalize-title']['access callback'] = '_cals_importer_tab_checker_parse_record';
   $items['node/%node/clean-author']['access callback'] = '_cals_importer_tab_checker_parse_record';
   $items['node/%node/generate-marc-856']['access callback'] = '_cals_importer_tab_checker_parse_record';
+  $items['node/%node/generate-marc-output']['access callback'] = '_cals_importer_tab_checker_parse_record';
 
 }
 function _cals_importer_tab_checker_parse_record() {
