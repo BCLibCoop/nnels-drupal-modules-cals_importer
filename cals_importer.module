@@ -247,7 +247,7 @@ function cals_importer_action_info() {
   return array(
     //the main MARC XML parser
     '_cals_importer_update_repository_items' => array(
-      'label' => t('CALS: 1. Generate Full Record (parse MARC XML)'),
+      'label' => t('1. Generate Full Record (parse MARC XML)'),
       'type' => 'node',
       'configurable' => FALSE,
       'triggers' => array('any'),
@@ -255,7 +255,7 @@ function cals_importer_action_info() {
     
     //bulk update to generate marc xml strings w/ 856 tag
     '_cals_importer_generate_marc_xml_856' => array(
-      'label' => t('CALS: 2. Generate MARC with 856 strings'),
+      'label' => t('2. Generate MARC with 856 strings'),
       'type' => 'node',
       'configurable' => FALSE,
       'triggers' => array('any'),
@@ -263,7 +263,7 @@ function cals_importer_action_info() {
 
   	//batch generate MARC XML files and attach to original recordset
     '_cals_importer_generate_marcxml_files' => array(
-      'label' => t('CALS: 3. Generate downloadable MARC XML files'),
+      'label' => t('3. Generate downloadable MARC XML files'),
       'type' => 'node',
       'configurable' => FALSE,
       'triggers' => array('any'),
