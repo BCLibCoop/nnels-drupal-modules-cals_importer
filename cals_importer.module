@@ -247,7 +247,7 @@ function cals_importer_action_info() {
   return array(
     //the main MARC XML parser
     '_cals_importer_update_repository_items' => array(
-      'label' => t('Parse MARC XML'),
+      'label' => t('CALS: 1. Generate Full Record (parse MARC XML)'),
       'type' => 'node',
       'configurable' => FALSE,
       'triggers' => array('any'),
@@ -255,7 +255,7 @@ function cals_importer_action_info() {
     
     //bulk update to generate marc xml strings w/ 856 tag
     '_cals_importer_generate_marc_xml_856' => array(
-      'label' => t('CALS: Generate MARC with 856 strings'),
+      'label' => t('CALS: 2. Generate MARC with 856 strings'),
       'type' => 'node',
       'configurable' => FALSE,
       'triggers' => array('any'),
@@ -263,7 +263,7 @@ function cals_importer_action_info() {
 
   	//batch generate MARC XML files and attach to original recordset
     '_cals_importer_generate_marcxml_files' => array(
-      'label' => t('CALS: batch generate MARC XML files'),
+      'label' => t('CALS: 3. Generate downloadable MARC XML files'),
       'type' => 'node',
       'configurable' => FALSE,
       'triggers' => array('any'),
@@ -271,21 +271,21 @@ function cals_importer_action_info() {
         
     //batch update to just the system control numbers
     '_cals_importer_update_system_control_numbers' => array(
-      'label' => t('Update System Control Numbers'),
+      'label' => t('CALS: Update System Control Numbers'),
       'type' => 'node',
       'configurable' => FALSE,
       'triggers' => array('any'),
     ),
     //batch update to adjust/update the 506 access rights permissions
     '_cals_importer_update_licensed_access' => array(
-      'label' => t('Update Access Restrictions'),
+      'label' => t('CALS: Update Access Restrictions'),
       'type' => 'node',
       'configurable' => FALSE,
       'triggers' => array('any'),
     ),
     //batch update to update org email fields based on J. Schatz's CVS file
     '_cals_update_org_emails' => array(
-      'label' => t('Update Organization Emails'),
+      'label' => t('CALS: Update Organization Emails'),
       'type' => 'node',
       'configurable' => FALSE,
       'triggers' => array('any'),
