@@ -75,8 +75,10 @@ function _cals_parse_record_details($node) {
 	//if(!strlen($xml)) return "no xml!";
 	$arr = array();
 	
-	//set file access to "Open Access"
-	$arr['repos']['field_access_restrictions'][0] = 0;
+	//set file access to "Open Access" 
+	// NEW, as of 2014-03-12: this will be defined by the parent record set
+	//$arr['repos']['field_access_restrictions'][0] = 0;
+	
 	//let's grab date issued
 	$date_issued =  _cals_get_date_issued($xml);
 	
@@ -108,8 +110,7 @@ function _cals_parse_record_details($node) {
 	//delete the field collections so we have a fairly stripped down node if reparsing
 	$node = _cals_delete_existing_field_collection_items($node, array_keys($arr['fc']));
 	$node->status = 1;
-	
-	
+
 	foreach($arr['repos'] as $k => $v) {
 
 		if(is_array($v)) {
