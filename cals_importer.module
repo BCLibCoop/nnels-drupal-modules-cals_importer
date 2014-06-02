@@ -3,7 +3,7 @@
 /**
  * set memory limit and max execution times to higher than normal!
  */
-	ini_set('memory_limit', '1024M');
+	//ini_set('memory_limit', '1024M');
 //ini_set('max_execution_time', '600'); 
 
 //the MARC namespace
@@ -18,6 +18,7 @@ require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.clean_
 require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.deduper.inc");
 require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.marcxmlfilebuilder.inc");
 
+require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.corsS3.inc");
 
 
 //module_load_include("inc", "cals_importer", "cals_importer.marcxmlfilebuilder.inc");
@@ -29,6 +30,9 @@ module_load_include('inc', 'entity', 'includes/entity.controller');
   
 function cals_importer_menu() {
   $items = array();
+
+
+
 
 
   /**
@@ -155,6 +159,22 @@ function cals_importer_menu() {
     'weight' => 200,
   
   );
+
+
+  $items['node/%node/convert-s3-paths'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_importer_update_cors_file_table',
+    'file' => "cals_importer.cors3.inc",
+    'title' => t('update S3 -> CORS path'),
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'page arguments' => array(1),
+    'weight' => 200,
+  
+  );
+  
+  
+  
   /*
   $items['node/%node/parse-access-rights'] = array(
     'access arguments' => array('administer site configuration'),
@@ -331,6 +351,13 @@ function cals_importer_action_info() {
       'triggers' => array('any'),
     ),
 
+    //batch copy existing S3 paths to Field Collection "field_file_resource"
+    '_cals_batch_update_field_file_resource_s3_paths' => array(
+      'label' => t('CALS: Copy S3 paths to Field Collection'),
+      'type' => 'node',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),
   
   );
 }
