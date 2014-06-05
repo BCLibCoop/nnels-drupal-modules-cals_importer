@@ -45,7 +45,7 @@ function _cals_importer_update_field_collection_field_file_resource($node, $file
 		
 		$filepath = str_replace("download.nnels.ca/", "", $filepath);
 		
-		printAndDie($filepath);
+		//printAndDie($filepath);
 		//$filepath = "s3://foo";
 		// Create managed File object and associate with zip. Not currently in use, but leave intact for now
 		$file = (object) array(
