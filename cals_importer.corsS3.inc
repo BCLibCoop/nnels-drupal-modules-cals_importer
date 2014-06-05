@@ -43,7 +43,7 @@ function _cals_importer_update_field_collection_field_file_resource($node, $file
 		// Attach it to the node.
 		$fc_item->setHostEntity('node', $node); 
 		
-		//$filepath = str_replace("download.nnels.ca/", "", $filepath);
+		$filepath = str_replace("download.nnels.ca/", "", $filepath);
 		
 		printAndDie($filepath);
 		//$filepath = "s3://foo";
