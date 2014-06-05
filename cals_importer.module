@@ -31,10 +31,6 @@ module_load_include('inc', 'entity', 'includes/entity.controller');
 function cals_importer_menu() {
   $items = array();
 
-
-
-
-
   /**
    * Parses S3 sets, can be invoked directly - e.g:
    * http://me/cals_staging/admin/content/cals/batch-update-s3-paths/5429
