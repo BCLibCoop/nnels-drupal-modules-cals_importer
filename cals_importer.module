@@ -102,6 +102,21 @@ function cals_importer_menu() {
   
   );
 
+  $items['node/%node/normalize-record'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_normalize_record_value',
+    'file' => "cals_importer.clean_up.inc",
+    'title' => t('Normalize Record'),
+    'description' => t('Scrubs the title, author and publisher values'),
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'page arguments' => array(1),
+    'weight' => 150,
+  
+  );
+
+
+  /*
   $items['node/%node/clean-author'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_clean_up_creator',
@@ -114,6 +129,7 @@ function cals_importer_menu() {
   
   );
   
+
   $items['node/%node/normalize-publisher'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_normalize_publisher',
@@ -139,6 +155,7 @@ function cals_importer_menu() {
   
   );
 
+	*/
 
   $items['node/%node/generate-marc-856'] = array(
     'access arguments' => array('administer site configuration'),
