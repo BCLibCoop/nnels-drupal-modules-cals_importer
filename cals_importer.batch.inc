@@ -1,6 +1,11 @@
 <?php
 /**
- * Implementation of hook_submit() for the biblio_import_form.
+ * @file
+ * CALS Importer Batch Module.
+ */
+
+/**
+ * Implements hook_submit() for the biblio_import_form.
  */
 function cals_importer_form_submit($form, & $form_state) {
   global $user;
@@ -16,7 +21,7 @@ function cals_importer_form_submit($form, & $form_state) {
 
   $session_id = microtime();
   $batch = array(
-    'title' => t('Importing '),
+    'title' => t('Importing') . " ",
     'operations' => array(
       array('cals_import_batch_operations', array($session_id, $user, $userid, $terms))
     ),
@@ -26,7 +31,7 @@ function cals_importer_form_submit($form, & $form_state) {
     'progress_message' => t('Saving nodes...'),
   );
   batch_set($batch);
-	return $batch;
+  return $batch;
   $base = variable_get('biblio_base', 'biblio');
   batch_process("$base/import");
 
@@ -47,11 +52,11 @@ function cals_import_batch_operations($session_id, $filename, $userid, &$context
     $context['sandbox']['progress']   = 0;
     $context['sandbox']['current_id'] = 0;
     $context['results']['nids'] = array();
- 		$context['filename'] = $filename; // FILE_FOLDER . ;
- 		$context['xml'] =  _cals_load_records($filename);
-		$context['sandbox']['max'] = count($xml->children($ns));
+    $context['filename'] = $filename; // FILE_FOLDER . ;
+    $context['xml'] =  _cals_load_records($filename);
+    $context['sandbox']['max'] = count($xml->children($ns));
 
- 		
+    
     $context['sandbox']['itters'] = $context['sandbox']['max'] / $limit;
     $context['sandbox']['eta'] = 0;
  
@@ -64,11 +69,11 @@ function cals_import_batch_operations($session_id, $filename, $userid, &$context
 
   // Process the next 20 nodes.
 
-	for ($i = $context['sandbox']['current_id']; $i < $context['sandbox']['current_id'] + $limit; ++$i) {
-		drupal_set_message("processing record id: " . $i);
+  for ($i = $context['sandbox']['current_id']; $i < $context['sandbox']['current_id'] + $limit; ++$i) {
+    drupal_set_message(t("processing record id: %i", array('%i' => $i));
     
     /*
-		if ($node = unserialize(base64_decode($row->data))) {
+    if ($node = unserialize(base64_decode($row->data))) {
       cals_importer_save_node($node, $terms);
       $context['results']['nids'][] = $node->nid;
     }
@@ -115,8 +120,8 @@ function cals_importer_import_finalize($success, $results) {
       watchdog($format, $message, array('@count' => $count), WATCHDOG_INFO);
       foreach ($dups as $nid) {
         $message = '';
-        $message = t('The item you are trying to import already exists in the database, see ');
-        $message .= l('node/'. $nid, 'node/'. $nid);
+        $message = t('The item you are trying to import already exists in the database, see');
+        $message .= " " . l(t('node/%n', array('%n' => $nid), 'node/' . $nid);
 
         drupal_set_message($message, 'status');
         watchdog($format, $message, array(), WATCHDOG_ERROR);
@@ -125,7 +130,7 @@ function cals_importer_import_finalize($success, $results) {
   }
   else {
     $count = count($nids);
-    $message = t('Import finished with an error!  ') . format_plural($count, 'One node imported.', '@count nodes imported.');
+    $message = t('Import finished with an error!') . ' ' . format_plural($count, 'One node imported.', '@count nodes imported.');
     drupal_set_message($message, 'error');
     watchdog($format, $message, array('@count' => $count), WATCHDOG_ERROR);
   }

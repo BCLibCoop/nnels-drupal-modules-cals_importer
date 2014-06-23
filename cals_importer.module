@@ -1,24 +1,27 @@
 <?php
-
+/**
+ * @file
+ * CALS Importer Module.
+ */
 /**
  * set memory limit and max execution times to higher than normal!
  */
-	//ini_set('memory_limit', '1024M');
-//ini_set('max_execution_time', '600'); 
+  //ini_set('memory_limit', '1024M');
+  //ini_set('max_execution_time', '600'); 
+  
+  //the MARC namespace
+  define("NAME_SPACE", "http://www.loc.gov/MARC21/slim");
 
-//the MARC namespace
-define("NAME_SPACE", "http://www.loc.gov/MARC21/slim");
-
-//require these files...
-module_load_include('inc', 'cals_importer', 'cals_importer.misc');
-module_load_include('inc', 'cals_importer', 'cals_importer.mappings');
-module_load_include('inc', 'cals_importer', 'cals_importer.marcxml');
-module_load_include('inc', 'cals_importer', 'cals_importer.s3paths');
-module_load_include('inc', 'cals_importer', 'cals_importer.clean_up');
-module_load_include('inc', 'cals_importer', 'cals_importer.deduper');
-module_load_include('inc', 'cals_importer', 'cals_importer.marcxmlfilebuilder');
-module_load_include('inc', 'cals_importer', 'cals_importer.corsS3');
-module_load_include('inc', 'entity', 'includes/entity.controller');
+  //require these files...
+  module_load_include('inc', 'cals_importer', 'cals_importer.misc');
+  module_load_include('inc', 'cals_importer', 'cals_importer.mappings');
+  module_load_include('inc', 'cals_importer', 'cals_importer.marcxml');
+  module_load_include('inc', 'cals_importer', 'cals_importer.s3paths');
+  module_load_include('inc', 'cals_importer', 'cals_importer.clean_up');
+  module_load_include('inc', 'cals_importer', 'cals_importer.deduper');
+  module_load_include('inc', 'cals_importer', 'cals_importer.marcxmlfilebuilder');
+  module_load_include('inc', 'cals_importer', 'cals_importer.corsS3');
+  module_load_include('inc', 'entity', 'includes/entity.controller');
 
 /*
 	require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.misc.inc");
@@ -50,7 +53,7 @@ function cals_importer_menu() {
   $items['admin/content/cals/batch-update-s3-paths'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_batch_update_s3_paths',
-    'title' => t('Update S3 Paths'),
+    'title' => 'Update S3 Paths',
     'page arguments' => array(4),  
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
@@ -58,7 +61,7 @@ function cals_importer_menu() {
   );
 
   $items['admin/content/cals/parse-org-emails'] = array(
-    'title' => t('Update Organizational Contact Emails from CSV file'),
+    'title' => 'Update Organizational Contact Emails from CSV file',
     'access arguments' => array('administer site configuration'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('cals_org_emails_import_form'),
@@ -68,7 +71,7 @@ function cals_importer_menu() {
   $items['admin/content/cals/test-load-org-emails-csv'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_get_array_org_emails',
-    'title' => t("Test Load CSV file"),
+    'title' => "Test Load CSV file",
     'type' => MENU_CALLBACK,
     //'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'page arguments' => array(1),
@@ -81,7 +84,7 @@ function cals_importer_menu() {
   $items['node/%node/parse-marcxml-new'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_import_skeletal_records',
-    'title' => t("Generate / Update Stub Entries"),
+    'title' => "Generate / Update Stub Entries",
     'type' => MENU_CALLBACK,
     //'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'page arguments' => array(1),
@@ -93,7 +96,7 @@ function cals_importer_menu() {
   $items['node/%node/parse-record'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_importer_update_repository_item',
-    'title' => t('Parse MARC/XML'),
+    'title' => 'Parse MARC/XML',
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'page arguments' => array(1),
@@ -106,8 +109,8 @@ function cals_importer_menu() {
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_normalize_record_value',
     'file' => "cals_importer.clean_up.inc",
-    'title' => t('Normalize Record'),
-    'description' => t('Scrubs the title, author and publisher values'),
+    'title' => 'Normalize Record',
+    'description' => 'Scrubs the title, author and publisher values',
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'page arguments' => array(1),
@@ -121,7 +124,7 @@ function cals_importer_menu() {
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_clean_up_creator',
     'file' => "cals_importer.clean_up.inc",
-    'title' => t('Scrub Author'),
+    'title' => 'Scrub Author',
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'page arguments' => array(1),
@@ -134,7 +137,7 @@ function cals_importer_menu() {
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_normalize_publisher',
     'file' => "cals_importer.clean_up.inc",
-    'title' => t('Scrub Publisher'),
+    'title' => 'Scrub Publisher',
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'page arguments' => array(1),
@@ -147,7 +150,7 @@ function cals_importer_menu() {
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_normalize_title',
     'file' => "cals_importer.clean_up.inc",
-    'title' => t('Scrub Title'),
+    'title' => 'Scrub Title',
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'page arguments' => array(1),
@@ -161,7 +164,7 @@ function cals_importer_menu() {
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_importer_add_856_tag',
     'file' => "cals_importer.clean_up.inc",
-    'title' => t('Generate MARC 856'),
+    'title' => 'Generate MARC 856',
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'page arguments' => array(1),
@@ -173,7 +176,7 @@ function cals_importer_menu() {
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_importer_generate_marcxml_file',
     'file' => "cals_importer.marcxmlfilebuilder.inc",
-    'title' => t('Generate MARC Output File'),
+    'title' => 'Generate MARC Output File',
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'page arguments' => array(1),
@@ -186,7 +189,7 @@ function cals_importer_menu() {
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_importer_update_cors_file_table',
     'file' => "cals_importer.corsS3.inc",
-    'title' => t('update S3 -> CORS path!'),
+    'title' => 'update S3 -> CORS path!',
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'page arguments' => array(1),
@@ -200,7 +203,7 @@ function cals_importer_menu() {
   $items['node/%node/parse-access-rights'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_parse_licensed_access',
-    'title' => t('Parse 506 (access)'),
+    'title' => 'Parse 506 (access'),
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'page arguments' => array(1),
@@ -216,7 +219,7 @@ function cals_importer_menu() {
   $items['admin/content/cals/update-isbn-length'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_increase_field_size',
-    'title' => t('Update ISBN Field Size (admin only)'),
+    'title' => 'Update ISBN Field Size (admin only'),
     'type' => MENU_LOCAL_TASK,
     'file' => 'cals_importer.misc.inc',
     'weight' => 100,
@@ -302,7 +305,7 @@ function cals_importer_action_info() {
       'triggers' => array('any'),
     ),
 
-  	//batch generate MARC XML files and attach to original recordset
+    //batch generate MARC XML files and attach to original recordset
     '_cals_importer_generate_marcxml_files' => array(
       'label' => t('3. Generate downloadable MARC XML files'),
       'type' => 'node',
@@ -400,12 +403,14 @@ function cals_importer_menu_alter(&$items) {
   $items['node/%node/generate-marc-856']['access callback'] = '_cals_importer_tab_checker_parse_record';
   $items['node/%node/generate-marc-output']['access callback'] = '_cals_importer_tab_checker_parse_record';
   $items['node/%node/convert-s3-paths']['access callback'] = '_cals_importer_tab_checker_parse_record';
+  $items['node/%node/normalize-record']['access callback'] = '_cals_importer_tab_checker_parse_record';
 
 }
+
 function _cals_importer_tab_checker_parse_record() {
   global $user;
   //todo - change to permission
-  if( user_access('parse marc records') && arg(0) == 'node') {
+  if (user_access('parse marc records') && arg(0) == 'node') {
     $n = node_load(arg(1));
     RETURN ($n->type == 'repository_item') ? TRUE : FALSE;
   }
@@ -415,7 +420,7 @@ function _cals_importer_tab_checker_parse_record() {
 function _cals_importer_tab_checker() {
   global $user;
   //todo - change to permission
-  if( user_access('parse s3 paths') && arg(0) == 'node') {
+  if ( user_access('parse s3 paths') && arg(0) == 'node') {
     $n = node_load(arg(1));
     RETURN ($n->type == 'record_set') ? TRUE : FALSE;
   }
@@ -426,10 +431,10 @@ function _cals_importer_tab_checker() {
  */
 function cals_importer_views_query_alter(&$view, &$query) {
 
-  switch($view->name) {
+  switch ($view->name) {
     case "repository_items_deduplicate2":
     case "repo_items_bulk_deduper":
-      if($view->current_display == 'page') {
+      if ($view->current_display == 'page') {
         $sql = 
         "SELECT field_data_field_system_control_number.field_system_control_number_value as val " .
           "FROM field_data_field_system_control_number " .
@@ -449,7 +454,7 @@ function cals_importer_views_query_alter(&$view, &$query) {
       break;
   
     case "repository_item_admin_views":
-      if($view->current_display == 'page_8') {
+      if ($view->current_display == 'page_8') {
         //custom query to find duplicate system control numbers  
         $vals = array();
         $rs = db_query("select entity_id, field_system_control_number_value
@@ -461,7 +466,7 @@ function cals_importer_views_query_alter(&$view, &$query) {
              group by field_system_control_number_value
              having count(*) > 1)
           order by field_system_control_number_value");
-        foreach($rs as $row) {
+        foreach ($rs as $row) {
           $vals[] = $row->entity_id;
         }
     
@@ -476,7 +481,7 @@ function cals_importer_views_query_alter(&$view, &$query) {
       break;
       
     case "organizations_vbo":
-      if($view->current_display == 'page_2') {
+      if ($view->current_display == 'page_2') {
         //custom query to find duplicate system control numbers  
         $vals = array();
         $rs = db_query("select entity_id, field_library_code_value
@@ -488,7 +493,7 @@ function cals_importer_views_query_alter(&$view, &$query) {
              group by field_library_code_value
              having count(*) > 1)
           order by field_library_code_value");
-        foreach($rs as $row) {
+        foreach ($rs as $row) {
           $vals[] = $row->entity_id;
         }
     
@@ -518,9 +523,9 @@ function cals_importer_node_view($node, $view_mode, $langcode) {
   switch ($node->type) {
     case "record_set":
      
-      if(user_access("generate repo records") || user_access("parse marc records") ) {
+      if (user_access("generate repo records") || user_access("parse marc records") ) {
         $label = t("Generate new stub Repository Records");
-        if(count($node->field_parsed_nodes)) {
+        if (count($node->field_parsed_nodes)) {
           $label = t("Update existing Repository Records (titles + S3 paths)");
         }
         $node->content['additional-text'] = array(
@@ -558,14 +563,14 @@ function _cals_import_skeletal_records($node) {
   
   global $user;
   //module_load_include('inc', 'entity', 'includes/entity.controller');
-  foreach(taxonomy_get_vocabularies() as $k => $v) {
+  foreach (taxonomy_get_vocabularies() as $k => $v) {
     $arr_tax[$v->name] = $k;
   } 
 
-	$arr_s3 = array();
-	if(!empty($node->field_file_csv)) {
-		$file_s3 = drupal_realpath($node->field_file_csv[LANGUAGE_NONE][0]['uri']); 
-   	$arr_s3 = _cals_get_array_csv_by_file($file_s3);
+  $arr_s3 = array();
+  if (!empty($node->field_file_csv)) {
+    $file_s3 = drupal_realpath($node->field_file_csv[LANGUAGE_NONE][0]['uri']); 
+    $arr_s3 = _cals_get_array_csv_by_file($file_s3);
   
   }
   
@@ -576,9 +581,9 @@ function _cals_import_skeletal_records($node) {
   $xml = simplexml_load_file($file);
   
 
-  if($xml===FALSE) {
-    drupal_set_message("oops, could not parse the file. Might not be valid xml?", "error");
-     foreach(libxml_get_errors() as $error) {
+  if ($xml===FALSE) {
+    drupal_set_message(t("Oops, could not parse the file. Might not be valid xml?"), "error");
+     foreach (libxml_get_errors() as $error) {
         drupal_set_message($error->message, "error");
     }
     drupal_goto("node/" . $node->nid);
@@ -587,17 +592,17 @@ function _cals_import_skeletal_records($node) {
   $num = 0;
   $parsed = array();//track some details re. the parsing
   
-  foreach($xml->children(NAME_SPACE) as $record) {
+  foreach ($xml->children(NAME_SPACE) as $record) {
     $arr = _cals_get_title_from_xml($record);
     $result = '';
     
-    if(!isset($arr['repos']['title']) || strlen($arr['repos']['title']) == 0) return "Oops, there's a missing title in this record set!";
+    if (!isset($arr['repos']['title']) || strlen($arr['repos']['title']) == 0) return "Oops, there's a missing title in this record set!";
       $new_record = TRUE;
-      if(isset($node->field_parsed_nodes[LANGUAGE_NONE][$num]) ) {
+      if (isset($node->field_parsed_nodes[LANGUAGE_NONE][$num]) ) {
         $new_record = FALSE;
         $n = node_load($node->field_parsed_nodes[LANGUAGE_NONE][$num]['nid']);
         //added just in case the node reference field is not cleared.
-        if(!isset($n->type) || $n-type != "repository_item") {
+        if (!isset($n->type) || $n-type != "repository_item") {
           //prepare new node
           $n = _cals_prepare_new_item_repos();
           $result .= "Skeletal record added. ";
@@ -621,15 +626,15 @@ function _cals_import_skeletal_records($node) {
       //we'll add string to xml field.
       $arr['xml_record'] = $record->saveXML();
 
-      if($num < 10000) {
-        //if($new_record || $n->title != $arr['repos']['title'] || empty($n->field_xml_string)) {
+      if ($num < 10000) {
+        //if ($new_record || $n->title != $arr['repos']['title'] || empty($n->field_xml_string)) {
           $n->status = 0;
           $n->title = $arr['repos']['title'];
           
           $n->field_xml_string[LANGUAGE_NONE][]['value'] = $arr['xml_record'];
   
-          if(count($arr_s3)) {
-            if(isset($arr['repos']['field_system_control_number'][0])) {
+          if (count($arr_s3)) {
+            if (isset($arr['repos']['field_system_control_number'][0])) {
               $tmp = $arr['repos']['field_system_control_number'][0];
               if (array_key_exists($tmp, $arr_s3)) {
                 $n->field_s3_path[LANGUAGE_NONE] = array();
@@ -642,11 +647,9 @@ function _cals_import_skeletal_records($node) {
           }
           //save the new/existing repository item node  
           $n->field_record_set[LANGUAGE_NONE][0]['nid'] = $node->nid;
-				  $n->field_access_restrictions[LANGUAGE_NONE][0]['value'] = $node->field_access_restrictions[LANGUAGE_NONE][0]['value'];
-				  
+          $n->field_access_restrictions[LANGUAGE_NONE][0]['value'] = $node->field_access_restrictions[LANGUAGE_NONE][0]['value'];
           node_save($n);
-
-          $result  = l("edit", "node/" . $n->nid . "/edit" ) . " | " . l("view", "node/" . $n->nid) . " - {$n->title}" 
+          $result  = l(t("edit"), "node/" . $n->nid . "/edit" ) . " | " . l(t("view"), "node/" . $n->nid) . " - {$n->title}" 
             . " " . $result;  
           
         //} 
@@ -665,8 +668,8 @@ function _cals_import_skeletal_records($node) {
   node_save($node);
 
   $vars = array("items" => $parsed, "title" => "parsed list: {$num} records", "type" => "ol", "attributes" => array());
-    
-  drupal_set_message(theme_item_list($vars));
+  $vars = theme_item_list($vars); 
+  drupal_set_message(filter_xss($vars, $allowed_tags = array('a', 'em', 'strong', 'cite', 'blockquote', 'code', 'ul', 'ol', 'li', 'dl', 'dt', 'dd')));
   drupal_goto("node/" . $node->nid);
 
 }  
@@ -682,10 +685,10 @@ function _cals_importer_update_system_control_numbers(&$entity, $context = array
     $content_types = array('repository_item');
     if (in_array($node->type, $content_types)  ) {
       _cals_parse_system_control_number($node);
-      drupal_set_message("{$node->title} System Control Numbers updated.");
+      drupal_set_message(t('%string System Control Numbers updated', array('%string' => $node->title)));
     }
     else{
-      drupal_set_message("Invalid selection: not a repos item");
+      drupal_set_message(t("Invalid selection: not a repos item"));
     }
 
   }//end main if
@@ -701,8 +704,8 @@ function _cals_importer_update_system_control_numbers(&$entity, $context = array
 function _cals_parse_system_control_number($node) {
 
 
-  if(!isset($node->field_xml_string[LANGUAGE_NONE]) ) return ''; //get out of here if not xml string
-  if(isset($node->field_xml_string[LANGUAGE_NONE])) 
+  if (!isset($node->field_xml_string[LANGUAGE_NONE]) ) return ''; //get out of here if not xml string
+  if (isset($node->field_xml_string[LANGUAGE_NONE])) 
     $xml = _cals_get_xml_string($node->field_xml_string[LANGUAGE_NONE][0]['value']);
 
   $tmp = $xml->xpath("//marc:datafield[@tag='035']/marc:subfield[@code='a']");
@@ -710,18 +713,20 @@ function _cals_parse_system_control_number($node) {
   //$tmp = $xml->xpath("//marc:datafield[@tag='035']");
   unset($node->field_system_control_number);
   
-  if(count($tmp)) {
+  if (count($tmp)) {
   
-    foreach($tmp as $me) {
+    foreach ($tmp as $me) {
       $val = (string) $me;
       $node->field_system_control_number[LANGUAGE_NONE][]['value'] = $val;  
-      drupal_set_message("{$node->title} System Control Numbers updated.");
+      drupal_set_message(t('%string System Control Numbers updated', array('%string' => $node->title)));
+
     }
   
   }
   else {
     $node->field_system_control_number[LANGUAGE_NONE][0]['value'] = 0;  
-    drupal_set_message("{$node->title} System Control Numbers updated.");
+    drupal_set_message(t('%string System Control Numbers updated', array('%string' => $node->title)));
+
 
   }
   node_save($node);
@@ -743,7 +748,7 @@ function _cals_importer_update_licensed_access(&$entity, $context = array()) {
       _cals_parse_licensed_access($node);
     }
     else{
-      drupal_set_message("Invalid selection: not a repos item");
+      drupal_set_message(t("Invalid selection: not a repos item"));
     }
 
   }//end main if
@@ -761,22 +766,22 @@ function _cals_importer_update_licensed_access(&$entity, $context = array()) {
 
 function _cals_parse_licensed_access($node) {
 
-  if(!isset($node->field_xml_string[LANGUAGE_NONE]) ) return ''; //get out of here if not xml string
+  if (!isset($node->field_xml_string[LANGUAGE_NONE]) ) return ''; //get out of here if not xml string
 
   $xml = _cals_get_xml_string($node->field_xml_string[LANGUAGE_NONE][0]['value']); 
   
   $str = 'xyz';//placeholder string
   $tmp = $xml->xpath("//marc:datafield[@tag='506']/marc:subfield[@code='a']");
-  if(!count($tmp)) {
-    drupal_set_message("{$node->title} Access Restriction not updated (no 506 element).");
+  if (!count($tmp)) {
+    drupal_set_message(t('%string  Access Restriction not updated (no 506 element).'), array('%string' => $node->title));
     return '';
   }
   $str = (string) $tmp[0];
-  $tmp = strpos(strtolower($str),"restricted");
+  $tmp = strpos(strtolower($str), "restricted");
   $node->field_access_restrictions[LANGUAGE_NONE][0]['value'] = (is_numeric($tmp)) ? 1 : 0; 
     
   node_save($node);
-  drupal_set_message("{$node->title} Access Restriction updated.");
+  drupal_set_message(t('%string  Access Restriction updated.'), array('%string' => $node->title));
   return '';  
 
 }
@@ -787,21 +792,21 @@ function _cals_get_subjects($xml) {
   $have_date = FALSE;
   $date = '';
   $tmp = $xml->xpath("//marc:datafield[@tag='008']");
-  if(count($tmp)) {
+  if (count($tmp)) {
     $str = (string) $tmp[0];
     return _cals_get_date_from_008($str);
   }
-  if($have_date === FALSE) {
+  if ($have_date === FALSE) {
     $tmp = $xml->xpath("//marc:datafield[@tag='264']/marc:subfield[@code='c']");
-    if(count($tmp)) {
+    if (count($tmp)) {
       $str = (string) $tmp[0];
       return _cals_get_iso_date($str);
     }
         
   } 
-  if($have_date === FALSE) {
+  if ($have_date === FALSE) {
     $tmp = $xml->xpath("//marc:datafield[@tag='260']/marc:subfield[@code='c']");
-    if(count($tmp)) {
+    if (count($tmp)) {
       $str = (string) $tmp[0];
       return _cals_get_iso_date($str);
     }
@@ -817,31 +822,31 @@ function _cals_get_title_from_xml($record) {
   $arr = array();
   //loop thru datafields
   $arr['repos']['title'] = '';
-  foreach($record->children(NAME_SPACE)->datafield as $datafield) {
+  foreach ($record->children(NAME_SPACE)->datafield as $datafield) {
     $tag = (string) $datafield->attributes()->tag;
     $ind1 = (string) $datafield->attributes()->ind1;
     $ind2 = (string) $datafield->attributes()->ind2;
     
     
-    foreach($datafield as $subfield) {
+    foreach ($datafield as $subfield) {
       $code = (string) $subfield->attributes()->code;
       $str = trim((string) $subfield);
       $str = trim($str);
 
     
-      switch($tag) {
+      switch ($tag) {
       
         case 245:
-          if($code == 'a') $arr['repos']['title'] =  $str;
-          if($code == 'b') $arr['repos']['title'] .=  " " .  $str;
+          if ($code == 'a') $arr['repos']['title'] =  $str;
+          if ($code == 'b') $arr['repos']['title'] .=  " " . $str;
           $arr['repos']['title'] = _cals_get_truncated_value($arr['repos']['title'], 250);
           
           break;
           
         case "035":
-          if($code == 'a') {
+          if ($code == 'a') {
   
-            if(strpos($str, "(OCoLC)")) {
+            if (strpos($str, "(OCoLC)")) {
               $arr['repos']["field_oclc_number"][] = $str;
             }
             else {
@@ -903,27 +908,29 @@ function _cals_importer_get_string($arr) {
 
 function _cals_importer_xml2php($xml) {
   $fils = 0;
-  $tab = false;
+  $tab = FALSE;
   $array = array();
 
-  foreach($xml->children() as $key => $value) {   
+  foreach ($xml->children() as $key => $value) {   
     $child = _cals_importer_xml2php($value);
     //To deal with the attributes
-    foreach($node->attributes() as $ak=>$av){
+    foreach ($node->attributes() as $ak => $av) {
       $child[$ak] = (string)$av;
     }
     //Let see if the new child is not in the array
-    if($tab==false && in_array($key,array_keys($array))) {
+    if ($tab == FALSE && in_array($key, array_keys($array))) {
     //If this element is already in the array we will create an indexed array
       $tmp = $array[$key];
       $array[$key] = NULL;
       $array[$key][] = $tmp;
       $array[$key][] = $child;
-      $tab = true;
-    }elseif($tab == true){
+      $tab = TRUE;
+    }
+    elseif ($tab == TRUE) {
       //Add an element in an existing array
       $array[$key][] = $child;
-    }else{
+    }
+    else{
       //Add a simple element
       $array[$key] = $child;
     }
@@ -931,7 +938,7 @@ function _cals_importer_xml2php($xml) {
     $fils++;       
   }
   
-  if($fils==0) {
+  if ($fils==0) {
     
     return (string)$xml;
     
@@ -950,12 +957,12 @@ function _cals_importer_xml2php($xml) {
 
 function _cals_update_s3_path($node) {
   $paths = array();
-  foreach($node->field_s3_path[LANGUAGE_NONE] as $k => $v) {
+  foreach ($node->field_s3_path[LANGUAGE_NONE] as $k => $v) {
     $paths[] = $v['value'];
   }
   $paths = array_unique($paths);
   unset($node->field_s3_path[LANGUAGE_NONE]);
-  foreach($paths as $path) {
+  foreach ($paths as $path) {
     $node->field_s3_path[LANGUAGE_NONE][]['value'] = $path;
   
   }
