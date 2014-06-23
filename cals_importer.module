@@ -10,19 +10,27 @@
 define("NAME_SPACE", "http://www.loc.gov/MARC21/slim");
 
 //require these files...
-require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.misc.inc");
-require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.mappings.inc");
-require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.marcxml.inc");
-require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.s3paths.inc");
-require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.clean_up.inc");
-require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.deduper.inc");
-require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.marcxmlfilebuilder.inc");
-
-require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.corsS3.inc");
-
-
-//module_load_include("inc", "cals_importer", "cals_importer.marcxmlfilebuilder.inc");
+module_load_include('inc', 'cals_importer', 'cals_importer.misc');
+module_load_include('inc', 'cals_importer', 'cals_importer.mappings');
+module_load_include('inc', 'cals_importer', 'cals_importer.marcxml');
+module_load_include('inc', 'cals_importer', 'cals_importer.s3paths');
+module_load_include('inc', 'cals_importer', 'cals_importer.clean_up');
+module_load_include('inc', 'cals_importer', 'cals_importer.deduper');
+module_load_include('inc', 'cals_importer', 'cals_importer.marcxmlfilebuilder');
+module_load_include('inc', 'cals_importer', 'cals_importer.corsS3');
 module_load_include('inc', 'entity', 'includes/entity.controller');
+
+/*
+	require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.misc.inc");
+	require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.mappings.inc");
+	require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.marcxml.inc");
+	require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.s3paths.inc");
+	require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.clean_up.inc");
+	require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.deduper.inc");
+	require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.marcxmlfilebuilder.inc");
+	require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.corsS3.inc");
+*/
+
 
 /**
  * Implements hook_menu().

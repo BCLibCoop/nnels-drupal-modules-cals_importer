@@ -92,7 +92,7 @@ function _cals_run_batch_update_field_collection_s3_path(&$entity, $context = ar
     if (in_array($node->type, $content_types)  ) {
     	$filepath = $node->field_s3_path[LANGUAGE_NONE][0]['value'];
       _cals_importer_update_field_collection_field_file_resource($node, $filepath);
-      drupal_set_message("Invalid selection: not a repos item");
+      //drupal_set_message("Invalid selection: not a repos item");
     }
     else{
       drupal_set_message("Invalid selection: not a repos item");
