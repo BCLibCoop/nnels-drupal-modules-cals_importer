@@ -1,6 +1,11 @@
 <?php
 
 /**
+ * @file
+ * Updates s3 paths via batch update views
+ */
+ 
+/**
  * Invokes Drupal's batch api to update S3 paths
  * 
  * @param $nid
@@ -11,54 +16,54 @@ function _cals_batch_update_s3_paths($nid) {
   global $user;
   $null_path = "admin/content/cals/s3-record-sets";
   $msg_file_str = t("Can't parse the S3 file. Please check its structure.");
-  if(empty($nid)) drupal_goto($null_path); //printPre("HEY, empty!");
+  if (empty($nid)) drupal_goto($null_path); //printPre("HEY, empty!");
   
   //get array from csv file. Pass this into the initial batch
-	$arr = _cals_get_array_csv($nid);
-	
-	
-	if(empty($arr)) {
-	  drupal_set_message($msg_file_str);
-	  drupal_goto($null_path);
-	}
-	else {
-		//check first row to ensure well structured.
-		$tmp = strpos($arr[0][1], "s3://");
-		if($tmp === FALSE) {
-		  drupal_set_message($msg_file_str);
-		  drupal_goto($null_path);
-		}
-	}
-	
-	//printAndDie($arr);
-	
-	/*
-	foreach($arr as $v) {
-		$sysnum = $v[0];
-		$nid = _cals_get_node_by_sysnum($sysnum);
-		printPre($nid);
-	
-	}
-	
-	*/
-	$batch = array(
-		'title' => t('Update S3 Paths'),
-		//'operations' => array('_cals_run_batch_update_s3_path', array($nid, $arr) ),
-		'operations' => array(array('_cals_run_batch_update_s3_path', array($nid, $arr)), 
-		
+  $arr = _cals_get_array_csv($nid);
+  
+  
+  if (empty($arr)) {
+    drupal_set_message(t('%m'), array('%m' => $msg_file_str));
+    drupal_goto($null_path);
+  }
+  else {
+    //check first row to ensure well structured.
+    $tmp = strpos($arr[0][1], "s3://");
+    if ($tmp === FALSE) {
+      drupal_set_message(t('%m'), array('%m' => $msg_file_str));
+      drupal_goto($null_path);
+    }
+  }
+  
+  //printAndDie($arr);
+  
+  /*
+  foreach ($arr as $v) {
+    $sysnum = $v[0];
+    $nid = _cals_get_node_by_sysnum($sysnum);
+    printPre($nid);
+  
+  }
+  
+  */
+  $batch = array(
+    'title' => t('Update S3 Paths'),
+    //'operations' => array('_cals_run_batch_update_s3_path', array($nid, $arr) ),
+    'operations' => array(array('_cals_run_batch_update_s3_path', array($nid, $arr)), 
+    
     ),
-		//'progress_message' => t('Update. Operation @current out of @total.'),
-		'error_message' => t('Error!'),
-		'finished' => '_cals_batch_update_s3_path_finished',
-	);
-		($batch);
+    //'progress_message' => t('Update. Operation @current out of @total.'),
+    'error_message' => t('Error!'),
+    'finished' => '_cals_batch_update_s3_path_finished',
+  );
+    ($batch);
   batch_set($batch);
-	batch_process('admin/content/cals/s3-record-sets');
+  batch_process('admin/content/cals/s3-record-sets');
 }
 
 /**
  * The main batch process to update S3 paths
- *	 
+ *   
  * @param $nid
  *   the node id
  * @param $arr
@@ -72,62 +77,55 @@ function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
   $limit = 10; //10;
   // Get Count of products
   if (empty($context['sandbox']['progress']) ) {
-		$context['sandbox']['progress'] = 0;
+    $context['sandbox']['progress'] = 0;
     $context['sandbox']['max'] = count($arr); //count($pids);
     $context['sandbox']['arr'] = $arr;
     $context['sandbox']['current'] = 0;
     //watchdog('import', 'update s3 paths');
-  	//dpm($arr);
+    //dpm($arr);
   }
- 	$i = $context['sandbox']['progress'];
- 	$total = $i + 10;
- 	if($total > $context['sandbox']['max']) $total = $context['sandbox']['max'];
-	for($i = $context['sandbox']['progress']; $i < $total; $i++){
-	//for($i = 0; $i < $limit; $i++){
-	//if( ($context['sandbox']['progress'] < $context['sandbox']['max']) ){
-		
-		  // && ($context['sandbox']['progress'] <= $context['sandbox']['max'])
-			$current_row = $context['sandbox']['progress'];
-			$data = $context['sandbox']['arr'][$current_row];
-	    
-		  //$bibid = $data[0];
-			$sysnum = $data[0];
-			$path = $data[1];
-	
-			$nid2 = _cals_get_node_by_sysnum($sysnum);
-			
-			//drupal_set_message("we get here: nid = $nid | nid2 = $nid2 | $bidid = {$data[0]} | {$data[1]} | {$data[2]}");
-	
-			
-			if($nid2 > 0) {
-				$paths = array();
-				$node = node_load($nid2);
-				if(isset($node->field_s3_path[LANGUAGE_NONE]) && count($node->field_s3_path[LANGUAGE_NONE]) > 1) {
-					foreach($node->field_s3_path[LANGUAGE_NONE] as $k => $v) {
-						$paths[] = $v['value'];
-					}
-				}
-				$paths[] = $path;
-				$paths = array_unique($paths);
-				unset($node->field_s3_path[LANGUAGE_NONE]); //reset this variable so we can dedupe with unique values
-				foreach($paths as $path) {
-					$node->field_s3_path[LANGUAGE_NONE][]['value'] = $path;
-				}
-				//$node->field_bibid[LANGUAGE_NONE][0]['value'] = $bibid;
-				node_save($node);
-				drupal_set_message("{$current_row}. updated node " . l($nid2, "node/" . $nid2) . ": " . $node->title);
-				$context['results'][] = check_plain($node->title); // Track nodes updated
-	    	$context['message'] = "updated node " . $node->nid;
-			}
-			else {
-				drupal_set_message("{$current_row}. could not find {$sysnum}");
-			}
-	
-	    $context['sandbox']['progress']++; // Used to keep track of rows processed
-	    //array_shift($context['sandbox']['arr']);
-		}
-		
-		
+  $i = $context['sandbox']['progress'];
+  $total = $i + 10;
+  if ($total > $context['sandbox']['max']) $total = $context['sandbox']['max'];
+  for ($i = $context['sandbox']['progress']; $i < $total; $i++) {
+ 
+    $current_row = $context['sandbox']['progress'];
+    $data = $context['sandbox']['arr'][$current_row];
+    
+    //$bibid = $data[0];
+    $sysnum = $data[0];
+    $path = $data[1];
+
+    $nid2 = _cals_get_node_by_sysnum($sysnum);
+    
+    if ($nid2 > 0) {
+      $paths = array();
+      $node = node_load($nid2);
+      if (isset($node->field_s3_path[LANGUAGE_NONE]) && count($node->field_s3_path[LANGUAGE_NONE]) > 1) {
+        foreach ($node->field_s3_path[LANGUAGE_NONE] as $k => $v) {
+          $paths[] = $v['value'];
+        }
+      }
+      $paths[] = $path;
+      $paths = array_unique($paths);
+      unset($node->field_s3_path[LANGUAGE_NONE]); //reset this variable so we can dedupe with unique values
+      foreach ($paths as $path) {
+        $node->field_s3_path[LANGUAGE_NONE][]['value'] = $path;
+      }
+      //$node->field_bibid[LANGUAGE_NONE][0]['value'] = $bibid;
+      node_save($node);
+      //drupal_set_message(t("%cr{$current_row}. updated node " . l($nid2, "node/" . $nid2) . ": " . $node->title);
+      $context['results'][] = check_plain($node->title); // Track nodes updated
+      $context['message'] = "updated node " . $node->nid;
+    }
+    else {
+      drupal_set_message(t("%c. could not find %s"), array('%c' => $current_row, '%s' => $sysnum));
+    }
+    $context['sandbox']['progress']++; // Used to keep track of rows processed
+    //array_shift($context['sandbox']['arr']);
+  }
+  
+    
  
 
   if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
@@ -141,7 +139,7 @@ function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
  * Finish batch
  */
 function _cals_batch_update_s3_path_finished($success, $results, $operations) {
-	if ($success) {
+  if ($success) {
     $message = format_plural(count($results), 'One node updated', '@count nodes updated.');
   } 
   else {
@@ -162,24 +160,24 @@ function _cals_batch_update_s3_path_finished($success, $results, $operations) {
  *   an array.
  */
 function _cals_get_array_csv($nid) {
-	$node = node_load($nid);
-	$file = drupal_realpath($node->field_file_csv[LANGUAGE_NONE][0]['uri']);
-	
-	$row = 1; 	
-	$arr = array();
-	if (($handle = fopen($file, "r")) !== FALSE) {
-	  //while (($data = fgetcsv($handle, 1000, "\t")) !== FALSE) {
-		while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {	
-			if($row > 1 ) {
-				$arr[] = $data;
-			}
-			$row++;
-	  }
-	  fclose($handle);
-	}
-	return $arr;
-	
-	
+  $node = node_load($nid);
+  $file = drupal_realpath($node->field_file_csv[LANGUAGE_NONE][0]['uri']);
+  
+  $row = 1;   
+  $arr = array();
+  if (($handle = fopen($file, "r")) !== FALSE) {
+    //while (($data = fgetcsv($handle, 1000, "\t")) !== FALSE) {
+    while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) { 
+      if ($row > 1 ) {
+        $arr[] = $data;
+      }
+      $row++;
+    }
+    fclose($handle);
+  }
+  return $arr;
+  
+  
 }
 
 /**
@@ -194,21 +192,21 @@ function _cals_get_array_csv($nid) {
 
 function _cals_get_array_csv_by_file($file) {
 
-	$row = 1; 	
-	$arr = array();
-	if (($handle = fopen($file, "r")) !== FALSE) {
-	  //while (($data = fgetcsv($handle, 1000, "\t")) !== FALSE) {
-		while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {	
-			if($row > 1 ) {
-				$arr[$data[0]] = $data[1];
-			}
-			$row++;
-	  }
-	  fclose($handle);
-	}
-	
-	
-	return $arr;
+  $row = 1;   
+  $arr = array();
+  if (($handle = fopen($file, "r")) !== FALSE) {
+    //while (($data = fgetcsv($handle, 1000, "\t")) !== FALSE) {
+    while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) { 
+      if ($row > 1 ) {
+        $arr[$data[0]] = $data[1];
+      }
+      $row++;
+    }
+    fclose($handle);
+  }
+  
+  
+  return $arr;
 }
 
 
@@ -218,82 +216,82 @@ function _cals_get_array_csv_by_file($file) {
  */
 function _cals_load_s3_file($start, $limit) {
 
-	$nid = arg(4);
-	$file = drupal_get_path('module', "cals_importer") . "/20130717-cals-systemnumber-file-all-dave.csv";
-	$arr = array();
-	$row = 1;
-	$num_updated = 0;
-	if (($handle = fopen($file, "r")) !== FALSE) {
-	    while (($data = fgetcsv($handle, 1000, "\t")) !== FALSE) {
-				if($row > 1) {
-					$arr[] = $data;
-					$bibid = $data[0];
-					$sysnum = $data[1];
-					$path = $data[2];
-					$nid = _cals_get_node_by_sysnum($sysnum);
-					if($nid > 0) {
-						$node = node_load($nid);
-						//
-						//$node->field_system_control_number[LANGUAGE_NONE][]['value'] = $sysnum;
-						
-						$node->field_s3_path[LANGUAGE_NONE][]['value'] = $path;
-						$node->field_bibid[LANGUAGE_NONE][0]['value'] = $bibid;
-						node_save($node);
-						$num_updated++;
-						//drupal_set_message("saved {$node->title}: $path");
-					}
+  $nid = arg(4);
+  $file = drupal_get_path('module', "cals_importer") . "/20130717-cals-systemnumber-file-all-dave.csv";
+  $arr = array();
+  $row = 1;
+  $num_updated = 0;
+  if (($handle = fopen($file, "r")) !== FALSE) {
+      while (($data = fgetcsv($handle, 1000, "\t")) !== FALSE) {
+        if ($row > 1) {
+          $arr[] = $data;
+          $bibid = $data[0];
+          $sysnum = $data[1];
+          $path = $data[2];
+          $nid = _cals_get_node_by_sysnum($sysnum);
+          if ($nid > 0) {
+            $node = node_load($nid);
+            //
+            //$node->field_system_control_number[LANGUAGE_NONE][]['value'] = $sysnum;
+            
+            $node->field_s3_path[LANGUAGE_NONE][]['value'] = $path;
+            $node->field_bibid[LANGUAGE_NONE][0]['value'] = $bibid;
+            node_save($node);
+            $num_updated++;
+            //drupal_set_message("saved {$node->title}: $path");
+          }
 
-				}
-				$row++;
-	    }
-	    fclose($handle);
-	    return "updated {$num_updated}";
-	}
-	else {
-		return "can't find file??";
-	
-	}
+        }
+        $row++;
+      }
+      fclose($handle);
+      return "updated {$num_updated}";
+  }
+  else {
+    return "can't find file??";
+  
+  }
 
 }
 
 function _cals_update_s3_paths() {
 
-	//require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.mappings.inc");
-	$file = drupal_get_path('module', "cals_importer") . "/20130717-cals-systemnumber-file-all-dave.csv";
-	$arr = array();
-	$row = 1;
-	$num_updated = 0;
+  //require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.mappings.inc");
+  $file = drupal_get_path('module', "cals_importer") . "/20130717-cals-systemnumber-file-all-dave.csv";
+  $arr = array();
+  $row = 1;
+  $num_updated = 0;
 
-	if (($handle = fopen($file, "r")) !== FALSE) {
-	    while (($data = fgetcsv($handle, 1000, "\t")) !== FALSE) {
-				if($row > 1) {
-					$arr[] = $data;
-					$bibid = $data[0];
-					$sysnum = $data[1];
-					$path = $data[2];
-					$nid = _cals_get_node_by_sysnum($sysnum);
-					if($nid > 0) {
-						$node = node_load($nid);
-						//
-						//$node->field_system_control_number[LANGUAGE_NONE][]['value'] = $sysnum;
-						
-						$node->field_s3_path[LANGUAGE_NONE][]['value'] = $path;
-						$node->field_bibid[LANGUAGE_NONE][0]['value'] = $bibid;
-						node_save($node);
-						$num_updated++;
-						//drupal_set_message("saved {$node->title}: $path");
-					}
+  if (($handle = fopen($file, "r")) !== FALSE) {
+      while (($data = fgetcsv($handle, 1000, "\t")) !== FALSE) {
+        if ($row > 1) {
+          $arr[] = $data;
+          $bibid = $data[0];
+          $sysnum = $data[1];
+          $path = $data[2];
+          $nid = _cals_get_node_by_sysnum($sysnum);
+          if ($nid > 0) {
+            $node = node_load($nid);
+            //
+            //$node->field_system_control_number[LANGUAGE_NONE][]['value'] = $sysnum;
+            
+            $node->field_s3_path[LANGUAGE_NONE][]['value'] = $path;
+            $node->field_bibid[LANGUAGE_NONE][0]['value'] = $bibid;
+            node_save($node);
+            $num_updated++;
+            //drupal_set_message("saved {$node->title}: $path");
+          }
 
-				}
-				$row++;
-	    }
-	    fclose($handle);
-	    return "updated {$num_updated}";
-	}
-	else {
-		return "can't find file??";
-	
-	}
+        }
+        $row++;
+      }
+      fclose($handle);
+      return "updated {$num_updated}";
+  }
+  else {
+    return "can't find file??";
+  
+  }
 
 
 
