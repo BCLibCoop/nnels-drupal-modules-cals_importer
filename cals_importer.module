@@ -23,17 +23,6 @@
   module_load_include('inc', 'cals_importer', 'cals_importer.corsS3');
   module_load_include('inc', 'entity', 'includes/entity.controller');
 
-/*
-	require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.misc.inc");
-	require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.mappings.inc");
-	require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.marcxml.inc");
-	require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.s3paths.inc");
-	require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.clean_up.inc");
-	require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.deduper.inc");
-	require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.marcxmlfilebuilder.inc");
-	require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.corsS3.inc");
-*/
-
 
 /**
  * Implements hook_menu().

@@ -91,7 +91,7 @@ function _cals_parse_record_details($node) {
   _cals_get_descriptors_from_marc($arr, $xml);
   
   //isbns
-  _cals_get_isbn_sysnums_from_marc($arr, $xml);
+  _cals_importer_get_isbn_sysnums_from_marc($arr, $xml);
 
     //grabs some of the generic fields, e.g., titles, uri, publisher number, etc.
   _cals_get_commom_fields_from_marc($arr, $xml);
@@ -105,7 +105,7 @@ function _cals_parse_record_details($node) {
 
   //get the rest of the fields by looping thru the record
   foreach ($xml->children(NAME_SPACE) as $record) {
-    _cals_get_array_from_xml($record, $arr);
+    _cals_importer_get_array_from_marcxml($record, $arr);
   }
   
   $node->title = _cals_get_truncated_value($arr['repos']['title'], 250);        
@@ -145,6 +145,6 @@ function _cals_parse_record_details($node) {
   node_save($node);
   
   //populate the field collections
-  _cals_add_entity_values2($node, $arr_tax, $arr['fc']);
+  _cals_importer_populate_repos_item_fieldcollections($node, $arr_tax, $arr['fc']);
   
 }

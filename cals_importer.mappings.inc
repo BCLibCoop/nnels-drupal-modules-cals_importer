@@ -46,22 +46,16 @@ function _cals_get_date_issued($xml) {
     return _cals_get_iso_year($str);
   }
  
- 
   return '';
-
 
 }
 
 function _cals_get_date_from_008($str) {
-
   return _cals_get_iso_date(substr($str, 7, 4));
-  
 }
 
 function _cals_get_genre_from_marc(&$arr, $xml) {
-
   //<marc:datafield tag="655" ind1=" " ind2=" ">
-
   $tmp = $xml->xpath("//marc:datafield[@tag='655'][@ind1=' ']/marc:subfield[@code='a']|//marc:datafield[@tag='655'][@ind2=' ']/marc:subfield[@code='a']");
 
   if (count($tmp) >= 1) {
@@ -81,9 +75,8 @@ function _cals_get_genre_from_marc(&$arr, $xml) {
     }
  
   }
-
-
 }
+
 function _cals_get_subject_from_marc(&$arr, $xml) {
 
   //600
@@ -244,15 +237,9 @@ function _cals_get_description_type($tag) {
   
   if (array_key_exists($tag, $tmp)) return $tmp[$tag];
   return "";
-
-
-
-
 }
 
-function _cals_get_isbn_sysnums_from_marc(&$arr, $xml) {
-
-
+function _cals_importer_get_isbn_sysnums_from_marc(&$arr, $xml) {
 //"field_isbn" => array("key" => "repos", "datafield" => 534, "subfield" => "z"),
   $tmp = $xml->xpath("//marc:datafield[@tag='534']/marc:subfield[@code='z']");
   foreach ($tmp as $me) {
@@ -270,6 +257,76 @@ function _cals_get_isbn_sysnums_from_marc(&$arr, $xml) {
     foreach ($tmp2 as $val2) {
       $arr['repos']['field_isbn'][] = trim($val2);
     }
+  }
+  
+}
+
+
+
+/**
+ *
+ * @param $arr
+ *   the drupal ready array of fields
+ * @param $xml
+ *   the original xml string
+ *
+ * @return
+ *   an array of Drupal-ready fields
+ *
+ */
+function _cals_importer_get_performer_from_marcxml(&$arr, $xml) {
+
+
+  if(!isset($arr['fc_files'])) $arr['fc_files'] = array();
+
+  //look for 511 tags
+ 
+
+  $tmp = $xml->xpath("//marc:datafield[@tag='511']/marc:subfield[@code='a']");
+  
+  foreach ($tmp as $me) {
+  
+    $val = (string) trim($me[0]);
+    //replace ";" to ","  
+    $val = str_replace(";", ",", $val);
+
+    if (strpos($val, "[")) $val = trim(substr($val, 0, strpos($val, "[") ));
+    if (strpos($val, "(")) $val = trim(substr($val, 0, strpos($val, "(") ));
+
+    //in case its multi valued
+    $tmp2 = explode(",", $val);
+
+    foreach ($tmp2 as $val2) {
+      $arr['fc_files']['field_performer'][] = trim($val2);
+    }
+  }
+  
+}
+
+/**
+ *
+ * @param $arr
+ *   the drupal ready array of fields
+ * @param $xml
+ *   the original xml string
+ *
+ * @return
+ *   an array of Drupal-ready fields
+ *
+ * see: http://www.loc.gov/marc/bibliographic/bd306.html
+ */
+function _cals_importer_get_runningtime_from_marcxml(&$arr, $xml) {
+
+  //files field collection
+  if(!isset($arr['fc_files'])) $arr['fc_files'] = array();
+  //look for 306 tag code a
+  $tmp = $xml->xpath("//marc:datafield[@tag='306']/marc:subfield[@code='a']");
+
+  foreach ($tmp as $me) {
+    $val = (string) trim($me[0]);
+    $val = trim($val);
+    //field format: $fc_item->field_running_time[LANGUAGE_NONE][$k]['value']
+    $arr['fc_files']['field_running_time'][]['value'] = $val;
   }
   
 }
@@ -384,7 +441,7 @@ function _cals_get_commom_fields_from_marc(&$arr, $xml) {
  *   an array of Drupal-ready fields
  *
  */
-function _cals_get_array_from_xml($record, &$arr) {
+function _cals_importer_get_array_from_marcxml($record, &$arr) {
 
 
   //leader field

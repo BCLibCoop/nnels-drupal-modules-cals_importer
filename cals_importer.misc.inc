@@ -295,7 +295,7 @@ function _cals_delete_existing_field_collection_items($node,$keys) {
  *   an array. 
  *
  */ 
-function _cals_add_entity_values2( $node, $arr_tax, $arr ) {
+function _cals_importer_populate_repos_item_fieldcollections( $node, $arr_tax, $arr ) {
   
   foreach($arr as $k => $v) {
     $values = array();
@@ -340,6 +340,9 @@ function _cals_add_entity_values2( $node, $arr_tax, $arr ) {
     
 
 }
+
+
+
 
 
 function _cals_get_nid_by_title($title) {

@@ -41,40 +41,109 @@
  */
 function _cals_importer_update_field_collection_field_file_resource($node, $filepath) {
 
-    // Create new field collection item.
-    $fc_item = entity_create('field_collection_item', array('field_name' => 'field_file_resource')); 
+  //printAndDie($node->field_xml_string);
 
-    // Attach it to the node.
-    $fc_item->setHostEntity('node', $node); 
-    
-    $filepath = str_replace("download.nnels.ca/", "", $filepath);
-    
-    //printAndDie($filepath);
-    //$filepath = "s3://foo";
-    // Create managed File object and associate with zip. Not currently in use, but leave intact for now
-    $file = (object) array(
-      'uid' => 1,
-      'uri' => $filepath,
-      'filename' => $filepath, //str_replace("s3://", "", $filepath),
-      'filemime' => "application/zip",    //application/zip or multipart/x-zip
-      'status' => 1,
-      'display' => 1
-    );
-    
-    //printAndDie($file, $node->field_file_resource);
-    file_save($file);
-     
-    //$fc_wrapper = entity_metadata_wrapper('field_collection_item', $fc_item);
-    $fc_item->field_s3_file_upload[LANGUAGE_NONE][0]  =  (array)$file;
-    $fc_item->field_user[LANGUAGE_NONE][0]['value'] = 1;
-    $fc_item->field_performer[LANGUAGE_NONE][0]['value'] = "TEST";
-    $fc_item->field_s3_path[LANGUAGE_NONE][0]['value'] = $filepath;
-    $fc_item->save(); // Save field-collection item.
-    node_save($node);
-    drupal_set_message(t("updated s3 path: ") . $node->title);
+  $arr = _cals_importer_parse_marcxml_cors3($node);
+  
+  // Create new field collection item.
+  $fc_item = entity_create('field_collection_item', array('field_name' => 'field_file_resource')); 
+
+  // Attach it to the node.
+  $fc_item->setHostEntity('node', $node); 
+  
+  $filepath = str_replace("download.nnels.ca/", "", $filepath);
+  
+  //$filepath = "s3://foo";
+  // Create managed File object and associate with zip. Not currently in use, but leave intact for now
+  $file = (object) array(
+    'uid' => 1,
+    'uri' => $filepath,
+    'filename' => $filepath, //str_replace("s3://", "", $filepath),
+    'filemime' => "application/zip",    //application/zip or multipart/x-zip
+    'status' => 1,
+    'display' => 1
+  );
+  
+  //file_save($file);
+   
+  //$fc_wrapper = entity_metadata_wrapper('field_collection_item', $fc_item);
+  //$fc_item->field_s3_file_upload[LANGUAGE_NONE][0]  =  (array)$file;
+  $fc_item->field_user[LANGUAGE_NONE][0]['value'] = 1;
+  $fc_item->field_performer[LANGUAGE_NONE][0]['value'] = "TEST";
+
+  if(count($arr['fc_files']['field_running_time'])) {
+    $fc_item->field_running_time[LANGUAGE_NONE] = $arr['fc_files']['field_running_time'];
+    //printAndDie($fc_item->field_running_time);
+  }
+  $fc_item->field_s3_path[LANGUAGE_NONE][0]['value'] = $filepath;
+  $fc_item->save(); // Save field-collection item.
+  
+  //printAndDie($file, $fc_item);
+
+  node_save($node);
+  drupal_set_message(t("updated s3 path: ") . $node->title);
 
  }
 
+/**
+ * Populates Field Collection values
+ *
+ * @param $node
+ *   the node passed to the parser
+ * @param $arr_tax
+ *   taxonomy values
+ * @param $arr
+ *   array of field collection values
+ *
+ * @return
+ *   an array. 
+ *
+ */ 
+function _cals_importer_populate_fieldcollection_file_resource( $node, $arr_tax, $arr ) {
+  //field_file_resource
+  foreach($arr as $k => $v) {
+    $values = array();
+    //run thru a switch so we can isolate fields that still
+    //need to be worked on. Later, can remove switch? 
+    switch($k) {
+    
+      case "field_dc_subject":
+      case "field_dc_relation":
+      case "field_cataloguing_agency":
+      case "field_dc_description":
+      case "field_dc_coverage":
+      case "field_date":
+        $values = _cals_get_entity_value($k, $v, $arr_tax);
+        //printPre("ya", $v);
+        break;
+
+    
+      default:
+        printAndDie($k, $v);
+        break;
+    
+      
+    
+    }
+    
+    if (count($values)) {
+      foreach ($values as $value) {
+        if (is_array($value)) {
+          $e = entity_create('field_collection_item', $value);
+          // Attach the field_collection entity to the application node.
+          $e->setHostEntity('node', $node);
+          // Save the entity. 
+          $e->save(); 
+        }
+      }
+    }   
+      
+
+  }
+  
+    
+
+}
 
  
 /**
@@ -106,4 +175,43 @@ function _cals_run_batch_update_field_collection_s3_path(&$entity, $context = ar
  
   return "";
 
+}
+
+
+/**
+ * parses the original marcxml string to return array of values related to cors multi-value field collection
+ *
+ * @param $node
+ *   the node passed to the parser
+ *
+ * @return
+ *   an array. 
+ *
+ */ 
+ 
+function _cals_importer_parse_marcxml_cors3($node) {
+
+  $xml = '';
+  if (!isset($node->field_xml_string[LANGUAGE_NONE]) ) return ''; //get out of here if not xml string
+
+  if (isset($node->field_xml_string[LANGUAGE_NONE])) 
+    $xml = _cals_get_xml_string($node->field_xml_string[LANGUAGE_NONE][0]['value']);
+
+  //create an array of taxonomies to be used in parsing field collections, etc.
+  foreach (taxonomy_get_vocabularies() as $k => $v) {
+    $arr_tax[$v->name] = $k;
+  } 
+  
+  //if (!strlen($xml)) return "no xml!";
+  $arr = array();
+  
+  //get running time
+  _cals_importer_get_runningtime_from_marcxml($arr, $xml);
+  
+  //get performer
+  _cals_importer_get_performer_from_marcxml($arr, $xml);
+
+ 
+  return $arr;
+    
 }
