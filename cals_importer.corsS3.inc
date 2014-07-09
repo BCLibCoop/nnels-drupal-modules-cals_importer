@@ -39,6 +39,12 @@
  //$filepath
 function _cals_importer_update_field_collection_field_file_resource($node) {
 
+
+  $fc = entity_load('field_collection_item', array(56456));
+
+  //printAndDie($fc,$node);
+  
+  
   unset($node->field_file_resource[LANGUAGE_NONE]);
   $filepath = '';
   if(!empty($node->field_s3_path[LANGUAGE_NONE]) ) $filepath = $node->field_s3_path[LANGUAGE_NONE][0]['value'];
@@ -83,6 +89,15 @@ function _cals_importer_update_field_collection_field_file_resource($node) {
     $fc_item->field_running_time[LANGUAGE_NONE] = $arr['fc_files']['field_running_time'];
     //printAndDie($fc_item->field_running_time);
   }
+  
+  //hard-coded values (for now):
+  
+  $fc_item->field_availability_status[LANGUAGE_NONE][0]['value'] = 1;
+  
+  $fc_item->field_organization[LANGUAGE_NONE][0]['nid'] = 15450;
+  $fc_item->field_user[LANGUAGE_NONE][0]['uid'] = 1;
+  $fc_item->field_file_upload_details[LANGUAGE_NONE][0]['value'] = "Original collection reparsed";
+  
   if(!empty($filepath)) $fc_item->field_s3_path[LANGUAGE_NONE][0]['value'] = $filepath;
   $fc_item->save(); // Save field-collection item.
   
