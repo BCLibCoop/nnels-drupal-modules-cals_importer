@@ -22,15 +22,12 @@
   $filepath = 'http://s3://download.nnels.ca/AU/WA/ABWA/restricted/S9164/River_God_Chivers_Edition_S9164.zip';
   
   $filepath = 'http://s.libraries.coop/download.nnels.ca/AU/WA/ABWA/restricted/S9164/River_God_Chivers_Edition_S9164.zip';
-  
+  if(!empty($node->field_s3_path[LANGUAGE_NONE])) _cals_importer_update_field_collection_field_file_resource($node, $node->field_s3_path[LANGUAGE_NONE][0]['value']);  
   */
-  $filepath = $node->field_s3_path[LANGUAGE_NONE][0]['value'];
-  if(!empty($filepath)) _cals_importer_update_field_collection_field_file_resource($node, $filepath);
+  _cals_importer_update_field_collection_field_file_resource($node);
   drupal_goto("node/" . $node->nid);
-
-   
+ }  
  
- }
 /**
  * Creates and populates new field collection entity, saves node.
  * 
@@ -39,9 +36,12 @@
  * @param $filepath
  *   the s3 filepath
  */
-function _cals_importer_update_field_collection_field_file_resource($node, $filepath) {
+ //$filepath
+function _cals_importer_update_field_collection_field_file_resource($node) {
 
-  //printAndDie($node->field_xml_string);
+  unset($node->field_file_resource[LANGUAGE_NONE]);
+  $filepath = '';
+  if(!empty($node->field_s3_path[LANGUAGE_NONE]) ) $filepath = $node->field_s3_path[LANGUAGE_NONE][0]['value'];
 
   $arr = _cals_importer_parse_marcxml_cors3($node);
   
@@ -55,27 +55,35 @@ function _cals_importer_update_field_collection_field_file_resource($node, $file
   
   //$filepath = "s3://foo";
   // Create managed File object and associate with zip. Not currently in use, but leave intact for now
-  $file = (object) array(
-    'uid' => 1,
-    'uri' => $filepath,
-    'filename' => $filepath, //str_replace("s3://", "", $filepath),
-    'filemime' => "application/zip",    //application/zip or multipart/x-zip
-    'status' => 1,
-    'display' => 1
-  );
-  
-  //file_save($file);
+  if(!empty($filepath)) {
+    $file = (object) array(
+      'uid' => 1,
+      'uri' => $filepath,
+      'filename' => $filepath, //str_replace("s3://", "", $filepath),
+      'filemime' => "application/zip",    //application/zip or multipart/x-zip
+      'status' => 1,
+      'display' => 1
+    );
+    
+    file_save($file);
    
-  //$fc_wrapper = entity_metadata_wrapper('field_collection_item', $fc_item);
-  //$fc_item->field_s3_file_upload[LANGUAGE_NONE][0]  =  (array)$file;
+    //$fc_wrapper = entity_metadata_wrapper('field_collection_item', $fc_item);
+    $fc_item->field_s3_file_upload[LANGUAGE_NONE][0]  =  (array)$file;
+  
+  }
+  
   $fc_item->field_user[LANGUAGE_NONE][0]['value'] = 1;
-  $fc_item->field_performer[LANGUAGE_NONE][0]['value'] = "TEST";
+  //$fc_item->field_performer[LANGUAGE_NONE][0]['value'] = "TEST";
+  if(isset($arr['fc_files']['field_performer'][0])) {
+    $fc_item->field_performer[LANGUAGE_NONE] = $arr['fc_files']['field_performer'];
+    //printAndDie($fc_item->field_performer, $arr['fc_files']['field_performer']);
+  }
 
-  if(count($arr['fc_files']['field_running_time'])) {
+  if(isset($arr['fc_files']['field_running_time'][0])) {
     $fc_item->field_running_time[LANGUAGE_NONE] = $arr['fc_files']['field_running_time'];
     //printAndDie($fc_item->field_running_time);
   }
-  $fc_item->field_s3_path[LANGUAGE_NONE][0]['value'] = $filepath;
+  if(!empty($filepath)) $fc_item->field_s3_path[LANGUAGE_NONE][0]['value'] = $filepath;
   $fc_item->save(); // Save field-collection item.
   
   //printAndDie($file, $fc_item);

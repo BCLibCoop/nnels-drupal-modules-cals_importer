@@ -288,16 +288,13 @@ function _cals_importer_get_performer_from_marcxml(&$arr, $xml) {
   
     $val = (string) trim($me[0]);
     //replace ";" to ","  
-    $val = str_replace(";", ",", $val);
-
-    if (strpos($val, "[")) $val = trim(substr($val, 0, strpos($val, "[") ));
-    if (strpos($val, "(")) $val = trim(substr($val, 0, strpos($val, "(") ));
-
-    //in case its multi valued
+    $val = str_replace("Narrated by ", "", $val);
+    $val = str_replace(".", "", $val);
+    //valid??
     $tmp2 = explode(",", $val);
 
     foreach ($tmp2 as $val2) {
-      $arr['fc_files']['field_performer'][] = trim($val2);
+      $arr['fc_files']['field_performer'][]['value'] = trim($val2);
     }
   }
   
