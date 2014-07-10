@@ -43,7 +43,8 @@ function _cals_importer_update_field_collection_field_file_resource($node) {
   $fc = entity_load('field_collection_item', array(56456));
 
   //printAndDie($fc,$node);
-  
+
+  //printAndDie($node);
   
   unset($node->field_file_resource[LANGUAGE_NONE]);
   $filepath = '';
@@ -59,8 +60,11 @@ function _cals_importer_update_field_collection_field_file_resource($node) {
   
   $filepath = str_replace("download.nnels.ca/", "", $filepath);
   $filepath = str_replace("download2.nnels.ca/", "", $filepath);
-
   
+  //printAndDie($filepath);
+  
+  //$file_temp = file_save_data($file_temp, $filepath, FILE_EXISTS_RENAME);
+
   //$filepath = "s3://foo";
   // Create managed File object and associate with zip. Not currently in use, but leave intact for now
   if(!empty($filepath)) {
@@ -72,6 +76,8 @@ function _cals_importer_update_field_collection_field_file_resource($node) {
       'status' => 1,
       'display' => 1
     );
+    
+    //file_save_data($data, $destination = NULL, $replace = FILE_EXISTS_RENAME) //FILE_EXISTS_REPLACE
     
     file_save($file);
    
