@@ -58,6 +58,8 @@ function _cals_importer_update_field_collection_field_file_resource($node) {
   $fc_item->setHostEntity('node', $node); 
   
   $filepath = str_replace("download.nnels.ca/", "", $filepath);
+  $filepath = str_replace("download2.nnels.ca/", "", $filepath);
+
   
   //$filepath = "s3://foo";
   // Create managed File object and associate with zip. Not currently in use, but leave intact for now
