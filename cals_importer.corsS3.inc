@@ -61,7 +61,7 @@ function _cals_importer_update_field_collection_field_file_resource($node) {
   $filepath = str_replace("download.nnels.ca/", "", $filepath);
   $filepath = str_replace("download2.nnels.ca/", "", $filepath);
   
-  //printAndDie($filepath);
+  printAndDie($filepath);
   
   //$file_temp = file_save_data($file_temp, $filepath, FILE_EXISTS_RENAME);
 
