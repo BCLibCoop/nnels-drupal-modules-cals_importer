@@ -14,8 +14,8 @@ function _cals_importer_update_repository_item($node) {
    
   //can also push this thru the batch api instead. To do so, comment out above and uncomment
   //the following function call.
-  
-  _cals_importer_update_repository_items($node);
+  _cals_parse_record_details($node);
+  //_cals_importer_update_repository_items($node);
 
   //take user back to main node page
   drupal_goto("node/" . $node->nid);
@@ -102,6 +102,8 @@ function _cals_parse_record_details($node) {
   //genre
   _cals_get_genre_from_marc($arr, $xml);
   
+  //language
+  _cals_importer_get_isolanguage_from_marcxml($arr, $xml);
 
   //get the rest of the fields by looping thru the record
   foreach ($xml->children(NAME_SPACE) as $record) {
@@ -113,6 +115,8 @@ function _cals_parse_record_details($node) {
   //delete the field collections so we have a fairly stripped down node if reparsing
   $node = _cals_delete_existing_field_collection_items($node, array_keys($arr['fc']));
   $node->status = 1;
+
+
 
   foreach ($arr['repos'] as $k => $v) {
 

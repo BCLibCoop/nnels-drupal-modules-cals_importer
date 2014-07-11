@@ -118,10 +118,12 @@ function _cals_normalize_record_values(&$entity, $context = array()) {
 
 /**
  * Normalize titles, authors, publishers 
+ *
+ * @todo Split individual code snippets into discrete functions similar to 
+ *   _cals_importer_normalize_publisher_entry
  */
 function _cals_normalize_record_entry($node) {
-  $save_node = 0;
-  
+
   //titles
   $title = rtrim($node->title);
   $msg = array();
@@ -129,7 +131,6 @@ function _cals_normalize_record_entry($node) {
   if ($title != $node->title) {
     $node->title = $title;
     //node_save($node);
-    $save_node = 1;
     $msg[] = t("title: %t", array('%t' => $title) );
   }
   
@@ -137,24 +138,32 @@ function _cals_normalize_record_entry($node) {
   foreach($node->field_dc_creator[LANGUAGE_NONE] as $k => $author) {
 
    $tmp = rtrim($author['value']); //trim various ascii chars
-
    //logic to determine if there's a ...
    $len = strlen($tmp);
    $sub = substr($tmp, 0, ($len - 1)); //substring minus 1 character to figure out # of potential replacements
    $count = substr_count($sub, ".") + substr_count($sub, ",");  
    if ($count != 0) { 
-    $tmp = _cals_strip_year_ranges($tmp);
+    $tmp = _cals_importer_strip_years_from_creator_values($tmp);
     $tmp = rtrim($tmp, ", .-"); //strip remaining trailing periods, dashes, etc.;
     //check to see if original value matches new value
     if ($tmp != $author['value']) {
       $node->field_dc_creator[LANGUAGE_NONE][$k]['value'] = $tmp;
-      $save_node = 1;
-      $msg[] = t("author:") . " " .  $tmp;
+      $msg[] = t("updated author:") . " " .  $tmp;
     }
    }
    
 
   } 
+  
+ //publisher
+  foreach($node->field_publisher[LANGUAGE_NONE] as $k => $publisher) {
+    $tmp = _cals_importer_normalize_publisher_entry($publisher['value']);
+    if($tmp != $publisher['value']) {
+      $node->field_publisher[LANGUAGE_NONE][$k]['value'] = $tmp;
+      $msg[] = t("updated publisher:") . " " .  $tmp;
+    }
+  }   
+  //if there's multiple messages, save node 
   if (count($msg) ) {
     $dmsg = t("Updated")  . $title . ": " . implode(" | ", $msg);  
     drupal_set_message($dmsg);
@@ -162,179 +171,16 @@ function _cals_normalize_record_entry($node) {
   }
   else {
     drupal_set_message(t("Not updated:") . " " . $title);
-  
   }
-  
-  //publishers??
-  
-  
-  if ($save_node === 1) {
-    
-  }
-  
+
+ 
 }  
 
 
- 
-
-
 /**
- * Simple wrapper so we can invoke from main repos page for testing purposes
- *
- * @param $node
- *   the node passed to the parser
+ * Strips dates and date ranges from creator values  
  */
-function _cals_normalize_title($node) {
-  _cals_normalize_title_entry($node);
-  drupal_goto("node/" . $node->nid);
-
-}
-
-/**
- * VBO to normalize titles 
- */
-function _cals_normalize_titles(&$entity, $context = array()) {
-  if (isset($entity->nid)) {
-    $node = node_load($entity->nid);
-    //safety check to make sure we're parsing repos items!!    
-    $content_types = array('repository_item');
-    
-    if (in_array($node->type, $content_types)  ) {
-      _cals_normalize_title_entry($node);
-    }
-    else{
-      drupal_set_message(t("Invalid selection: not a repos item"));
-    }
-
-  }//end main if
- 
-  return "";
-  
-}
-
-
-function _cals_normalize_title_entry($node) {
-
-  $save_node = FALSE;
-  $title = rtrim($node->title);
-  $title = rtrim($title, ", /"); 
-  if ($title === $node->title) {
-    drupal_set_message(t("skipped: %title"), array('%title' => $title));
-  }
-  else {
-    $node->title = $title;
-    node_save($node);
-    drupal_set_message(t("updated: %title"), array('%title' => $title));
-  }
-  
-}  
- 
- 
-/**
- * Publisher
- *
- */
- 
-function _cals_normalize_publisher($node) {
-  _cals_normalize_creator_entry($node);
-  drupal_goto("node/" . $node->nid);
-
-}
- 
- 
-function _cals_normalize_publishers(&$entity, $context = array()) {
-  if (isset($entity->nid)) {
-    $node = node_load($entity->nid);
-    //safety check to make sure we're parsing repos items!!    
-    $content_types = array('repository_item');
-    
-    if (in_array($node->type, $content_types)  ) {
-      _cals_normalize_creator_entry($node);
-    }
-    else{
-      drupal_set_message(t("Invalid selection: not a repos item"));
-    }
-
-  }//end main if
- 
-  return "";
-  
-}
-
-
-function _cals_normalize_creator_entry($node) {
-
-  $save_node = FALSE;
-  foreach($node->field_publisher[LANGUAGE_NONE] as $k => $v) {
-   //printPre($author['value']);
-   $tmp = rtrim($v['value']); //trim various ascii chars
-   //logic to determine if there's a ...
-   $len = strlen($tmp);
-   $sub = substr($tmp, 0, ($len - 1));
-   $count = substr_count($sub, ":");  
-
-   if ($count > 0) {
-    drupal_set_message(t("skipped: " . $v['value']));
-   }
-   else {
-     $tmp = rtrim($tmp, "."); //strip trailing periods;
-     $tmp = rtrim($tmp, ","); //strip trailing periods;
-     $tmp = rtrim($tmp, ":"); //strip trailing periods;
-     $tmp = rtrim($tmp, " :"); //strip trailing periods;
-     $tmp = rtrim($tmp, "]"); //strip trailing periods;
-     $tmp = ltrim($tmp, "["); //strip trailing periods;
-     $tmp = rtrim($tmp); //trim various ascii chars
-
-     $node->field_publisher[LANGUAGE_NONE][$k]['value'] = $tmp;
-     $save_node = TRUE;
-   }
-
-  } 
-  if ($save_node) {
-    node_save($node);
-    drupal_set_message(t("updated: %auth1 => %auth2"), array('%auth1' => $v['value'], '%auth2' => $tmp) );
-  } 
-} 
- 
-
-
-
-/**
- * Simple wrapper to call main batch api parse to clean-up author entries
- */
-
-function _cals_clean_up_creator($node) {
-
-  _cals_clean_up_creator_entry($node);
-  drupal_goto("node/" . $node->nid);
-
-}
-
- 
-
-/**
- * clean-up author entries, i.e., to strip off trailing commas, periods, etc.
- */
-function _cals_clean_up_creators(&$entity, $context = array()) {
-  if (isset($entity->nid)) {
-    $node = node_load($entity->nid);
-    //safety check to make sure we're parsing repos items!!    
-    $content_types = array('repository_item');
-    
-    if (in_array($node->type, $content_types)  ) {
-      _cals_clean_up_creator_entry($node);
-    }
-    else{
-      drupal_set_message("Invalid selection: not a repos item");
-    }
-
-  }//end main if
- 
-  return "";
-  
-}
-
-function _cals_strip_year_ranges($str) {
+function _cals_importer_strip_years_from_creator_values($str) {
 
   $patterns = array();
   $patterns = '([0-9]{4}-[0-9]{4}|[0-9]{4})';
@@ -344,8 +190,48 @@ function _cals_strip_year_ranges($str) {
   $tmp = preg_replace( "{\s+}", ' ', $tmp );
   return rtrim($tmp); 
 }
+  
+/**
+ * Updates the node with NNELS 856 tag 
+ *
+ * @param $value
+ *   the original publisher value
+ * @return $tmp
+ *   the scrubbed value (might be unaltered)
+ *
+ */
+function _cals_importer_normalize_publisher_entry($value) {
+
+   $tmp = rtrim($value); //trim various ascii chars
+   //logic to determine if there's a ...
+   $len = strlen($tmp);
+   $sub = substr($tmp, 0, ($len - 1));
+   $count = substr_count($sub, ":");  
+
+   if ($count > 0) {
+    return $value;
+   }
+   else {
+     $tmp = rtrim($tmp, "."); //strip trailing periods;
+     $tmp = rtrim($tmp, ","); //strip trailing periods;
+     $tmp = rtrim($tmp, ":"); //strip trailing periods;
+     $tmp = rtrim($tmp, " :"); //strip trailing periods;
+     $tmp = rtrim($tmp, "]"); //strip trailing periods;
+     $tmp = ltrim($tmp, "["); //strip trailing periods;
+     $tmp = rtrim($tmp); //trim various ascii chars
+     
+     return $tmp;
+   }
+} 
  
-function _cals_clean_up_creator_entry($node) {
+
+
+ 
+
+
+
+
+function _cals_clean_up_creator_entry_TO_DEPRECATE($node) {
 
   $save_node = FALSE;
   foreach($node->field_dc_creator[LANGUAGE_NONE] as $k => $author) {
@@ -360,7 +246,7 @@ function _cals_clean_up_creator_entry($node) {
       drupal_set_message(t("skipped: " . $author['value']));
    }
    else {
-     $tmp = _cals_strip_year_ranges($tmp);
+     $tmp = _cals_importer_strip_years_from_creator_values($tmp);
       $tmp = rtrim($tmp, ", .-"); //strip remaining trailing periods, dashes, etc.;
      $node->field_dc_creator[LANGUAGE_NONE][$k]['value'] = $tmp;
      $save_node = TRUE;

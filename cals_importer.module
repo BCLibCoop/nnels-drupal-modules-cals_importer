@@ -106,48 +106,7 @@ function cals_importer_menu() {
     'weight' => 150,
   
   );
-
-
-  /*
-  $items['node/%node/clean-author'] = array(
-    'access arguments' => array('administer site configuration'),
-    'page callback' => '_cals_clean_up_creator',
-    'file' => "cals_importer.clean_up.inc",
-    'title' => 'Scrub Author',
-    'type' => MENU_LOCAL_TASK,
-    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
-    'page arguments' => array(1),
-    'weight' => 150,
-  
-  );
-  
-
-  $items['node/%node/normalize-publisher'] = array(
-    'access arguments' => array('administer site configuration'),
-    'page callback' => '_cals_normalize_publisher',
-    'file' => "cals_importer.clean_up.inc",
-    'title' => 'Scrub Publisher',
-    'type' => MENU_LOCAL_TASK,
-    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
-    'page arguments' => array(1),
-    'weight' => 150,
-  
-  );
-
-
-  $items['node/%node/normalize-title'] = array(
-    'access arguments' => array('administer site configuration'),
-    'page callback' => '_cals_normalize_title',
-    'file' => "cals_importer.clean_up.inc",
-    'title' => 'Scrub Title',
-    'type' => MENU_LOCAL_TASK,
-    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
-    'page arguments' => array(1),
-    'weight' => 150,
-  
-  );
-
-	*/
+ 
 
   $items['node/%node/generate-marc-856'] = array(
     'access arguments' => array('administer site configuration'),
@@ -285,10 +244,18 @@ function cals_importer_action_info() {
       'configurable' => FALSE,
       'triggers' => array('any'),
     ),
+
+    //batch update title field, stripping out trailing slashes, etc.
+    '_cals_normalize_record_values' => array(
+      'label' => t('2. Normalize Title, Publisher, Creators'),
+      'type' => 'node',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),
     
     //bulk update to generate marc xml strings w/ 856 tag
     '_cals_importer_generate_marc_xml_856' => array(
-      'label' => t('2. Generate MARC with 856 strings'),
+      'label' => t('3. Generate MARC with 856 strings'),
       'type' => 'node',
       'configurable' => FALSE,
       'triggers' => array('any'),
@@ -296,7 +263,7 @@ function cals_importer_action_info() {
 
     //batch generate MARC XML files and attach to original recordset
     '_cals_importer_generate_marcxml_files' => array(
-      'label' => t('3. Generate downloadable MARC XML files'),
+      'label' => t('4. Generate downloadable MARC XML files'),
       'type' => 'node',
       'configurable' => FALSE,
       'triggers' => array('any'),
@@ -325,29 +292,7 @@ function cals_importer_action_info() {
       'file' => 'cals_importer.orgs.inc',
     ),
 
-    //batch update title field, stripping out trailing slashes, etc.
-    '_cals_normalize_titles' => array(
-      'label' => t('CALS: Normalize titles'),
-      'type' => 'node',
-      'configurable' => FALSE,
-      'triggers' => array('any'),
-    ),
-    //batch update creator field, stripping out trailing periods, commas, etc.
-    '_cals_clean_up_creators' => array(
-      'label' => t('CALS: Normalize authors / creators'),
-      'type' => 'node',
-      'configurable' => FALSE,
-      'triggers' => array('any'),
-      //'file' => 'cals_importer.clean_up.inc',
-    ),
 
-    //batch update creator field, stripping out trailing periods, commas, etc.
-    '_cals_normalize_publishers' => array(
-      'label' => t('CALS: Normalize publishers'),
-      'type' => 'node',
-      'configurable' => FALSE,
-      'triggers' => array('any'),
-    ),
 
     //batch dedupe marc xml records
     '_cals_dedupe_035' => array(
@@ -374,6 +319,30 @@ function cals_importer_action_info() {
   
   );
 }
+
+/*
+
+    //batch update creator field, stripping out trailing periods, commas, etc.
+    '_cals_clean_up_creators' => array(
+      'label' => t('CALS: Normalize authors / creators'),
+      'type' => 'node',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+      //'file' => 'cals_importer.clean_up.inc',
+    ),
+
+    //batch update creator field, stripping out trailing periods, commas, etc.
+    '_cals_normalize_publishers' => array(
+      'label' => t('CALS: Normalize publishers'),
+      'type' => 'node',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),
+
+
+*/
+
+
 
 
 /**
@@ -415,6 +384,23 @@ function _cals_importer_tab_checker() {
   }
   return FALSE;
 }
+
+function cals_importer_views_bulk_operations_form_alter(&$form, &$form_state, $vbo) {
+  if ($form_state['step'] == 'views_form_views_form') {
+    // Alter the first step of the VBO form (the selection page).
+    //$form['select']['#title'] = t('Bulk operations YO!');
+
+  }
+/*
+  elseif ($form_state['step'] == 'views_bulk_operations_config_form') {
+    // Alter the configuration step of the VBO form.
+  }
+  elseif ($form_state['step'] == 'views_bulk_operations_confirm_form') {
+    // Alter the confirmation step of the VBO form.
+  }
+*/
+}
+
 /**
  * Implements hook_views_query_alter().
  */

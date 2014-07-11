@@ -50,6 +50,35 @@ function _cals_get_date_issued($xml) {
 
 }
 
+
+/**
+ * @param $arr
+ *   the drupal ready array of fields
+ * @param $xml
+ *   the original xml string
+ *
+ * @return
+ *   an array of Drupal-ready fields
+ *
+ * parse 041 to grab language values
+ * see: http://www.loc.gov/marc/bibliographic/bd041.html
+ */
+function _cals_importer_get_isolanguage_from_marcxml(&$arr, $xml) {
+
+
+  //look for 041 tag code a
+  $tmp = $xml->xpath("//marc:datafield[@tag='041']/marc:subfield[@code='a']");
+  foreach ($tmp as $me) {
+    $val = (string) trim($me[0]);
+    $val = trim($val);
+    $arr['repos']['field_iso_language'][] = $val;
+  }
+  if( !isset($arr['repos']['field_iso_language']) ) $arr['repos']['field_iso_language'][0] = 'eng';
+  
+  
+}
+
+
 function _cals_get_date_from_008($str) {
   return _cals_get_iso_date(substr($str, 7, 4));
 }
