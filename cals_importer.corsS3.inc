@@ -100,15 +100,13 @@ function _cals_importer_populate_field_file_resource($node) {
     }  
     
     $candidates = implode(", ", $candidates);
-    $msg = '';
-    if(!strlen($candidates)) {
-      $msg = t("Please update !title manually - uri currently exists in file managed table.", 
-        array("!title" => l($node->title, "node/" . $node->nid)));    
+    $msg = t("Please update !title manually - uri currently exists in file managed table.", 
+        array("!title" => l($node->title, "node/" . $node->nid)));   
+    if(strlen($candidates)) {
+      $msg .= t("Please check the following node(s):") . " " . $candidates;    
     }
-    else {
-      $msg = t("Please update !title manually - uri currently exists in file managed table, possibly attached to the following node(s): " . $candidates, 
-      array("!title" => l($node->title, "node/" . $node->nid)));    
-    }
+    $node->field_duplicate_managed_file[LANGUAGE_NONE][0]['value'] = 1;
+    node_save($node);
     drupal_set_message($msg);
     return '';
   }

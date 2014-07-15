@@ -352,7 +352,7 @@ function _cals_importer_get_runningtime_from_marcxml(&$arr, $xml) {
     $val = (string) trim($me[0]);
     $val = trim($val);
     //field format: $fc_item->field_running_time[LANGUAGE_NONE][$k]['value']
-    $arr['fc_files']['field_running_time'][]['value'] = $val;
+    if(is_integer($val)) $arr['fc_files']['field_running_time'][]['value'] = $val;
   }
   
 }
