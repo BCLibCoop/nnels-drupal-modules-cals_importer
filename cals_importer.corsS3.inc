@@ -63,13 +63,14 @@ function _cals_run_batch_update_field_collection_s3_path(&$entity, $context = ar
 function _cals_importer_populate_field_file_resource($node) {
 
   //return if
+  /*
   if(!empty($node->field_file_resource)) {
     drupal_set_message(t("Please update manually: ") . $node->title);
     return '';
   
   }
-  
-  unset($node->field_file_resource[LANGUAGE_NONE]);
+  */
+  //unset($node->field_file_resource[LANGUAGE_NONE]);
   $filepath = '';
   if(!empty($node->field_s3_path[LANGUAGE_NONE]) ) $filepath = $node->field_s3_path[LANGUAGE_NONE][0]['value'];
 
@@ -83,7 +84,26 @@ function _cals_importer_populate_field_file_resource($node) {
   
   $filepath = str_replace("download.nnels.ca/", "", $filepath);
   $filepath = str_replace("download2.nnels.ca/", "", $filepath);
+  //drush sqlq "select * from file_managed limit 0, 100"
+  $test = db_query('SELECT n.fid FROM {file_managed} n WHERE n.uri = :uri', array(':uri' => $filepath));
+  if($test->rowCount()>0){
+    $test2 = db_query("select distinct fr.entity_id as nid 
+      from field_data_field_s3_file_upload fu inner join file_managed fm on fu.field_s3_file_upload_fid = fm.fid 
+      inner join field_data_field_file_resource fr on fu.entity_id = fr.field_file_resource_value
+      where fm.uri = :uri", array(':uri' => $filepath));
+    $candidates = array(); 
+    foreach($test2 as $row) {
+      $candidates[] = l("node/{$row->nid}", "node/{$row->nid}");
+    }  
+    
+    $candidates = implode(", ", $candidates);
 
+
+
+
+    drupal_set_message(t("Please update {$node->title} manually - uri currently exists in file managed table, possibly attached to the following node(s): " . $candidates));
+    return '';
+  }
   //$filepath = "s3://foo";
   // Create managed File object and associate with zip. Not currently in use, but leave intact for now
   if(!empty($filepath)) {
