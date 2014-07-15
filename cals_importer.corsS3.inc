@@ -84,24 +84,32 @@ function _cals_importer_populate_field_file_resource($node) {
   
   $filepath = str_replace("download.nnels.ca/", "", $filepath);
   $filepath = str_replace("download2.nnels.ca/", "", $filepath);
+  
+  //We need to check if the current file exists in the file_managed table
   //drush sqlq "select * from file_managed limit 0, 100"
   $test = db_query('SELECT n.fid FROM {file_managed} n WHERE n.uri = :uri', array(':uri' => $filepath));
   if($test->rowCount()>0){
     $test2 = db_query("select distinct fr.entity_id as nid 
-      from field_data_field_s3_file_upload fu inner join file_managed fm on fu.field_s3_file_upload_fid = fm.fid 
-      inner join field_data_field_file_resource fr on fu.entity_id = fr.field_file_resource_value
-      where fm.uri = :uri", array(':uri' => $filepath));
+        from field_data_field_s3_file_upload fu inner join file_managed fm on fu.field_s3_file_upload_fid = fm.fid 
+        inner join field_data_field_file_resource fr on fu.entity_id = fr.field_file_resource_value
+        where fm.uri = :uri", array(':uri' => $filepath));
+
     $candidates = array(); 
     foreach($test2 as $row) {
       $candidates[] = l("node/{$row->nid}", "node/{$row->nid}");
     }  
     
     $candidates = implode(", ", $candidates);
-
-
-
-
-    drupal_set_message(t("Please update {$node->title} manually - uri currently exists in file managed table, possibly attached to the following node(s): " . $candidates));
+    $msg = '';
+    if(!strlen($candidates)) {
+      $msg = t("Please update !title manually - uri currently exists in file managed table.", 
+        array("!title" => l($node->title, "node/" . $node->nid)));    
+    }
+    else {
+      $msg = t("Please update !title manually - uri currently exists in file managed table, possibly attached to the following node(s): " . $candidates, 
+      array("!title" => l($node->title, "node/" . $node->nid)));    
+    }
+    drupal_set_message($msg);
     return '';
   }
   //$filepath = "s3://foo";
@@ -147,7 +155,8 @@ function _cals_importer_populate_field_file_resource($node) {
   //printAndDie($file, $fc_item);
 
   node_save($node);
-  drupal_set_message(t("updated s3 path: ") . $node->title);
+  $msg = t("updated s3 path: ") . l($node->title, "node/" . $node->nid);
+  drupal_set_message($msg);
 
 
 
