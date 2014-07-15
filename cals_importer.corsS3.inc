@@ -13,8 +13,7 @@
  */
  
  function _cals_importer_update_cors_file_table($node) {
-
-  _cals_importer_update_field_collection_field_file_resource($node);
+  cals_importer_update_field_collection_field_file_resource($node);
   drupal_goto("node/" . $node->nid);
  }  
 
@@ -29,7 +28,6 @@
  * @return
  *   $val, a string
  */
- 
 function _cals_run_batch_update_field_collection_s3_path(&$entity, $context = array()) {
   if (isset($entity->nid)) {
     $node = node_load($entity->nid);
