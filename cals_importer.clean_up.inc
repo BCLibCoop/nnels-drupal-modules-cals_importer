@@ -135,34 +135,39 @@ function _cals_normalize_record_entry($node) {
   }
   
   //creators
-  foreach($node->field_dc_creator[LANGUAGE_NONE] as $k => $author) {
-
-   $tmp = rtrim($author['value']); //trim various ascii chars
-   //logic to determine if there's a ...
-   $len = strlen($tmp);
-   $sub = substr($tmp, 0, ($len - 1)); //substring minus 1 character to figure out # of potential replacements
-   $count = substr_count($sub, ".") + substr_count($sub, ",");  
-   if ($count != 0) { 
-    $tmp = _cals_importer_strip_years_from_creator_values($tmp);
-    $tmp = rtrim($tmp, ", .-"); //strip remaining trailing periods, dashes, etc.;
-    //check to see if original value matches new value
-    if ($tmp != $author['value']) {
-      $node->field_dc_creator[LANGUAGE_NONE][$k]['value'] = $tmp;
-      $msg[] = t("updated author:") . " " .  $tmp;
+  if(!empty($node->field_dc_creator)) {
+    foreach($node->field_dc_creator[LANGUAGE_NONE] as $k => $author) {
+  
+     $tmp = rtrim($author['value']); //trim various ascii chars
+     //logic to determine if there's a ...
+     $len = strlen($tmp);
+     $sub = substr($tmp, 0, ($len - 1)); //substring minus 1 character to figure out # of potential replacements
+     $count = substr_count($sub, ".") + substr_count($sub, ",");  
+     if ($count != 0) { 
+      $tmp = _cals_importer_strip_years_from_creator_values($tmp);
+      $tmp = rtrim($tmp, ", .-"); //strip remaining trailing periods, dashes, etc.;
+      //check to see if original value matches new value
+      if ($tmp != $author['value']) {
+        $node->field_dc_creator[LANGUAGE_NONE][$k]['value'] = $tmp;
+        $msg[] = t("updated author:") . " " .  $tmp;
+      }
+     }
+     
+  
     }
-   }
-   
-
   } 
   
  //publisher
-  foreach($node->field_publisher[LANGUAGE_NONE] as $k => $publisher) {
-    $tmp = _cals_importer_normalize_publisher_entry($publisher['value']);
-    if($tmp != $publisher['value']) {
-      $node->field_publisher[LANGUAGE_NONE][$k]['value'] = $tmp;
-      $msg[] = t("updated publisher:") . " " .  $tmp;
-    }
-  }   
+  if(!empty($node->field_publisher)) {
+    foreach($node->field_publisher[LANGUAGE_NONE] as $k => $publisher) {
+      $tmp = _cals_importer_normalize_publisher_entry($publisher['value']);
+      if($tmp != $publisher['value']) {
+        $node->field_publisher[LANGUAGE_NONE][$k]['value'] = $tmp;
+        $msg[] = t("updated publisher:") . " " .  $tmp;
+      }
+    }   
+  
+  }
   //if there's multiple messages, save node 
   if (count($msg) ) {
     $dmsg = t("Updated")  . $title . ": " . implode(" | ", $msg);  
