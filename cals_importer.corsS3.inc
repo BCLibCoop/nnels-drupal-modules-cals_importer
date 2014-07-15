@@ -13,7 +13,7 @@
  */
  
  function _cals_importer_update_cors_file_table($node) {
-  cals_importer_update_field_collection_field_file_resource($node);
+  _cals_importer_populate_field_file_resource($node);
   drupal_goto("node/" . $node->nid);
  }  
 
@@ -36,7 +36,7 @@ function _cals_run_batch_update_field_collection_s3_path(&$entity, $context = ar
     
     if (in_array($node->type, $content_types)  ) {
       $filepath = $node->field_s3_path[LANGUAGE_NONE][0]['value'];
-      _cals_importer_update_field_collection_field_file_resource($node, $filepath);
+      _cals_importer_populate_field_file_resource($node, $filepath);
       //drupal_set_message("Invalid selection: not a repos item");
     }
     else{
@@ -60,14 +60,14 @@ function _cals_run_batch_update_field_collection_s3_path(&$entity, $context = ar
  *   the s3 filepath
  */
  //$filepath
-function _cals_importer_update_field_collection_field_file_resource($node) {
+function _cals_importer_populate_field_file_resource($node) {
 
-
-  //$fc = entity_load('field_collection_item', array(56456));
-
-  //printAndDie($fc,$node);
-
-  //printAndDie($node);
+  //return if
+  if(!empty($node->field_file_resource)) {
+    drupal_set_message(t("Please update manually: ") . $node->title);
+    return '';
+  
+  }
   
   unset($node->field_file_resource[LANGUAGE_NONE]);
   $filepath = '';
@@ -83,10 +83,6 @@ function _cals_importer_update_field_collection_field_file_resource($node) {
   
   $filepath = str_replace("download.nnels.ca/", "", $filepath);
   $filepath = str_replace("download2.nnels.ca/", "", $filepath);
-  dpm($filepath);
-  //printAndDie($filepath);
-  
-  //$file_temp = file_save_data($file_temp, $filepath, FILE_EXISTS_RENAME);
 
   //$filepath = "s3://foo";
   // Create managed File object and associate with zip. Not currently in use, but leave intact for now
@@ -94,16 +90,12 @@ function _cals_importer_update_field_collection_field_file_resource($node) {
     $file = (object) array(
       'uid' => 1,
       'uri' => $filepath,
-      'filename' => $filepath, //str_replace("s3://", "", $filepath),
+      'filename' => $filepath, 
       'filemime' => "application/zip",    //application/zip or multipart/x-zip
       'status' => 1,
       'display' => 1
     );
-    
-    //file_save_data($data, $destination = NULL, $replace = FILE_EXISTS_RENAME) //FILE_EXISTS_REPLACE
-    
     file_save($file);
-   
     //$fc_wrapper = entity_metadata_wrapper('field_collection_item', $fc_item);
     $fc_item->field_s3_file_upload[LANGUAGE_NONE][0]  =  (array)$file;
   
@@ -137,7 +129,9 @@ function _cals_importer_update_field_collection_field_file_resource($node) {
   node_save($node);
   drupal_set_message(t("updated s3 path: ") . $node->title);
 
- }
+
+
+}
 
 /**
  * Populates Field Collection values
