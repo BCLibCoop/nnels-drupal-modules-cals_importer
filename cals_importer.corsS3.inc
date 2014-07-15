@@ -14,19 +14,44 @@
  
  function _cals_importer_update_cors_file_table($node) {
 
-  //printAndDie($node->field_s3_path);
-  /*
-  $filepath = 'http://s.libraries.coop/download.nnels.ca/downloads/1401740666/97ab1897a9938200dac05724d28b8221/River_God_Chivers_Edition_S9164.zip';
-  $filepath = 'http://s.libraries.coop/download.nnels.ca/downloads/1401740666/97ab1897a9938200dac05724d28b8221/River_God_Chivers_Edition_S9164.zip';  
-  
-  $filepath = 'http://s3://download.nnels.ca/AU/WA/ABWA/restricted/S9164/River_God_Chivers_Edition_S9164.zip';
-  
-  $filepath = 'http://s.libraries.coop/download.nnels.ca/AU/WA/ABWA/restricted/S9164/River_God_Chivers_Edition_S9164.zip';
-  if(!empty($node->field_s3_path[LANGUAGE_NONE])) _cals_importer_update_field_collection_field_file_resource($node, $node->field_s3_path[LANGUAGE_NONE][0]['value']);  
-  */
   _cals_importer_update_field_collection_field_file_resource($node);
   drupal_goto("node/" . $node->nid);
  }  
+
+
+ 
+/**
+ * The main batch process to update S3 paths to Field Collections
+ *   
+ * @param $nid
+ *   the node id
+ *
+ * @return
+ *   $val, a string
+ */
+ 
+function _cals_run_batch_update_field_collection_s3_path(&$entity, $context = array()) {
+  if (isset($entity->nid)) {
+    $node = node_load($entity->nid);
+    //safety check to make sure we're parsing repos items!!    
+    $content_types = array('repository_item');
+    
+    if (in_array($node->type, $content_types)  ) {
+      $filepath = $node->field_s3_path[LANGUAGE_NONE][0]['value'];
+      _cals_importer_update_field_collection_field_file_resource($node, $filepath);
+      //drupal_set_message("Invalid selection: not a repos item");
+    }
+    else{
+      drupal_set_message("Invalid selection: not a repos item");
+    }
+
+  }//end main if
+ 
+  return "";
+
+}
+
+
  
 /**
  * Creates and populates new field collection entity, saves node.
@@ -40,7 +65,7 @@
 function _cals_importer_update_field_collection_field_file_resource($node) {
 
 
-  $fc = entity_load('field_collection_item', array(56456));
+  //$fc = entity_load('field_collection_item', array(56456));
 
   //printAndDie($fc,$node);
 
@@ -173,38 +198,6 @@ function _cals_importer_populate_fieldcollection_file_resource( $node, $arr_tax,
   }
   
     
-
-}
-
- 
-/**
- * The main batch process to update S3 paths in Field Collections
- *   
- * @param $nid
- *   the node id
- *
- * @return
- *   $val, a string
- */
- 
-function _cals_run_batch_update_field_collection_s3_path(&$entity, $context = array()) {
-  if (isset($entity->nid)) {
-    $node = node_load($entity->nid);
-    //safety check to make sure we're parsing repos items!!    
-    $content_types = array('repository_item');
-    
-    if (in_array($node->type, $content_types)  ) {
-      $filepath = $node->field_s3_path[LANGUAGE_NONE][0]['value'];
-      _cals_importer_update_field_collection_field_file_resource($node, $filepath);
-      //drupal_set_message("Invalid selection: not a repos item");
-    }
-    else{
-      drupal_set_message("Invalid selection: not a repos item");
-    }
-
-  }//end main if
- 
-  return "";
 
 }
 
