@@ -75,7 +75,7 @@ function _cals_importer_populate_field_file_resource($node) {
   if(!empty($node->field_s3_path[LANGUAGE_NONE]) ) $filepath = $node->field_s3_path[LANGUAGE_NONE][0]['value'];
 
   $arr = _cals_importer_parse_marcxml_cors3($node);
-  
+
   // Create new field collection item.
   $fc_item = entity_create('field_collection_item', array('field_name' => 'field_file_resource')); 
 
@@ -84,7 +84,7 @@ function _cals_importer_populate_field_file_resource($node) {
   
   $filepath = str_replace("download.nnels.ca/", "", $filepath);
   $filepath = str_replace("download2.nnels.ca/", "", $filepath);
-  
+
   //We need to check if the current file exists in the file_managed table
   //drush sqlq "select * from file_managed limit 0, 100"
   $test = db_query('SELECT n.fid FROM {file_managed} n WHERE n.uri = :uri', array(':uri' => $filepath));
@@ -121,12 +121,19 @@ function _cals_importer_populate_field_file_resource($node) {
       'status' => 1,
       'display' => 1
     );
-    file_save($file);
+    try {
+			file_save($file);
+  	}
+		//catch exception
+		catch(Exception $e) {
+		  drupal_set_message('Could not update ' . $node->title . " due to the following issue: " .$e->getMessage()) ;
+		  return;
+		}
     //$fc_wrapper = entity_metadata_wrapper('field_collection_item', $fc_item);
     $fc_item->field_s3_file_upload[LANGUAGE_NONE][0]  =  (array)$file;
   
   }
-  
+
   $fc_item->field_user[LANGUAGE_NONE][0]['value'] = 1;
   //$fc_item->field_performer[LANGUAGE_NONE][0]['value'] = "TEST";
   if(isset($arr['fc_files']['field_performer'][0])) {
