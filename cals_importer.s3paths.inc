@@ -23,7 +23,7 @@ function _cals_batch_update_s3_paths($nid) {
   
   
   if (empty($arr)) {
-    drupal_set_message(t("Can't access the file or generate an array."));
+    drupal_set_message(t("Problem parsing the file: can't access the file or generate an array. This is probably due to an issue reading / opening the file."), "error");
     drupal_goto($null_path);
   }
   else {
@@ -31,7 +31,7 @@ function _cals_batch_update_s3_paths($nid) {
     $tmp = strpos($arr[0][1], "s3://");
     if ($tmp === FALSE) {
     
-	    drupal_set_message(t("Problem parsing the file. Please check its structure, esp. the S3 paths."));
+	    drupal_set_message(t("Problem parsing the file: please check its structure, esp. the S3 paths."), "error");
       drupal_goto($null_path);
     }
   }
