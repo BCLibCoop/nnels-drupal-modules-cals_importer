@@ -162,6 +162,25 @@ function _cals_batch_update_s3_path_finished($success, $results, $operations) {
  */
 function _cals_get_array_csv($nid) {
   $node = node_load($nid);
+
+	/*
+  $records = $node->field_s3_paths[LANGUAGE_NONE][0]['value'];
+
+	$me = explode("\n", $records);
+	printAndDie($me);
+  $row = 1;   
+  $arr = array();
+	//while (($data = fgetcsv($handle, 1000, "\t")) !== FALSE) {
+	while (($data = fgetcsv($records, 1000, ",")) !== FALSE) { 
+	  if ($row > 1 ) {
+	    $arr[] = $data;
+	  }
+	  $row++;
+	}
+
+
+  printAndDie($records, $arr);
+  */
   $file = drupal_realpath($node->field_file_csv[LANGUAGE_NONE][0]['uri']);
   
   $row = 1;   
