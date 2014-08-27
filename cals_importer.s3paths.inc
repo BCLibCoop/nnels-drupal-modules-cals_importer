@@ -4,6 +4,43 @@
  * @file
  * Updates s3 paths via batch update views
  */
+
+
+
+function _cals_batch_update_s3_paths_by_node($node) {
+
+  global $user;
+  $arr = _cals_get_array_csv($node->nid);
+  //printAndDie($arr);
+  if (empty($arr)) {
+    drupal_set_message(t("Problem parsing the file: can't access the file or generate an array. This is probably due to an issue reading / opening the file."), "error");
+    drupal_goto("node/" . $node->nid);
+  }
+  else {
+    //check first row to ensure well structured.
+    $tmp = strpos($arr[0][1], "s3://");
+    if ($tmp === FALSE) {
+    
+	    drupal_set_message(t("Problem parsing the file: please check its structure, esp. the S3 paths."), "error");
+      drupal_goto("node/" . $node->nid);
+    }
+  }
+
+  $batch = array(
+    'title' => t('Update S3 Paths'),
+    //'operations' => array('_cals_run_batch_update_s3_path', array($nid, $arr) ),
+    'operations' => array(array('_cals_run_batch_update_s3_path', array($node->nid, $arr)), 
+    
+    ),
+    //'progress_message' => t('Update. Operation @current out of @total.'),
+    'error_message' => t('Error!'),
+    'finished' => '_cals_batch_update_s3_path_finished',
+  );
+	($batch);
+  batch_set($batch);
+  batch_process('node/' . $node->nid);
+
+}
  
 /**
  * Invokes Drupal's batch api to update S3 paths
@@ -82,6 +119,7 @@ function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
     $context['sandbox']['max'] = count($arr); //count($pids);
     $context['sandbox']['arr'] = $arr;
     $context['sandbox']['current'] = 0;
+    $context['sandbox']['node'] = node_load($nid);
     //watchdog('import', 'update s3 paths');
     //dpm($arr);
   }
@@ -122,10 +160,11 @@ function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
     else {
       drupal_set_message(t("%c. could not find %s"), array('%c' => $current_row, '%s' => $sysnum));
     }
+		_cals_add_s3_something($context['sandbox']['node'], $nid2, $path, $sysnum);
+    
     $context['sandbox']['progress']++; // Used to keep track of rows processed
     //array_shift($context['sandbox']['arr']);
   }
-  
     
  
 
@@ -135,7 +174,33 @@ function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
 }
 
  
+/**
+ * Creates and populates new field collection entity, saves node.
+ * 
+ * @param $node
+ *   the node
+ * @param $filepath
+ *   the s3 filepath
+ */
+ //$filepath 
+ //_cals_add_s3_something($context['sandbox']['node'], $nid2, $sysnum, $path);
+function _cals_add_s3_something($node, $nid, $path, $sysnum) {
 
+  // Create new field collection item.
+  $fc_item = entity_create('field_collection_item', array('field_name' => 'field_s3_mapping')); 
+
+  // Attach it to the node.
+  $fc_item->setHostEntity('node', $node); 
+
+  $fc_item->field_system_control_number[LANGUAGE_NONE][0]['value'] = $sysnum;
+  $fc_item->field_s3_path[LANGUAGE_NONE][0]['value'] = $path;
+  if($nid2 > 0) $fc_item->field_nid_s3[LANGUAGE_NONE][0]['nid'] = $nid;
+
+  $fc_item->save(); // Save field-collection item.
+  node_save($node);
+	drupal_set_message("updated field collection: $sysnum: " . $node->nid);
+
+}
 /**
  * Finish batch
  */
@@ -163,24 +228,21 @@ function _cals_batch_update_s3_path_finished($success, $results, $operations) {
 function _cals_get_array_csv($nid) {
   $node = node_load($nid);
 
-	/*
+
   $records = $node->field_s3_paths[LANGUAGE_NONE][0]['value'];
-
-	$me = explode("\n", $records);
-	printAndDie($me);
-  $row = 1;   
   $arr = array();
-	//while (($data = fgetcsv($handle, 1000, "\t")) !== FALSE) {
-	while (($data = fgetcsv($records, 1000, ",")) !== FALSE) { 
-	  if ($row > 1 ) {
-	    $arr[] = $data;
-	  }
-	  $row++;
+	//printAndDie($arr);
+	//$records = explode("\n", $records);
+	$records = str_getcsv($records, "\n");
+	foreach($records as $k => $v) {
+	  if($k > 0) $arr[] = str_getcsv($v, "\t");	
 	}
+	return $arr;
+  
+  
 
-
-  printAndDie($records, $arr);
-  */
+  //printAndDie($records, $arr);
+ 	/* */
   $file = drupal_realpath($node->field_file_csv[LANGUAGE_NONE][0]['uri']);
   
   $row = 1;   

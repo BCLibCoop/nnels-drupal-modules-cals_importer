@@ -49,6 +49,23 @@ function cals_importer_menu() {
     'weight' => 100,
   );
 
+  /**
+   * Parses S3 sets via node page
+   * 
+   */
+
+  $items['node/%node/parse-s3-pathsx'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_batch_update_s3_paths_by_node',
+    'file' => "cals_importer.s3paths.inc",
+    'title' => 'Parse S3 Paths',
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'page arguments' => array(1),
+    'weight' => 100,
+  
+  );
+
   $items['admin/content/cals/parse-org-emails'] = array(
     'title' => 'Update Organizational Contact Emails from CSV file',
     'access arguments' => array('administer site configuration'),
@@ -201,7 +218,6 @@ function cals_importer_menu() {
   
   );
   */
-  
   return $items; 
 
 }
@@ -362,6 +378,7 @@ function cals_importer_menu_alter(&$items) {
   $items['node/%node/generate-marc-output']['access callback'] = '_cals_importer_tab_checker_parse_record';
   $items['node/%node/convert-s3-paths']['access callback'] = '_cals_importer_tab_checker_parse_record';
   $items['node/%node/normalize-record']['access callback'] = '_cals_importer_tab_checker_parse_record';
+  $items['node/%node/parse-s3-paths']['access callback'] = '_cals_importer_tab_checker_parse_s3_paths';
 
 }
 
@@ -383,6 +400,18 @@ function _cals_importer_tab_checker() {
     RETURN ($n->type == 'record_set') ? TRUE : FALSE;
   }
   return FALSE;
+}
+
+function _cals_importer_tab_checker_parse_s3_paths() {
+  global $user;
+  //todo - change to permission
+  if ( user_access('parse s3 paths') && arg(0) == 'node') {
+    $n = node_load(arg(1));
+    RETURN ($n->type == 's3_record_set') ? TRUE : FALSE;
+  }
+  return FALSE;
+
+
 }
 
 function cals_importer_views_bulk_operations_form_alter(&$form, &$form_state, $vbo) {
@@ -407,6 +436,31 @@ function cals_importer_views_bulk_operations_form_alter(&$form, &$form_state, $v
 function cals_importer_views_query_alter(&$view, &$query) {
 
   switch ($view->name) {
+  
+  	case "repository_items_with_field_collections":
+  	
+  		if($view->current_display == 'page_2') {
+				$sql = 
+        "SELECT entity_id as nid, field_s3_path_value as s3, COUNT( field_s3_path_value ) 
+					FROM field_data_field_s3_path
+					GROUP BY field_s3_path_value
+					HAVING (COUNT( field_s3_path_value ) > 1)";
+        $rs = db_query($sql);
+        foreach ($rs as $row) {
+          $arr[] = $row->s3;
+          //printPre($row);
+        }
+        //die;
+        $query->where[1]['conditions'][2] = array(
+           'field' => "field_data_field_s3_path.field_s3_path_value",
+           'value' => $arr, //array($subq),
+           'operator' => 'in', 
+          );
+          
+        //printAndDie($query);  
+  		}
+  		break;
+  
     case "repository_items_deduplicate2":
     case "repo_items_bulk_deduper":
       if ($view->current_display == 'page') {
