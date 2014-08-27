@@ -11,6 +11,10 @@ function _cals_batch_update_s3_paths_by_node($node) {
 
   global $user;
   $arr = _cals_get_array_csv($node->nid);
+<<<<<<< HEAD
+=======
+  //printAndDie($arr);
+>>>>>>> dk
   if (empty($arr)) {
     drupal_set_message(t("Problem parsing the file: can't access the file or generate an array. This is probably due to an issue reading / opening the file."), "error");
     drupal_goto("node/" . $node->nid);
@@ -35,9 +39,15 @@ function _cals_batch_update_s3_paths_by_node($node) {
     'error_message' => t('Error!'),
     'finished' => '_cals_batch_update_s3_path_finished',
   );
+<<<<<<< HEAD
   //  ($batch);
   batch_set($batch);
   batch_process('admin/content/cals/s3-record-sets');
+=======
+	($batch);
+  batch_set($batch);
+  batch_process('node/' . $node->nid);
+>>>>>>> dk
 
 }
  
