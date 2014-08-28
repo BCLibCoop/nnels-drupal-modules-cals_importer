@@ -194,11 +194,11 @@ function _cals_add_s3_something($node, $nid, $path, $sysnum) {
 
   $fc_item->field_system_control_number[LANGUAGE_NONE][0]['value'] = $sysnum;
   $fc_item->field_s3_path[LANGUAGE_NONE][0]['value'] = $path;
-  if($nid2 > 0) $fc_item->field_nid_s3[LANGUAGE_NONE][0]['nid'] = $nid;
+  if($nid > 0) $fc_item->field_nid_s3[LANGUAGE_NONE][0]['nid'] = $nid;
 
   $fc_item->save(); // Save field-collection item.
   node_save($node);
-	drupal_set_message("updated field collection: $sysnum: " . $node->nid);
+	drupal_set_message("updated field collection: $sysnum: " . $nid);
 
 }
 /**
