@@ -160,7 +160,7 @@ function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
     else {
       drupal_set_message(t("%c. could not find %s"), array('%c' => $current_row, '%s' => $sysnum));
     }
-		_cals_add_s3_something($context['sandbox']['node'], $nid2, $path, $sysnum);
+		_cals_populate_s3_mapping($context['sandbox']['node'], $nid2, $path, $sysnum);
     
     $context['sandbox']['progress']++; // Used to keep track of rows processed
     //array_shift($context['sandbox']['arr']);
@@ -178,13 +178,16 @@ function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
  * Creates and populates new field collection entity, saves node.
  * 
  * @param $node
- *   the node
- * @param $filepath
- *   the s3 filepath
+ *   the S3 recordset node
+ * @param $nid
+ *   the nid of the repository item being referenced
+ * @param $path
+ *   the s3 path
+ * @param $sysnum
+ *   the system number, i.e., the field is used to match the s3 path to the repos item
  */
- //$filepath 
- //_cals_add_s3_something($context['sandbox']['node'], $nid2, $sysnum, $path);
-function _cals_add_s3_something($node, $nid, $path, $sysnum) {
+
+function _cals_populate_s3_mapping($node, $nid, $path, $sysnum) {
 
   // Create new field collection item.
   $fc_item = entity_create('field_collection_item', array('field_name' => 'field_s3_mapping')); 
@@ -194,11 +197,11 @@ function _cals_add_s3_something($node, $nid, $path, $sysnum) {
 
   $fc_item->field_system_control_number[LANGUAGE_NONE][0]['value'] = $sysnum;
   $fc_item->field_s3_path[LANGUAGE_NONE][0]['value'] = $path;
-  if($nid2 > 0) $fc_item->field_nid_s3[LANGUAGE_NONE][0]['nid'] = $nid;
+  if($nid > 0) $fc_item->field_nid_s3[LANGUAGE_NONE][0]['nid'] = $nid;
 
   $fc_item->save(); // Save field-collection item.
   node_save($node);
-	drupal_set_message("updated field collection: $sysnum: " . $node->nid);
+	drupal_set_message("updated field collection: $sysnum: " . $nid);
 
 }
 /**
