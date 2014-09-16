@@ -204,7 +204,8 @@ function _cals_populate_s3_mapping($node, $nid, $path, $sysnum) {
 
   $fc_item->save(); // Save field-collection item.
   node_save($node);
-	drupal_set_message("updated field collection: $sysnum: " . $nid);
+	drupal_set_message( t("updated field collection: sysnum = @sysnum | nid = @nid", 
+		array('@sysnum' => $sysnum, '@nid' => $nid) ) );
 
 }
 /**

@@ -468,12 +468,9 @@ function _cals_get_commom_fields_from_marc(&$arr, $xml) {
  *
  */
 function _cals_importer_get_array_from_marcxml($record, &$arr) {
-
-
   //leader field
   $leader = (string) $record->children(NAME_SPACE)->leader;
   $arr["leader"] = $leader; 
-    
   $type = substr($leader, 6, 1);
   if ($type != '')   $arr['repos']['field_dc_type'][] = $type;
  
@@ -552,7 +549,7 @@ function _cals_get_value_from_tag($tags, &$arr) {
       */  
           
       case "008":
-      	//field collection
+        //field collection
         $arr['fc']['field_dc_coverage'][] = array(
           "field_value" => substr($str, 15, 3), 
           "field_dc_coverage_type" => "Spatial",

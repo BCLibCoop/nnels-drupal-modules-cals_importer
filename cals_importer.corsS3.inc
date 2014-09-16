@@ -62,15 +62,6 @@ function _cals_run_batch_update_field_collection_s3_path(&$entity, $context = ar
  //$filepath
 function _cals_importer_populate_field_file_resource($node) {
 
-  //return if
-  /*
-  if(!empty($node->field_file_resource)) {
-    drupal_set_message(t("Please update manually: ") . $node->title);
-    return '';
-  
-  }
-  */
-  //unset($node->field_file_resource[LANGUAGE_NONE]);
   $filepath = '';
   if(!empty($node->field_s3_path[LANGUAGE_NONE]) ) $filepath = $node->field_s3_path[LANGUAGE_NONE][0]['value'];
 
@@ -94,20 +85,22 @@ function _cals_importer_populate_field_file_resource($node) {
         inner join field_data_field_file_resource fr on fu.entity_id = fr.field_file_resource_value
         where fm.uri = :uri", array(':uri' => $filepath));
 
+    $node->field_duplicate_managed_file[LANGUAGE_NONE][0]['value'] = 1;
+    node_save($node);
+
     $candidates = array(); 
     foreach($test2 as $row) {
       $candidates[] = l("node/{$row->nid}", "node/{$row->nid}");
     }  
-    
     $candidates = implode(", ", $candidates);
-    $msg = t("Please update !title manually - uri currently exists in file managed table.", 
-        array("!title" => l($node->title, "node/" . $node->nid)));   
     if(strlen($candidates)) {
-      $msg .= t("Please check the following node(s):") . " " . $candidates;    
+      drupal_set_message(t("Please check the following node(s): @candidates", array('@candidates' =>$candidates) ));    
     }
-    $node->field_duplicate_managed_file[LANGUAGE_NONE][0]['value'] = 1;
-    node_save($node);
-    drupal_set_message($msg);
+    else {
+    	drupal_set_message(t("Please update @title manually - uri currently exists in file managed table.", 
+        array("@title" => l($node->title, "node/" . $node->nid))) );   
+    }
+
     return '';
   }
   //$filepath = "s3://foo";
@@ -126,7 +119,8 @@ function _cals_importer_populate_field_file_resource($node) {
   	}
 		//catch exception
 		catch(Exception $e) {
-		  drupal_set_message('Could not update ' . $node->title . " due to the following issue: " .$e->getMessage()) ;
+		  drupal_set_message(t('Could not update @title due to the following issue: @msg', 
+		    array('@title' => $node->title, @msg => $e->getMessage()) )) ;
 		  return;
 		}
     //$fc_wrapper = entity_metadata_wrapper('field_collection_item', $fc_item);
@@ -156,12 +150,9 @@ function _cals_importer_populate_field_file_resource($node) {
   
   if(!empty($filepath)) $fc_item->field_s3_path[LANGUAGE_NONE][0]['value'] = $filepath;
   $fc_item->save(); // Save field-collection item.
-  
-  //printAndDie($file, $fc_item);
 
   node_save($node);
-  $msg = t("updated s3 path: ") . l($node->title, "node/" . $node->nid);
-  drupal_set_message($msg);
+  drupal_set_message(t("updated s3 path: @title", array('@title' => l($node->title, "node/" . $node->nid) )));
 
 
 

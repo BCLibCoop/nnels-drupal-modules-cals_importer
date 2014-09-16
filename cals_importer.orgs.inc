@@ -18,7 +18,7 @@ function cals_org_emails_import_form() {
   $form['csvfile'] = array( 
     '#title' => t('CSV File'),
     '#type'  => 'file',
-    '#description' => ($max_size = parse_size(ini_get('upload_max_filesize'))) ? t('Due to server restrictions, the <strong>maximum upload file size is !max_size</strong>. Files that exceed this size will be disregarded.', array('!max_size' => format_size($max_size))) : '',    
+    '#description' => ($max_size = parse_size(ini_get('upload_max_filesize'))) ? t('Due to server restrictions, the maximum upload file size is @max_size. Files that exceed this size will be disregarded.', array('@max_size' => format_size($max_size))) : '',    
   ) ;
   $form['submit'] = array(
     '#type' => 'submit',

@@ -175,7 +175,7 @@ function _cals_normalize_record_entry($node) {
     node_save($node);
   }
   else {
-    drupal_set_message(t("Not updated:") . " " . $title);
+    drupal_set_message(t("Not updated: @title", array('@title' => $title ) ) );
   }
 
  
@@ -247,15 +247,15 @@ function _cals_clean_up_creator_entry_TO_DEPRECATE($node) {
    $len = strlen($tmp);
    $sub = substr($tmp, 0, ($len - 1)); //substring minus 1 character to figure out # of potential replacements
    $count = substr_count($sub, ".") + substr_count($sub, ",");  
-   if ($count == 0) { //
-      drupal_set_message(t("skipped: " . $author['value']));
+   if ($count == 0) { 
+     drupal_set_message(t("skipped: @author", array('@author' => $author['value']) ) );
    }
    else {
      $tmp = _cals_importer_strip_years_from_creator_values($tmp);
-      $tmp = rtrim($tmp, ", .-"); //strip remaining trailing periods, dashes, etc.;
+     $tmp = rtrim($tmp, ", .-"); //strip remaining trailing periods, dashes, etc.;
      $node->field_dc_creator[LANGUAGE_NONE][$k]['value'] = $tmp;
      $save_node = TRUE;
-     drupal_set_message("updated: " . $author['value'] . " => " .  $tmp);
+     drupal_set_message(t("updated: @author => @tmp", array('@author' =>  $author['value'], '@tmp' => $tmp) ) );
    }
    
 
