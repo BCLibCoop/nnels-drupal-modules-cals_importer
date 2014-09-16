@@ -9,17 +9,12 @@
  */
 
 function _cals_importer_update_repository_item($node) {
-
-  //_cals_parse_record_details($node);
-   
   //can also push this thru the batch api instead. To do so, comment out above and uncomment
   //the following function call.
   _cals_parse_record_details($node);
-  //_cals_importer_update_repository_items($node);
 
-  //take user back to main node page
+  //return user back to main node page
   drupal_goto("node/" . $node->nid);
-
 }
 
 

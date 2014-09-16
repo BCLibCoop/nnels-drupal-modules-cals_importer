@@ -488,11 +488,7 @@ function _cals_importer_get_array_from_marcxml($record, &$arr) {
     $tags['ind2'] = (string) $controlfield->attributes()->ind2;
     $tags['code'] = '';
     $tags['str'] = (string) $controlfield;
-    
-    
-    if ($tag == '008')  
-    _cals_get_value_from_tag($tags, $arr);
-    //dpm($me);
+    if ($tag == '008') _cals_get_value_from_tag($tags, $arr);
 
   } 
   
@@ -507,11 +503,7 @@ function _cals_importer_get_array_from_marcxml($record, &$arr) {
     foreach ($datafield as $subfield) {
       $tags['code'] = (string) $subfield->attributes()->code;
       $tags['str'] = (string) $subfield;
-
-      if ( strlen($tags['str'])) {
-        _cals_get_value_from_tag($tags, $arr);
-      }
- 
+      if ( strlen($tags['str']) ) _cals_get_value_from_tag($tags, $arr);
     }
   } 
 
@@ -531,8 +523,6 @@ function _cals_importer_get_array_from_marcxml($record, &$arr) {
  * @param $arr
  *   the big arr
  *
- * @return
- *   an array. Could replace w/ a reference
  *
  */
 function _cals_get_value_from_tag($tags, &$arr) {
@@ -562,13 +552,12 @@ function _cals_get_value_from_tag($tags, &$arr) {
       */  
           
       case "008":
-        //$str = (string) $datafield;
- 
+      	//field collection
         $arr['fc']['field_dc_coverage'][] = array(
-              "field_value" => substr($str, 15, 3), 
-              "field_dc_coverage_type" => "Spatial",
-              "field_dc_coverage_scheme" => "http://www.loc.gov/marc/countries",
-              "field_marc_tag" => $tag,
+          "field_value" => substr($str, 15, 3), 
+          "field_dc_coverage_type" => "Spatial",
+          "field_dc_coverage_scheme" => "http://www.loc.gov/marc/countries",
+          "field_marc_tag" => $tag,
         );
         
         $aud = substr($str, 22, 1);
@@ -578,35 +567,30 @@ function _cals_get_value_from_tag($tags, &$arr) {
       case "043":
       case "044":
         $arr['fc']['field_dc_coverage'][] = array(
-              "field_value" => $str, 
-              "field_dc_coverage_type" => "Spatial",
-              "field_dc_coverage_scheme" => "ISO 3166",
-              "field_marc_tag" => $tag,
+          "field_value" => $str, 
+          "field_dc_coverage_type" => "Spatial",
+          "field_dc_coverage_scheme" => "ISO 3166",
+          "field_marc_tag" => $tag,
         );
 
         break;  
       
       case 264:
         if ($code == 'a' || $code == 'b' ) $arr['repos']['field_publisher'][] = $str;
-        /*
-        if ($code == 'a') $arr['repos']['field_publisher'] =  $str;
-        if ($code == 'b') $arr['repos']['field_publisher'] .=  " " . $str;
-        */
-        
         break;  
 
       case 651:
-          if ($code == 'a') {
-            $arr['fc']['field_dc_coverage'][] = array(
-              "field_value" => $str, 
-              "field_dc_coverage_type" => "Spatial",
-              "field_dc_coverage_scheme" => "lcsh",
-              "field_marc_tag" => $tag,
-            );
-            //lets add this to the keyword index?
-            $arr['repos']['field_keyword_index'][] = $str;
+        if ($code == 'a') {
+          $arr['fc']['field_dc_coverage'][] = array(
+            "field_value" => $str, 
+            "field_dc_coverage_type" => "Spatial",
+            "field_dc_coverage_scheme" => "lcsh",
+            "field_marc_tag" => $tag,
+          );
+          //lets add this to the keyword index?
+          $arr['repos']['field_keyword_index'][] = $str;
 
-          } 
+        } 
         break;  
 
   
@@ -678,30 +662,21 @@ function _cals_get_value_from_tag($tags, &$arr) {
       *   040 $d = modifying_agency
       */
       case "003":
-        $arr['fc']['field_cataloguing_agency'][] = 
-          array(
-            "field_agency_type" => "", 
-            "value" => $str,
-          );
+        $arr['fc']['field_cataloguing_agency'][] = array(
+          "field_agency_type" => "", 
+          "value" => $str,
+        );
         break;
                   
       case "040":
-      
         $tmp = _cals_importer_get_array_cataloging_agency();
         if (array_key_exists($code, $tmp)) {
-          $arr['fc']['field_cataloguing_agency'][] = 
-            array(
-              "field_agency_type" => $tmp[$code], 
-              "value" => $str
-            );
-        
+          $arr['fc']['field_cataloguing_agency'][] = array(
+            "field_agency_type" => $tmp[$code], 
+            "value" => $str
+          );
         }
         break;
-
-
-
-  
-                
   } //end switch
 
 }// end function
