@@ -13,6 +13,7 @@
   define("NAME_SPACE", "http://www.loc.gov/MARC21/slim");
 
   //require these files...
+  module_load_include('inc', 'cals_importer', 'cals_importer.fieldcollections');
   module_load_include('inc', 'cals_importer', 'cals_importer.misc');
   module_load_include('inc', 'cals_importer', 'cals_importer.mappings');
   module_load_include('inc', 'cals_importer', 'cals_importer.marcxml');
@@ -54,7 +55,7 @@ function cals_importer_menu() {
    * 
    */
 
-  $items['node/%node/parse-s3-pathsx'] = array(
+  $items['node/%node/parse-s3-path-node'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_batch_update_s3_paths_by_node',
     'file' => "cals_importer.s3paths.inc",
@@ -378,7 +379,7 @@ function cals_importer_menu_alter(&$items) {
   $items['node/%node/generate-marc-output']['access callback'] = '_cals_importer_tab_checker_parse_record';
   $items['node/%node/convert-s3-paths']['access callback'] = '_cals_importer_tab_checker_parse_record';
   $items['node/%node/normalize-record']['access callback'] = '_cals_importer_tab_checker_parse_record';
-  $items['node/%node/parse-s3-paths']['access callback'] = '_cals_importer_tab_checker_parse_s3_paths';
+  $items['node/%node/parse-s3-path-node']['access callback'] = '_cals_importer_tab_checker_parse_s3_paths';
 
 }
 
@@ -407,10 +408,10 @@ function _cals_importer_tab_checker_parse_s3_paths() {
   //todo - change to permission
   if ( user_access('parse s3 paths') && arg(0) == 'node') {
     $n = node_load(arg(1));
+		//if($n->type == 's3_record_set') printAndDie($n);
     RETURN ($n->type == 's3_record_set') ? TRUE : FALSE;
   }
   return FALSE;
-
 
 }
 

@@ -120,6 +120,9 @@ function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
     $context['sandbox']['arr'] = $arr;
     $context['sandbox']['current'] = 0;
     $context['sandbox']['node'] = node_load($nid);
+   
+   	//_cals_delete_s3_mapping($context['sandbox']['node']);
+    
     //watchdog('import', 'update s3 paths');
     //dpm($arr);
   }
