@@ -627,13 +627,17 @@ function _cals_get_value_from_tag($tags, &$arr) {
 
         if ($code == 'a') {
           $str = (string)$str;
-          if (strpos($str, "(OCoLC)")) {
+          if (strpos($str, "(OCoLC)") !== false) {
             $arr['repos']["field_oclc_number"][] = $str;
           }
           else {
             $arr['repos']["field_system_control_number"][] = $str;
           }
         } 
+        
+        
+        printAndDie("HERE", strpos($str, "(OCoLC)"), $arr);
+        
         break;  
 
       //body field; description

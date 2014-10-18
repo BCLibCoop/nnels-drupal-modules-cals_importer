@@ -128,6 +128,9 @@ function _cals_normalize_record_entry($node) {
   $title = rtrim($node->title);
   $msg = array();
   $title = rtrim($title, ", /"); 
+  $title = _cals_importer_strip_parentheses_from_values($title);
+
+  
   if ($title != $node->title) {
     $node->title = $title;
     //node_save($node);
@@ -180,7 +183,25 @@ function _cals_normalize_record_entry($node) {
 
  
 }  
+/**
+ * Strips opening and closing parentheses from title, publisher fields  
+ */
+function _cals_importer_strip_parentheses_from_values($str) {
+	$skip = 0;
+	$str = rtrim($str);
+	//end of string, e.g. : [xyz]	
+	$regexp = "/ [\[a-zA-Z0-9_\]]{1,}$/";
+	preg_match($regexp, $str, $matches, PREG_OFFSET_CAPTURE);
+	if (count($matches) )  {
+		//we know this should be a single match because its end of string
+		$count = $matches[0][1];
+		$str = substr($str, 0, $count) .  str_replace(array("[", "]"), "", substr($str, $count));
+	}
+		
+	return rtrim($str);
 
+
+}
 
 /**
  * Strips dates and date ranges from creator values  

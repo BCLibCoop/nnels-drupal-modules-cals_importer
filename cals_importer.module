@@ -7,12 +7,10 @@
  * set memory limit and max execution times to higher than normal!
  */
   //ini_set('memory_limit', '1024M');
-  //ini_set('max_execution_time', '600'); 
-  
+  //ini_set('max_execution_time', '600');
   //the MARC namespace
   define("NAME_SPACE", "http://www.loc.gov/MARC21/slim");
-
-  //require these files...
+  //require these files..
   module_load_include('inc', 'cals_importer', 'cals_importer.fieldcollections');
   module_load_include('inc', 'cals_importer', 'cals_importer.misc');
   module_load_include('inc', 'cals_importer', 'cals_importer.mappings');
@@ -24,20 +22,18 @@
   module_load_include('inc', 'cals_importer', 'cals_importer.corsS3');
   module_load_include('inc', 'entity', 'includes/entity.controller');
 
-
 /**
  * Implements hook_menu().
  */
-  
 function cals_importer_menu() {
   $items = array();
 
-  /**
+  /*
    * Parses S3 sets, can be invoked directly - e.g:
    * http://me/cals_staging/admin/content/cals/batch-update-s3-paths/5429
    *
    * See: content/cals/s3-record-sets
-   * 
+   *
    */
 
   $items['admin/content/cals/batch-update-s3-paths'] = array(
@@ -50,6 +46,24 @@ function cals_importer_menu() {
     'weight' => 100,
   );
 
+  
+  /**
+   * Fix to move OCLC entries out of the system control field
+   * - deactivated so we don't run accidentally
+
+  $items['node/%node/fix-oclc-entry'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_importer_update_oclc_numbers_single_node',
+    'title' => 'Fix OCLC entry',
+    'type' => MENU_LOCAL_TASK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'page arguments' => array(1),
+    'weight' => 100,
+  
+  );  
+   * 
+   */
+  
   /**
    * Parses S3 sets via node page
    * 
@@ -66,6 +80,8 @@ function cals_importer_menu() {
     'weight' => 100,
   
   );
+  
+  
 
   $items['admin/content/cals/parse-org-emails'] = array(
     'title' => 'Update Organizational Contact Emails from CSV file',
@@ -285,7 +301,13 @@ function cals_importer_action_info() {
       'configurable' => FALSE,
       'triggers' => array('any'),
     ),
-        
+    //batch update to just the system control numbers
+    '_cals_importer_fix_oclc_numbers_batch' => array(
+      'label' => t("CALS: Fix Dave's STUPID OCLC bug!"),
+      'type' => 'node',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),        
     //batch update to just the system control numbers
     '_cals_importer_update_system_control_numbers' => array(
       'label' => t('CALS: Update System Control Numbers'),
@@ -408,7 +430,7 @@ function _cals_importer_tab_checker_parse_s3_paths() {
   //todo - change to permission
   if ( user_access('parse s3 paths') && arg(0) == 'node') {
     $n = node_load(arg(1));
-		//if($n->type == 's3_record_set') printAndDie($n);
+    //if ($n->type == 's3_record_set') printAndDie($n);
     RETURN ($n->type == 's3_record_set') ? TRUE : FALSE;
   }
   return FALSE;
@@ -437,26 +459,26 @@ function cals_importer_views_bulk_operations_form_alter(&$form, &$form_state, $v
  * view: admin/content/cals/repo-items/multi-files/duplicate-s3-paths-refs
  */
 function _cals_get_node_with_duplicate_s3($data) {
-	if(!empty($data->field_data_field_s3_path_field_s3_path_value)) {
-		$items = array();
-		$rs = db_query(
-			"SELECT entity_id as nid, field_s3_path_value as s3
-			FROM field_data_field_s3_path
-			where 
-			entity_id != :nid and field_s3_path_value = :s3 ", 
-			
-			array(":nid" => $data->nid, ":s3" => $data->field_data_field_s3_path_field_s3_path_value) );
-		
-		foreach ($rs as $row) {
-				$n = node_load($row->nid);
-				if($n) $items[] = l($n->title, "node/" . $n->nid);
-		}
-		if(count($items)){
-						//printAndDie($arr);
-			$vars = array("items" =>  $items, "title" => '', "type" => 'ul', "attributes" => array('id' => 'nodes') );
-			return theme_item_list($vars);		
-		}
-	}
+  if (!empty($data->field_data_field_s3_path_field_s3_path_value)) {
+    $items = array();
+    $rs = db_query(
+      "SELECT entity_id as nid, field_s3_path_value as s3
+      FROM field_data_field_s3_path
+      where 
+      entity_id != :nid and field_s3_path_value = :s3 ", 
+      
+      array(":nid" => $data->nid, ":s3" => $data->field_data_field_s3_path_field_s3_path_value) );
+    
+    foreach ($rs as $row) {
+        $n = node_load($row->nid);
+        if ($n) $items[] = l($n->title, "node/" . $n->nid);
+    }
+    if (count($items)){
+            //printAndDie($arr);
+      $vars = array("items" =>  $items, "title" => '', "type" => 'ul', "attributes" => array('id' => 'nodes') );
+      return theme_item_list($vars);    
+    }
+  }
   return "NULL";
 }
 
@@ -467,14 +489,14 @@ function cals_importer_views_query_alter(&$view, &$query) {
 
   switch ($view->name) {
   
-  	case "repository_items_with_field_collections":
-  	
-  		if($view->current_display == 'page_2' || $view->current_display == 'page_4' ) {
-				$sql = 
+    case "repository_items_with_field_collections":
+    
+      if ($view->current_display == 'page_2' || $view->current_display == 'page_4' ) {
+        $sql = 
         "SELECT entity_id as nid, field_s3_path_value as s3, COUNT( field_s3_path_value ) 
-					FROM field_data_field_s3_path
-					GROUP BY field_s3_path_value
-					HAVING (COUNT( field_s3_path_value ) > 1)";
+          FROM field_data_field_s3_path
+          GROUP BY field_s3_path_value
+          HAVING (COUNT( field_s3_path_value ) > 1)";
         $rs = db_query($sql);
         foreach ($rs as $row) {
           $arr[] = $row->s3;
@@ -486,10 +508,8 @@ function cals_importer_views_query_alter(&$view, &$query) {
            'value' => $arr, //array($subq),
            'operator' => 'in', 
           );
-          
-        //printAndDie($query);  
-  		}
-  		break;
+      }
+      break;
   
     case "repository_items_deduplicate2":
     case "repo_items_bulk_deduper":
@@ -734,6 +754,60 @@ function _cals_import_skeletal_records($node) {
 }  
 
 
+
+function _cals_importer_update_oclc_numbers_single_node($node) {
+
+  _cals_importer_update_oclc_numbers_query($node);
+
+}
+
+function _cals_importer_update_oclc_numbers_query($node) {
+
+	$vals = $node->field_system_control_number[LANGUAGE_NONE];
+	//reset
+	$node->field_system_control_number[LANGUAGE_NONE] = array();
+  foreach($vals as $value) {
+  	$val = $value['value'];
+    if(strpos($val, "(OCoLC)") !== false) {
+      $node->field_oclc_number[LANGUAGE_NONE][]['value'] = $val;
+    }
+    else {
+      $node->field_system_control_number[LANGUAGE_NONE][]['value'] = $val;
+    } 
+    
+  }
+  node_save($node);
+	//printAndDie($node);
+}
+
+
+/**
+ * move OCoLC into proper field
+ */
+function _cals_importer_fix_oclc_numbers_batch(&$entity, $context = array()) {
+  if (isset($entity->nid)) {
+    $node = node_load($entity->nid);
+    //safety check to make sure we're parsing repos items!!    
+    $content_types = array('repository_item');
+    if (in_array($node->type, $content_types)  ) {
+    	_cals_importer_update_oclc_numbers_query($node);
+      drupal_set_message(t('OCLC Number updated for ') . l($node->title, "node/" . $node->nid . "/edit") ); 
+      
+    }
+    else{
+      drupal_set_message(t("Invalid selection: not a repos item"));
+    }
+
+  }//end main if
+ 
+  return "";
+  
+}
+
+
+
+
+
 /**
  * update / add system control numbers
  */
@@ -905,7 +979,7 @@ function _cals_get_title_from_xml($record) {
         case "035":
           if ($code == 'a') {
   
-            if (strpos($str, "(OCoLC)")) {
+            if (strpos($str, "(OCoLC)") !== false) {
               $arr['repos']["field_oclc_number"][] = $str;
             }
             else {
@@ -913,6 +987,7 @@ function _cals_get_title_from_xml($record) {
               
             }
           } 
+
           break;  
   
         
@@ -993,20 +1068,10 @@ function _cals_importer_xml2php($xml) {
       //Add a simple element
       $array[$key] = $child;
     }
-     
     $fils++;       
   }
-  
-  if ($fils==0) {
-    
-    return (string)$xml;
-    
-  }
-  
- 
-
+  if ($fils==0) return (string)$xml;
   return $array;
-  
 }
 
 
@@ -1023,7 +1088,6 @@ function _cals_update_s3_path($node) {
   unset($node->field_s3_path[LANGUAGE_NONE]);
   foreach ($paths as $path) {
     $node->field_s3_path[LANGUAGE_NONE][]['value'] = $path;
-  
   }
   node_save($node);
   return "yah!";
