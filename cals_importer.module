@@ -51,6 +51,8 @@ function cals_importer_menu() {
    * Fix to move OCLC entries out of the system control field
    * - deactivated so we don't run accidentally
 
+   * 
+   */
   $items['node/%node/fix-oclc-entry'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_importer_update_oclc_numbers_single_node',
@@ -61,8 +63,6 @@ function cals_importer_menu() {
     'weight' => 100,
   
   );  
-   * 
-   */
   
   /**
    * Parses S3 sets via node page
@@ -751,32 +751,18 @@ function _cals_import_skeletal_records($node) {
 }  
 
 
-
+/**
+ * fixes single node oclc number.
+ *
+ * @param $node
+ *   the node passed to the parser
+ */
 function _cals_importer_update_oclc_numbers_single_node($node) {
 
   _cals_importer_update_oclc_numbers_query($node);
+  drupal_goto("node/" . $node->nid);
 
 }
-
-function _cals_importer_update_oclc_numbers_query($node) {
-
-	$vals = $node->field_system_control_number[LANGUAGE_NONE];
-	//reset
-	$node->field_system_control_number[LANGUAGE_NONE] = array();
-  foreach($vals as $value) {
-  	$val = $value['value'];
-    if(strpos($val, "(OCoLC)") !== false) {
-      $node->field_oclc_number[LANGUAGE_NONE][]['value'] = $val;
-    }
-    else {
-      $node->field_system_control_number[LANGUAGE_NONE][]['value'] = $val;
-    } 
-    
-  }
-  node_save($node);
-	//printAndDie($node);
-}
-
 
 /**
  * move OCoLC into proper field
@@ -801,7 +787,64 @@ function _cals_importer_fix_oclc_numbers_batch(&$entity, $context = array()) {
   
 }
 
+function _cals_importer_update_oclc_numbers_query($node) {
 
+	$vals = $node->field_system_control_number[LANGUAGE_NONE];
+	//reset sys control number
+	$node->field_system_control_number[LANGUAGE_NONE] = array();
+  foreach($vals as $value) {
+  	$val = $value['value'];
+    if(strpos($val, "(OCoLC)") !== false) {
+    	if (_cals_isvalid_oclc_number($val) === 1) {
+    		$node->field_oclc_number[LANGUAGE_NONE][]['value'] = $val; 
+    	}	
+    }
+    else { //repopulate the sys control numbers
+      $node->field_system_control_number[LANGUAGE_NONE][]['value'] = $val;
+    } 
+    
+  }
+  _cals_delete_duplicate_oclc_numbers($node);
+	//printAndDie($node->field_oclc_number);
+  node_save($node);
+	//printAndDie($node);
+}
+
+
+/**
+ * checks validity of oclc number
+ *
+ * @param $string
+ *   the string value passed to the function
+ * @return integer
+ *   returns 1 if true; 0 if false
+ */
+function _cals_isvalid_oclc_number($string) {
+  $value = trim(str_replace("(OCoLC)", "", $string));
+  $is_valid = 0;
+  return (ctype_digit($value) !== false || is_int($value) !== false) ? 1 : 0;
+}
+
+/**
+ * loops thru oclc_number values to strip out duplicates
+ *
+ * @param $node
+ *   the node, passed by reference
+ */
+
+function _cals_delete_duplicate_oclc_numbers(&$node){
+  if(!empty($node->field_oclc_number)) {
+    $arr = array();
+		foreach($node->field_oclc_number[LANGUAGE_NONE] as $k => $v) if(!in_array($v['value'], $arr)) $arr[] = $v['value'];
+    $node->field_oclc_number[LANGUAGE_NONE] = array();
+    //if multiple oclc numbers, throw an error message
+    if(count($arr) > 1) {
+    	drupal_set_message(t("There are multiple OCLC numbers. Please check entry: ") . 
+    		l($node->title, "node/" . $node->nid . "/edit") );  
+    }	
+		foreach($arr as $val)   $node->field_oclc_number[LANGUAGE_NONE][] = array("value" => $val);
+  }
+}
 
 
 
