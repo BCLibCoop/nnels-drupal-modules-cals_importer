@@ -11,8 +11,8 @@
   //the MARC namespace
   define("NAME_SPACE", "http://www.loc.gov/MARC21/slim");
   //require these files..
-  module_load_include('inc', 'cals_importer', 'cals_importer.fieldcollections');
   module_load_include('inc', 'cals_importer', 'cals_importer.misc');
+  module_load_include('inc', 'cals_importer', 'cals_importer.fieldcollections');
   module_load_include('inc', 'cals_importer', 'cals_importer.mappings');
   module_load_include('inc', 'cals_importer', 'cals_importer.marcxml');
   module_load_include('inc', 'cals_importer', 'cals_importer.s3paths');

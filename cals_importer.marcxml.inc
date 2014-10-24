@@ -58,7 +58,6 @@ function _cals_importer_update_repository_items(&$entity, $context = array()) {
  */ 
  
 function _cals_parse_record_details($node) {
-
 	$xml = _cals_get_marc_xml_string($node);
 	if($xml === 0) return;
 
