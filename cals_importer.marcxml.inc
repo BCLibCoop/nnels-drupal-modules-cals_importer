@@ -59,11 +59,8 @@ function _cals_importer_update_repository_items(&$entity, $context = array()) {
  
 function _cals_parse_record_details($node) {
 
-  $xml = '';
-  if (!isset($node->field_xml_string[LANGUAGE_NONE]) ) return ''; //get out of here if not xml string
-
-  if (isset($node->field_xml_string[LANGUAGE_NONE])) 
-    $xml = _cals_get_xml_string($node->field_xml_string[LANGUAGE_NONE][0]['value']);
+	$xml = _cals_get_marc_xml_string($node);
+	if($xml === 0) return;
 
   //create an array of taxonomies to be used in parsing field collections, etc.
   foreach (taxonomy_get_vocabularies() as $k => $v) {
@@ -82,13 +79,14 @@ function _cals_parse_record_details($node) {
   
   if (!empty($date_issued)) 
     $arr['fc']['field_date'][] = array("field_qualifier_date" => "Issued", "field_dc_date" => $date_issued);
+    
   //descriptions
   _cals_get_descriptors_from_marc($arr, $xml);
   
   //isbns
   _cals_importer_get_isbn_sysnums_from_marc($arr, $xml);
 
-    //grabs some of the generic fields, e.g., titles, uri, publisher number, etc.
+  //grabs some of the generic fields, e.g., titles, uri, publisher number, etc.
   _cals_get_commom_fields_from_marc($arr, $xml);
 
   //subjects
@@ -106,12 +104,10 @@ function _cals_parse_record_details($node) {
   }
   
   $node->title = _cals_get_truncated_value($arr['repos']['title'], 250);        
+  $node->status = 1;
 
   //delete the field collections so we have a fairly stripped down node if reparsing
   $node = _cals_delete_existing_field_collection_items($node, array_keys($arr['fc']));
-  $node->status = 1;
-
-
 
   foreach ($arr['repos'] as $k => $v) {
 

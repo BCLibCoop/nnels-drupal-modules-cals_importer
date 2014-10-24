@@ -232,11 +232,8 @@ function _cals_importer_populate_fieldcollection_file_resource( $node, $arr_tax,
  
 function _cals_importer_parse_marcxml_cors3($node) {
 
-  $xml = '';
-  if (!isset($node->field_xml_string[LANGUAGE_NONE]) ) return ''; //get out of here if not xml string
-
-  if (isset($node->field_xml_string[LANGUAGE_NONE])) 
-    $xml = _cals_get_xml_string($node->field_xml_string[LANGUAGE_NONE][0]['value']);
+	$xml = _cals_get_marc_xml_string($node);
+	if($xml === 0) return; //skip this record.
 
   //create an array of taxonomies to be used in parsing field collections, etc.
   foreach (taxonomy_get_vocabularies() as $k => $v) {
