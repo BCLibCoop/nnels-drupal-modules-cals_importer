@@ -627,8 +627,10 @@ function _cals_get_value_from_tag($tags, &$arr) {
 
         if ($code == 'a') {
           $str = (string)$str;
+          //oclc
           if (strpos($str, "(OCoLC)") !== false) {
-            $arr['repos']["field_oclc_number"][] = $str;
+          	//new check on valid oclc numbers
+          	if (_cals_isvalid_oclc_number($str) === 1) $arr['repos']["field_oclc_number"][] = $str;
           }
           else {
             $arr['repos']["field_system_control_number"][] = $str;
@@ -636,7 +638,7 @@ function _cals_get_value_from_tag($tags, &$arr) {
         } 
         
         
-        printAndDie("HERE", strpos($str, "(OCoLC)"), $arr);
+        //printAndDie("HERE", strpos($str, "(OCoLC)"), $arr);
         
         break;  
 

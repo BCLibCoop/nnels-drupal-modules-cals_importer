@@ -245,10 +245,8 @@ function _cals_get_array_csv($nid) {
 	  if($k > 0) $arr[] = str_getcsv($v, "\t");	
 	}
 	return $arr;
+  //NOTE TO SELF, why does this return here???
   
-  
-
-  //printAndDie($records, $arr);
  	/* */
   $file = drupal_realpath($node->field_file_csv[LANGUAGE_NONE][0]['uri']);
   

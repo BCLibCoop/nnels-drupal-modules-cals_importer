@@ -60,7 +60,6 @@ function _cals_importer_update_repository_items(&$entity, $context = array()) {
 function _cals_parse_record_details($node) {
 	$xml = _cals_get_marc_xml_string($node);
 	if($xml === 0) return;
-
   //create an array of taxonomies to be used in parsing field collections, etc.
   foreach (taxonomy_get_vocabularies() as $k => $v) {
     $arr_tax[$v->name] = $k;
@@ -104,7 +103,9 @@ function _cals_parse_record_details($node) {
   
   $node->title = _cals_get_truncated_value($arr['repos']['title'], 250);        
   $node->status = 1;
-
+  
+  _cals_delete_duplicate_oclc_numbers($node);
+  
   //delete the field collections so we have a fairly stripped down node if reparsing
   $node = _cals_delete_existing_field_collection_items($node, array_keys($arr['fc']));
 

@@ -427,12 +427,72 @@ function _cals_importer_tab_checker_parse_s3_paths() {
   //todo - change to permission
   if ( user_access('parse s3 paths') && arg(0) == 'node') {
     $n = node_load(arg(1));
-    //if ($n->type == 's3_record_set') printAndDie($n);
     RETURN ($n->type == 's3_record_set') ? TRUE : FALSE;
   }
   return FALSE;
 
 }
+
+
+function cals_importer_form_alter(&$form, &$form_state, $form_id) {
+	global $user;
+	dpm($form_id);
+	switch($form_id) {
+		
+		case "field_collection_item_form":
+			//$form['#submit'][] = 
+			$form['nid'] = array('#type' => 'value', '#default_value' => 9724);
+			$form['actions']['submit']['#submit'][] = '_cals_importer_s3_cors_field_submit';
+			dpm($form);
+			
+			break;
+	}
+
+}
+function xhook_field_collection_item_presave(FieldCollectionItemEntity $field_collection_item) {
+  $field_collection_item->name = 'foo';
+}
+function cals_importer_field_collection_item_presave(FieldCollectionItemEntity $field_collection_item) {
+	
+	printAndDie($field_collection_item);
+  printAndDie(array_keys((array)$field_collection_item), $field_collection_item);//$field_collection_item->FieldCollectionItemEntity);
+
+}
+
+
+ 
+function _cals_importer_s3_cors_field_submit($form, &$form_state){
+	$filepath = "NO";
+	//printAndDie($form_state['values']['field_s3_to_cors_update'][LANGUAGE_NONE][0]['value']);
+  if($form_state['values']['field_s3_to_cors_update'][LANGUAGE_NONE][0]['value'] == 1) {
+  	if(isset($form_state['values']['nid']) && !empty($form_state['values']['field_s3_path'])) {
+  	  $node = node_load($form_state['values']['nid']); 
+  	  $filepath = $form_state['values']['field_s3_path'][LANGUAGE_NONE][0]['value'];
+  	  $file = _cals_importer_file_updater($node, $filepath);
+  	}	
+  	//  $test = db_query('SELECT n.fid FROM {file_managed} n WHERE n.uri = :uri', array(':uri' => $filepath));
+
+		//printAndDie("here", $filepath, $file, $form_state['values']);
+		
+		$form_state['values']['field_s3_file_upload'][LANGUAGE_NONE][0] = (array)$file;
+		//printAndDie("here", $filepath, $file, $form_state['field_collection_item']->item_id);
+    //$fc_wrapper = entity_metadata_wrapper('field_collection_item', $fc_item);
+    //return (array)$file;
+
+		
+		//printAndDie($form_state['values']);
+		/*
+    $e = entity_create('field_collection_item', $value);
+    // Attach the field_collection entity to the application node or user
+    $e->setHostEntity('node', $node);
+    // Save the entity. 
+    $e->save(); 
+    */
+    
+  }
+
+}
+
 
 function cals_importer_views_bulk_operations_form_alter(&$form, &$form_state, $vbo) {
   if ($form_state['step'] == 'views_form_views_form') {
@@ -471,7 +531,6 @@ function _cals_get_node_with_duplicate_s3($data) {
         if ($n) $items[] = l($n->title, "node/" . $n->nid);
     }
     if (count($items)){
-            //printAndDie($arr);
       $vars = array("items" =>  $items, "title" => '', "type" => 'ul', "attributes" => array('id' => 'nodes') );
       return theme_item_list($vars);    
     }
@@ -805,9 +864,7 @@ function _cals_importer_update_oclc_numbers_query($node) {
     
   }
   _cals_delete_duplicate_oclc_numbers($node);
-	//printAndDie($node->field_oclc_number);
   node_save($node);
-	//printAndDie($node);
 }
 
 

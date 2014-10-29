@@ -63,7 +63,6 @@ function _cals_importer_generate_marcxml_file($node) {
     $filebuilder = new MarcXmlFileBuilder($node, $xml);
     $filebuilder->createFile();
   }
-  //printAndDie("here", $xml);  
   //take user back to main node page
   drupal_goto("node/" . $node->nid);
 
@@ -128,15 +127,11 @@ class MarcXmlFileBuilder {
     $file = file_save_data($xml->asXml(), 'public://' . $filename);
     $file->display = 1;
     $file->description = '';
-    //printAndDie($file);
-    
-    //$file = file_copy($file, 'public://');
-  
+
     //$xml->asXml($filename);
     $parent->field_marc_xml_output_file[LANGUAGE_NONE][0] = (array)$file;
     node_save($parent);  
-    //printAndDie($file, $parent);
- 
+
     try {
       //$file = file_copy($file, 'public://');
     } catch (Exception $e) {

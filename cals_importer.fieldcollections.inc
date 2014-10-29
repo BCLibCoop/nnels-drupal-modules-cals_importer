@@ -103,7 +103,6 @@ function _cals_get_entity_value($key, $arr, $arr_tax) {
           
         );
 
-        //printAndDie($values);   
         break;
       case "field_dc_coverage":
             

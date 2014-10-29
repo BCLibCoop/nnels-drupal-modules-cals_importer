@@ -48,7 +48,89 @@ function _cals_run_batch_update_field_collection_s3_path(&$entity, $context = ar
   return "";
 
 }
+ 
+/**
+ * Creates new file, if not in the database
+ * 
+ * @param $node
+ *   the node
+ * @param $filepath
+ *   the s3 filepath
+ */
+function _cals_importer_file_updater($node, $filepath) {
 
+  $filepath = str_replace("download.nnels.ca/", "", $filepath);
+  $filepath = str_replace("download2.nnels.ca/", "", $filepath);
+
+  //We need to check if the current file exists in the file_managed table
+  //drush sqlq "select * from file_managed limit 0, 100"
+  $test = db_query('SELECT n.fid FROM {file_managed} n WHERE n.uri = :uri', array(':uri' => $filepath));
+  
+  
+  if($test->rowCount()>0){
+  
+  	foreach($test as $row) {
+  	  printPre($row);
+  	  $file = file_load($row->fid);
+
+			if(is_object($file)) return $file;
+
+  	}
+    $test2 = db_query("select distinct fr.entity_id as nid 
+        from field_data_field_s3_file_upload fu 
+        	inner join file_managed fm on fu.field_s3_file_upload_fid = fm.fid
+        	inner join field_data_field_file_resource fr on fu.entity_id = fr.field_file_resource_value
+        where fm.uri = :uri", 
+        	array(':uri' => $filepath));
+
+
+    $candidates = array(); 
+    foreach($test2 as $row) {
+      $candidates[] = l("node/{$row->nid}", "node/{$row->nid}");
+      printPre($row);
+    }  
+    $candidates = implode(", ", $candidates);
+    if(strlen($candidates)) {
+      drupal_set_message(t("Please check the following node(s): @candidates", array('@candidates' =>$candidates) ));   
+			printAndDie("here", $candidates);
+	    $node->field_duplicate_managed_file[LANGUAGE_NONE][0]['value'] = 1;
+	    node_save($node);
+ 
+    }
+    else {
+    	drupal_set_message(t("Please update @title manually - uri currently exists in file managed table.", 
+        array("@title" => l($node->title, "node/" . $node->nid))) );   
+    }
+    return 0;
+  }
+  //$filepath = "s3://foo";
+  // Create managed File object and associate with zip. Not currently in use, but leave intact for now
+  if(!empty($filepath)) {
+    $file = (object) array(
+      'uid' => 1,
+      'uri' => $filepath,
+      'filename' => $filepath, 
+      'filemime' => "application/zip",    //application/zip or multipart/x-zip
+      'status' => 1,
+      'display' => 1
+    );
+    try {
+			file_save($file);
+  	}
+		//catch exception
+		catch(Exception $e) {
+		  drupal_set_message(t('Could not update @title due to the following issue: @msg', 
+		    array('@title' => $node->title, @msg => $e->getMessage()) )) ;
+		  return;
+		}
+    
+    
+   	return $file;  
+  }
+
+
+
+}
 
  
 /**
@@ -132,12 +214,10 @@ function _cals_importer_populate_field_file_resource($node) {
   //$fc_item->field_performer[LANGUAGE_NONE][0]['value'] = "TEST";
   if(isset($arr['fc_files']['field_performer'][0])) {
     $fc_item->field_performer[LANGUAGE_NONE] = $arr['fc_files']['field_performer'];
-    //printAndDie($fc_item->field_performer, $arr['fc_files']['field_performer']);
   }
 
   if(isset($arr['fc_files']['field_running_time'][0])) {
     $fc_item->field_running_time[LANGUAGE_NONE] = $arr['fc_files']['field_running_time'];
-    //printAndDie($fc_item->field_running_time);
   }
   
   //hard-coded values (for now):
@@ -232,9 +312,6 @@ function _cals_importer_populate_fieldcollection_file_resource( $node, $arr_tax,
  
 function _cals_importer_parse_marcxml_cors3($node) {
 
-	$xml = _cals_get_marc_xml_string($node);
-	if($xml === 0) return; //skip this record.
-
   //create an array of taxonomies to be used in parsing field collections, etc.
   foreach (taxonomy_get_vocabularies() as $k => $v) {
     $arr_tax[$v->name] = $k;
@@ -242,12 +319,14 @@ function _cals_importer_parse_marcxml_cors3($node) {
   
   //if (!strlen($xml)) return "no xml!";
   $arr = array();
-  
-  //get running time
-  _cals_importer_get_runningtime_from_marcxml($arr, $xml);
-  
-  //get performer
-  _cals_importer_get_performer_from_marcxml($arr, $xml);
+	$xml = _cals_get_marc_xml_string($node);
+  //skip this running times and performer updates.
+  if($xml !== 0) { 
+	  //get running time
+	  _cals_importer_get_runningtime_from_marcxml($arr, $xml);
+	  //get performer
+	  _cals_importer_get_performer_from_marcxml($arr, $xml);
+	}
 
  
   return $arr;

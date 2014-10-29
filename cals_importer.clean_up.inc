@@ -125,11 +125,15 @@ function _cals_normalize_record_values(&$entity, $context = array()) {
 function _cals_normalize_record_entry($node) {
 
   //titles
+	_cals_importer_strip_square_brackets($node);
   $title = rtrim($node->title);
+  
+
   $msg = array();
   $title = rtrim($title, ", /"); 
   $title = _cals_importer_strip_parentheses_from_values($title);
 
+	
   
   if ($title != $node->title) {
     $node->title = $title;
@@ -183,6 +187,30 @@ function _cals_normalize_record_entry($node) {
 
  
 }  
+/**
+ * Strips opening and closing parentheses from title, publisher fields  
+ */
+function _cals_importer_strip_square_brackets(&$node) {
+	//printPre($node);
+  //$str = str_replace(array("[", "]"), "", $str);
+  
+  $node->title = str_replace(array("[", "]"), "", $node->title);
+  $arr = array("title_field", "field_dc_creator", "field_publisher");
+ 	
+  foreach($arr as $field) {
+  	$arr2 = $node->{$field}[LANGUAGE_NONE];
+  	
+  	foreach($arr2 as $k => $v) {
+  	  $val = str_replace(array("[", "]"), "", $v['value']);
+  	  $node->{$field}[LANGUAGE_NONE][$k]['value'] = $val;
+
+  	}
+  
+  }
+	//printAndDie($node);
+
+}
+
 /**
  * Strips opening and closing parentheses from title, publisher fields  
  */
