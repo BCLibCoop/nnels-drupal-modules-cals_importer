@@ -48,7 +48,105 @@ function _cals_run_batch_update_field_collection_s3_path(&$entity, $context = ar
   return "";
 
 }
- 
+
+
+function _cals_update_filecollection_file($node) {
+
+  printAndDie($node);
+
+
+}
+
+
+/**
+ * Creates new file, if not in the database
+ * 
+ * @param $node
+ *   the node
+ * @param $filepath
+ *   the s3 filepath
+ */
+function _cals_importer_s3path_to_file_updater($nid, $item_id) {
+  global $user;
+		$link = t("No file available");
+		if($user->uid == 1) {
+			dpm($nid);
+			dpm($item_id);
+
+			$entity = entity_load('field_collection_item', array($item_id));
+			dpm($entity->field_s3_path['und'][0]['safe_value']);
+		  if(empty($entity->field_s3_file_upload)) {
+		    $link .= ": " .  l("update file attachment from S3 path", "admin/%node/update-file-upload-from-field-collection");
+		    //$file = _cals_importer_get_file_from_filepath($entity->field_s3_path['und'][0]['safe_value']);
+		  	//printPre($file);
+			  dpm($file);
+		  }
+			
+		}
+		/*
+	  if($user->uid == 1 & isset($row->field_field_s3_path[0]['raw']['value']) && 
+	  	empty($row->file_managed_field_data_field_s3_file_upload_fid) ) {
+	  	
+	  	$link .= ": " . "ADD FILE THINGIE HERE??";
+	  	
+	  }	
+    */
+	return $link;
+}
+/**
+ * Creates new file, if not in the database
+ * 
+ * @param $node
+ *   the node
+ * @param $filepath
+ *   the s3 filepath
+ */
+function _cals_importer_get_file_from_filepath($filepath) {
+
+  $filepath = str_replace("download.nnels.ca/", "", $filepath);
+  $filepath = str_replace("download2.nnels.ca/", "", $filepath);
+
+  //We need to check if the current file exists in the file_managed table
+  //drush sqlq "select * from file_managed limit 0, 100"
+  $test = db_query('SELECT n.fid FROM {file_managed} n WHERE n.uri = :uri', array(':uri' => $filepath));
+  
+  
+  if($test->rowCount()>0){
+  
+  	foreach($test as $row) {
+  	  $file = file_load($row->fid);
+			if(is_object($file)) return $file;
+  	}
+  }
+  //$filepath = "s3://foo";
+  // Create managed File object and associate with zip. Not currently in use, but leave intact for now
+  if(!empty($filepath)) {
+    $file = (object) array(
+      'uid' => 1,
+      'uri' => $filepath,
+      'filename' => $filepath, 
+      'filemime' => "application/zip",    //application/zip or multipart/x-zip
+      'status' => 1,
+      'display' => 1
+    );
+    try {
+			file_save($file);
+  	}
+		//catch exception
+		catch(Exception $e) {
+		  drupal_set_message(t('Could not update @title due to the following issue: @msg', 
+		    array('@title' => $node->title, @msg => $e->getMessage()) )) ;
+		  return;
+		}
+    
+    
+   	return $file;  
+  }
+
+
+
+}
+
 /**
  * Creates new file, if not in the database
  * 
@@ -70,7 +168,6 @@ function _cals_importer_file_updater($node, $filepath) {
   if($test->rowCount()>0){
   
   	foreach($test as $row) {
-  	  printPre($row);
   	  $file = file_load($row->fid);
 
 			if(is_object($file)) return $file;
@@ -92,8 +189,7 @@ function _cals_importer_file_updater($node, $filepath) {
     $candidates = implode(", ", $candidates);
     if(strlen($candidates)) {
       drupal_set_message(t("Please check the following node(s): @candidates", array('@candidates' =>$candidates) ));   
-			printAndDie("here", $candidates);
-	    $node->field_duplicate_managed_file[LANGUAGE_NONE][0]['value'] = 1;
+			$node->field_duplicate_managed_file[LANGUAGE_NONE][0]['value'] = 1;
 	    node_save($node);
  
     }
