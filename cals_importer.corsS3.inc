@@ -50,10 +50,37 @@ function _cals_run_batch_update_field_collection_s3_path(&$entity, $context = ar
 }
 
 
-function _cals_update_filecollection_file($node) {
+function _cals_update_filecollection_file($node, $item_id) {
+	$ent = entity_load_single('field_collection_item', $item_id);
+	
+	//	  $ent->field_s3_to_cors_update[LANGUAGE_NONE][0]['value'] == 1  &&
 
-  printAndDie($node);
+	if(isset($ent->field_s3_to_cors_update[LANGUAGE_NONE][0]['value']) &&
+		!empty($ent->field_s3_path) && 
+		
+		empty($ent->field_s3_file_upload)
+		){
+			//printAndDie("EYS");
+			
+			$file = _cals_importer_get_file_from_filepath($ent->field_s3_path[LANGUAGE_NONE][0]['value']);
+			$file2 = (array)$file; //cast to array 
+			$file2['display'] = 1; //set file to display
 
+	    try {
+			  $ent->field_s3_file_upload[LANGUAGE_NONE][0] = $file2;
+			  entity_save('field_collection_item', $ent);
+        node_save($node);  //not certain if this is necessary?
+	    } catch (Exception $e) {
+	      printAndDie($e->getMessage());
+	      drupal_set_message($e->getMessage());
+	      watchdog('my_error', $e->getMessage());
+	    }
+
+			
+	}
+	//printAndDie($node);
+
+	drupal_goto("node/" . $node->nid);
 
 }
 
@@ -66,12 +93,14 @@ function _cals_update_filecollection_file($node) {
  * @param $filepath
  *   the s3 filepath
  */
-function _cals_importer_s3path_to_file_updater($nid, $item_id) {
+function _cals_importer_s3path_to_file_updater($node, $item_id) {
   global $user;
 		$link = t("No file available");
 		if($user->uid == 1) {
 			dpm($nid);
 			dpm($item_id);
+			
+			
 
 			$entity = entity_load('field_collection_item', array($item_id));
 			dpm($entity->field_s3_path['und'][0]['safe_value']);
