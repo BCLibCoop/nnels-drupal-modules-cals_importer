@@ -178,7 +178,7 @@ function cals_importer_menu() {
     'weight' => 200,
   
   );
-  
+  //generate cors s3 file via s3 path (field collection)
 	$items['admin/%node/update-file-upload-from-field-collection'] = array(
     'page callback' => '_cals_update_filecollection_file',
     'title' => "Update via Field Collection",
