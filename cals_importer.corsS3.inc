@@ -97,29 +97,12 @@ function _cals_importer_s3path_to_file_updater($node, $item_id) {
   global $user;
 		$link = t("No file available");
 		if($user->uid == 1) {
-			dpm($nid);
-			dpm($item_id);
-			
-			
-
 			$entity = entity_load('field_collection_item', array($item_id));
-			dpm($entity->field_s3_path['und'][0]['safe_value']);
 		  if(empty($entity->field_s3_file_upload)) {
 		    $link .= ": " .  l("update file attachment from S3 path", "admin/%node/update-file-upload-from-field-collection");
-		    //$file = _cals_importer_get_file_from_filepath($entity->field_s3_path['und'][0]['safe_value']);
-		  	//printPre($file);
-			  dpm($file);
 		  }
 			
 		}
-		/*
-	  if($user->uid == 1 & isset($row->field_field_s3_path[0]['raw']['value']) && 
-	  	empty($row->file_managed_field_data_field_s3_file_upload_fid) ) {
-	  	
-	  	$link .= ": " . "ADD FILE THINGIE HERE??";
-	  	
-	  }	
-    */
 	return $link;
 }
 /**
