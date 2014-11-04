@@ -55,13 +55,8 @@ function _cals_update_filecollection_file($node, $item_id) {
 	
 	//	  $ent->field_s3_to_cors_update[LANGUAGE_NONE][0]['value'] == 1  &&
 
-	if(isset($ent->field_s3_to_cors_update[LANGUAGE_NONE][0]['value']) &&
-		!empty($ent->field_s3_path) && 
-		
-		empty($ent->field_s3_file_upload)
-		){
-			//printAndDie("EYS");
-			
+	if(!empty($ent->field_s3_path) && empty($ent->field_s3_file_upload)){
+
 			$file = _cals_importer_get_file_from_filepath($ent->field_s3_path[LANGUAGE_NONE][0]['value']);
 			$file2 = (array)$file; //cast to array 
 			$file2['display'] = 1; //set file to display
@@ -143,6 +138,7 @@ function _cals_importer_get_file_from_filepath($filepath) {
     );
     try {
 			file_save($file);
+			dpm($file);
   	}
 		//catch exception
 		catch(Exception $e) {
