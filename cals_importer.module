@@ -313,6 +313,14 @@ function cals_importer_action_info() {
       'configurable' => FALSE,
       'triggers' => array('any'),
     ),
+    
+    //preview changes to Author
+    '_cals_importer_normalize_creators_preview_vbo' => array(
+      'label' => t("CALS: Preview Creator Normalization"),
+      'type' => 'node',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),       
     //batch update to just the system control numbers
     '_cals_importer_fix_oclc_numbers_batch' => array(
       'label' => t("CALS: Fix Dave's STUPID OCLC bug!"),

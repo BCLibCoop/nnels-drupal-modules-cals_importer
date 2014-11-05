@@ -33,7 +33,6 @@ function _cals_run_batch_update_field_collection_s3_path(&$entity, $context = ar
     $node = node_load($entity->nid);
     //safety check to make sure we're parsing repos items!!    
     $content_types = array('repository_item');
-    
     if (in_array($node->type, $content_types)  ) {
       $filepath = $node->field_s3_path[LANGUAGE_NONE][0]['value'];
       _cals_importer_populate_field_file_resource($node, $filepath);
@@ -79,27 +78,6 @@ function _cals_update_filecollection_file($node, $item_id) {
 
 }
 
-
-/**
- * Creates new file, if not in the database
- * 
- * @param $node
- *   the node
- * @param $filepath
- *   the s3 filepath
- */
-function _cals_importer_s3path_to_file_updater($node, $item_id) {
-  global $user;
-		$link = t("No file available");
-		if($user->uid == 1) {
-			$entity = entity_load('field_collection_item', array($item_id));
-		  if(empty($entity->field_s3_file_upload)) {
-		    $link .= ": " .  l("update file attachment from S3 path", "admin/%node/update-file-upload-from-field-collection");
-		  }
-			
-		}
-	return $link;
-}
 /**
  * Creates new file, if not in the database
  * 
@@ -116,8 +94,7 @@ function _cals_importer_get_file_from_filepath($filepath) {
   //We need to check if the current file exists in the file_managed table
   //drush sqlq "select * from file_managed limit 0, 100"
   $test = db_query('SELECT n.fid FROM {file_managed} n WHERE n.uri = :uri', array(':uri' => $filepath));
-  
-  
+
   if($test->rowCount()>0){
   
   	foreach($test as $row) {
