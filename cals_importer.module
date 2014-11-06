@@ -144,7 +144,7 @@ function cals_importer_menu() {
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_normalize_record_value_preview',
     'file' => "cals_importer.clean_up.inc",
-    'title' => 'Normalize Record',
+    'title' => 'Preview Creator Normalization',
     'description' => 'Preview the normalization',
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,

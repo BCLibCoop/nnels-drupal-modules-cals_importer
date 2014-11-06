@@ -143,7 +143,6 @@ function _cals_normalize_record_entry($node) {
   //creators
 	_cals_importer_normalize_creators($node);
 	_cals_importer_strip_trailing_periods($node);
-  printAndDie($node->field_dc_creator);
  //publisher
   if(!empty($node->field_publisher)) {
     foreach($node->field_publisher[LANGUAGE_NONE] as $k => $publisher) {
@@ -206,7 +205,7 @@ function _cals_importer_normalize_creators_preview_query($node) {
   _cals_importer_strip_trailing_periods($node);
   //dpm($node->field_dc_creator);
   foreach($node->field_dc_creator[LANGUAGE_NONE] as $k => $author) {
-    drupal_set_message("ORIGINAL: " . $author['safe_value'] . " | UPDATED: " . $author['value']);
+    drupal_set_message("ORIGINAL: " . $author['safe_value'] . " | NORMALIZED: " . $author['value']);
   }
 
 }
@@ -217,9 +216,11 @@ function _cals_importer_normalize_creators_preview_query($node) {
 function _cals_importer_normalize_creators(&$node) {
   if(!empty($node->field_dc_creator)) {
     foreach($node->field_dc_creator[LANGUAGE_NONE] as $k => $author) {
-  
+  	
      $tmp = rtrim($author['value']); //trim various ascii chars
      //logic to determine if there's a ...
+     $q = "?";
+     $tmp = str_replace($q, "", $tmp);
      $len = strlen($tmp);
      $sub = substr($tmp, 0, ($len - 1)); //substring minus 1 character to figure out # of potential replacements
      $count = substr_count($sub, ".") + substr_count($sub, ",");  
@@ -246,11 +247,10 @@ function _cals_importer_normalize_creators(&$node) {
  * Strips opening and closing parentheses from creators,  
  */
 function _cals_importer_strip_trailing_periods(&$node) {
-	printPre(__FUNCTION__);
   if(!empty($node->field_dc_creator)) {
     foreach($node->field_dc_creator[LANGUAGE_NONE] as $k => $author) {
     	$tmp = rtrim($author['value']); //trim various ascii chars
-     //logic to determine if there's a ...
+     	//$tmp = "Hatter, A. C."; // replace with other patterns for testing purposes
       $len = strlen($tmp);
       $sub = substr($tmp, 0, ($len - 1)); //substring minus 1 character to figure out # of potential replacements
       $count = substr_count($sub, ".");  
@@ -258,16 +258,37 @@ function _cals_importer_strip_trailing_periods(&$node) {
       $secondlast = 0; 
       if($last > 0) {
       	
-      	$tmp2 = substr($tmp, 0, 50);
+      	$tmp2 = substr($tmp, 0, $last);
         $secondlast = (strrpos($tmp2, ".") === FALSE)? 0 : strrpos($tmp2, ".");
         $diff = $last - $secondlast;
-        if($diff > 2) $tmp = rtrim($tmp, "."); //strip remaining trailing periods, dashes, etc.;
+        $test_char = substr($tmp2, -2, -1); //we want to test for this, if space, we 
+
+        if($secondlast > 0 && $diff > 4) {
+        	$tmp = rtrim($tmp, "."); //strip remaining trailing periods, dashes, etc.;
+        	//printPre("1");
+        }
+        if($secondlast == 0 && $test_char != " ") {
+        	$tmp = rtrim($tmp, "."); //strip remaining trailing periods, dashes, etc.;
+        	//printPre("2");
+        }
+        $tmp = rtrim($tmp, ", -"); //strip remaining trailing periods, dashes, etc.;
+        
 
         if ($tmp != $author['value']) {
           $node->field_dc_creator[LANGUAGE_NONE][$k]['value'] = $tmp;
           $msg[] = t("updated author:") . " " .  $tmp;
         }
-        
+				/* 
+				printAndDie(
+					"last = " . $last, 
+					"secondlast = " . $secondlast, 
+					"diff = " . $diff, 
+					"original: " . rtrim($author['value']),  
+					"normalized: " . $node->field_dc_creator[LANGUAGE_NONE][$k]['value'],  
+					"substring: " . $tmp2,
+					"test_char: " . $test_char
+					);
+				//*/
       }
     }
   } 
