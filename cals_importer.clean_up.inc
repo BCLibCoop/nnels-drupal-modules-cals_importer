@@ -84,7 +84,6 @@ function _cals_add_856_tag($node) {
 }
 
 
-
 /**
  * Simple wrapper to call main batch api parse to standardize author, title and publisher values
  */
@@ -143,7 +142,8 @@ function _cals_normalize_record_entry($node) {
   
   //creators
 	_cals_importer_normalize_creators($node);
-  printAndDie($node);
+	_cals_importer_strip_trailing_periods($node);
+  printAndDie($node->field_dc_creator);
  //publisher
   if(!empty($node->field_publisher)) {
     foreach($node->field_publisher[LANGUAGE_NONE] as $k => $publisher) {
@@ -167,18 +167,24 @@ function _cals_normalize_record_entry($node) {
 
  
 }
+/**
+ * Simple wrapper to preview the normalization process
+ */
 
+function _cals_normalize_record_value_preview($node) {
+  _cals_importer_normalize_creators_preview_query($node);
+  drupal_goto("node/" . $node->nid);
+}
 
 /**
  * Previews creator normalization  
  */
+function _cals_importer_normalize_creators_preview_vbo(&$entity, $context = array()) {
 
-_cals_importer_normalize_creators_preview_vbo(&$entity, $context = array()) {
   if (isset($entity->nid)) {
     $node = node_load($entity->nid);
     //safety check to make sure we're parsing repos items!!    
     $content_types = array('repository_item');
-    
     if (in_array($node->type, $content_types)  ) {
       _cals_importer_normalize_creators_preview_query($node);
     }
@@ -194,9 +200,14 @@ _cals_importer_normalize_creators_preview_vbo(&$entity, $context = array()) {
 
 
 function _cals_importer_normalize_creators_preview_query($node) {
+	_cals_importer_strip_square_brackets($node);
 
   _cals_importer_normalize_creators($node);
-  dpm($node->field_dc_creator);
+  _cals_importer_strip_trailing_periods($node);
+  //dpm($node->field_dc_creator);
+  foreach($node->field_dc_creator[LANGUAGE_NONE] as $k => $author) {
+    drupal_set_message("ORIGINAL: " . $author['safe_value'] . " | UPDATED: " . $author['value']);
+  }
 
 }
 
@@ -215,7 +226,11 @@ function _cals_importer_normalize_creators(&$node) {
      if ($count != 0) { 
       $tmp = _cals_importer_strip_years_from_creator_values($tmp);
       $tmp = rtrim($tmp, ", -"); //strip remaining trailing periods, dashes, etc.;
+      
+      
+      
       //check to see if original value matches new value
+      //$tmp = str_replace("??", "", $tmp);
       if ($tmp != $author['value']) {
         $node->field_dc_creator[LANGUAGE_NONE][$k]['value'] = $tmp;
         $msg[] = t("updated author:") . " " .  $tmp;
@@ -223,6 +238,37 @@ function _cals_importer_normalize_creators(&$node) {
      }
      
   
+    }
+  } 
+
+}
+/**
+ * Strips opening and closing parentheses from creators,  
+ */
+function _cals_importer_strip_trailing_periods(&$node) {
+	printPre(__FUNCTION__);
+  if(!empty($node->field_dc_creator)) {
+    foreach($node->field_dc_creator[LANGUAGE_NONE] as $k => $author) {
+    	$tmp = rtrim($author['value']); //trim various ascii chars
+     //logic to determine if there's a ...
+      $len = strlen($tmp);
+      $sub = substr($tmp, 0, ($len - 1)); //substring minus 1 character to figure out # of potential replacements
+      $count = substr_count($sub, ".");  
+      $last = strrpos($tmp, ".");
+      $secondlast = 0; 
+      if($last > 0) {
+      	
+      	$tmp2 = substr($tmp, 0, 50);
+        $secondlast = (strrpos($tmp2, ".") === FALSE)? 0 : strrpos($tmp2, ".");
+        $diff = $last - $secondlast;
+        if($diff > 2) $tmp = rtrim($tmp, "."); //strip remaining trailing periods, dashes, etc.;
+
+        if ($tmp != $author['value']) {
+          $node->field_dc_creator[LANGUAGE_NONE][$k]['value'] = $tmp;
+          $msg[] = t("updated author:") . " " .  $tmp;
+        }
+        
+      }
     }
   } 
 
