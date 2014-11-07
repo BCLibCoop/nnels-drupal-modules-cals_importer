@@ -564,6 +564,66 @@ function _cals_get_node_with_duplicate_s3($data) {
  */
 function cals_importer_views_query_alter(&$view, &$query) {
 
+
+  switch ($view->name . ":" . $view->current_display) {
+
+
+
+  	case "repository_items_duplicates:page_1":
+  	  
+	    //custom query to find duplicate system control numbers  
+	    $vals = array();
+	    $rs = db_query("select nid, title
+	      from {node} n 
+	      where title != '' and title
+	      
+	      in (select title 
+	         from {node}
+	         group by title
+	         having count(*) > 1)
+	      order by title");
+	    foreach ($rs as $row) {
+	      $vals[] = $row->nid;
+	    }
+	    $query->where[1]['conditions'][] = array(
+	          "field" => "node.nid",
+	          "value" => $vals,
+	          "operator" => "in",
+	    );      
+      
+			//printAndDie($query);  
+  	
+  	  break;
+
+  	case "repository_items_duplicates:page_8":
+  	case "repository_item_admin_views:page_8":
+ 
+
+	    //custom query to find duplicate system control numbers  
+	    $vals = array();
+	    $rs = db_query("select entity_id, field_system_control_number_value
+	      from {field_data_field_system_control_number} 
+	      where field_system_control_number_value
+	      
+	      in (select field_system_control_number_value 
+	         from {field_data_field_system_control_number}
+	         group by field_system_control_number_value
+	         having count(*) > 1)
+	      order by field_system_control_number_value");
+	    foreach ($rs as $row) {
+	      $vals[] = $row->entity_id;
+	    }
+	
+	    $query->where[1]['conditions'][1] = array(
+	          "field" => "node.nid",
+	          "value" => $vals,
+	          "operator" => "in",
+	    );      
+        
+      break;
+
+  }	
+
   switch ($view->name) {
   
     case "repository_items_with_field_collections":
@@ -609,34 +669,7 @@ function cals_importer_views_query_alter(&$view, &$query) {
       }
       break;
   	
-  	case "repository_items_duplicates":
-  	
-    case "repository_item_admin_views":
-      if ($view->current_display == 'page_8') {
-        //custom query to find duplicate system control numbers  
-        $vals = array();
-        $rs = db_query("select entity_id, field_system_control_number_value
-          from {field_data_field_system_control_number} 
-          where field_system_control_number_value
-          
-          in (select field_system_control_number_value 
-             from {field_data_field_system_control_number}
-             group by field_system_control_number_value
-             having count(*) > 1)
-          order by field_system_control_number_value");
-        foreach ($rs as $row) {
-          $vals[] = $row->entity_id;
-        }
-    
-        $query->where[1]['conditions'][1] = array(
-              "field" => "node.nid",
-              "value" => $vals,
-              "operator" => "in",
-        );      
-        
-      }
-    
-      break;
+
       
     case "organizations_vbo":
       if ($view->current_display == 'page_2') {
