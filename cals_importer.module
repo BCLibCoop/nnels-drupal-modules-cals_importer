@@ -568,7 +568,7 @@ function cals_importer_views_query_alter(&$view, &$query) {
   switch ($view->name . ":" . $view->current_display) {
 
 
-
+    //system control number duplicates
   	case "repository_items_duplicates:page_1":
   	  
 	    //custom query to find duplicate system control numbers  
@@ -594,12 +594,31 @@ function cals_importer_views_query_alter(&$view, &$query) {
 			//printAndDie($query);  
   	
   	  break;
-
+  	  
+    //isbn duplicates
+  	case "repository_items_duplicates:page_2":
+	    $vals = array();
+	    $rs = db_query("select entity_id, field_isbn_value
+	      from {field_data_field_isbn} 
+	      where field_isbn_value
+	      
+	      in (select field_isbn_value 
+	         from {field_data_field_isbn}
+	         group by field_isbn_value
+	         having count(*) > 1)
+	      order by field_isbn_value");
+	    foreach ($rs as $row) {
+	      $vals[] = $row->entity_id;
+	    }
+	    $query->where[1]['conditions'][1] = array(
+	          "field" => "node.nid",
+	          "value" => $vals,
+	          "operator" => "in",
+	    );      
+  	  break;
+		//custom query to find duplicate system control numbers  
   	case "repository_items_duplicates:page_8":
   	case "repository_item_admin_views:page_8":
- 
-
-	    //custom query to find duplicate system control numbers  
 	    $vals = array();
 	    $rs = db_query("select entity_id, field_system_control_number_value
 	      from {field_data_field_system_control_number} 
