@@ -616,6 +616,30 @@ function cals_importer_views_query_alter(&$view, &$query) {
 	          "operator" => "in",
 	    );      
   	  break;
+    //isbn duplicates
+  	case "repository_items_duplicates:page_3":
+	    $vals = array();
+	    $rs = db_query("select entity_id, field_oclc_number_value
+	      from {field_data_field_oclc_number} 
+	      where field_oclc_number_value
+	      
+	      in (select field_oclc_number_value 
+	         from {field_data_field_oclc_number}
+	         group by field_oclc_number_value
+	         having count(*) > 1)
+	      order by field_oclc_number_value");
+	    foreach ($rs as $row) {
+	      $vals[] = $row->entity_id;
+	    }
+	    $query->where[1]['conditions'][1] = array(
+	          "field" => "node.nid",
+	          "value" => $vals,
+	          "operator" => "in",
+	    );      
+  	  break;
+  	  
+  	  
+  	  
 		//custom query to find duplicate system control numbers  
   	case "repository_items_duplicates:page_8":
   	case "repository_item_admin_views:page_8":
