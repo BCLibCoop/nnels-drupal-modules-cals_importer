@@ -325,6 +325,16 @@ function cals_importer_action_info() {
       'configurable' => FALSE,
       'triggers' => array('any'),
     ),
+
+
+    //batch generate MARC XML files from all files that include 856 tag
+    '_cals_importer_generate_marcxml_files_all_records' => array(
+      'label' => t('CALS: Generate downloadable MARC XML files (entire recordset)'),
+      'type' => 'node',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),
+
     
     //preview changes to Author
     '_cals_importer_normalize_creators_preview_vbo' => array(
@@ -559,6 +569,37 @@ function _cals_get_node_with_duplicate_s3($data) {
   return "NULL";
 }
 
+
+function _cals_importer_query_duplicate_titles($type) {
+
+	$arr = array(
+		"title" => array("tbl" => "field_data_title_field", "field" => "title_field_value"),
+	  "isbn" => array("tbl" => "field_data_field_isbn", "field" => "field_isbn_value"),
+	  "oclc" => array("tbl" => "field_data_field_oclc_number", "field" => "field_oclc_number_value"),
+	  "syscontrolnum" => array("tbl" => "field_data_field_system_control_number", "field" => "field_system_control_number_value"),
+	); 
+	$field = $arr[$type]['field'];
+	$tbl = $arr[$type]['tbl'];
+
+  $vals = array();
+  //, $field as field
+  $rs = db_query("select entity_id as nid
+    from {" . $tbl . "} 
+    where $field != '' and $field
+    in (select $field 
+       from {" . $tbl . "}
+       group by $field
+       having count(*) > 1)
+    order by $field");
+  foreach ($rs as $row) {
+    $vals[] = $row->nid;
+  } 
+  
+  return $vals;
+
+}
+
+
 /**
  * Implements hook_views_query_alter().
  */
@@ -568,7 +609,7 @@ function cals_importer_views_query_alter(&$view, &$query) {
   switch ($view->name . ":" . $view->current_display) {
 
 
-
+    //system control number duplicates
   	case "repository_items_duplicates:page_1":
   	  
 	    //custom query to find duplicate system control numbers  
@@ -576,7 +617,6 @@ function cals_importer_views_query_alter(&$view, &$query) {
 	    $rs = db_query("select nid, title
 	      from {node} n 
 	      where title != '' and title
-	      
 	      in (select title 
 	         from {node}
 	         group by title
@@ -585,6 +625,7 @@ function cals_importer_views_query_alter(&$view, &$query) {
 	    foreach ($rs as $row) {
 	      $vals[] = $row->nid;
 	    }
+	    $vals = _cals_importer_query_duplicate_titles("title");
 	    $query->where[1]['conditions'][] = array(
 	          "field" => "node.nid",
 	          "value" => $vals,
@@ -594,26 +635,30 @@ function cals_importer_views_query_alter(&$view, &$query) {
 			//printAndDie($query);  
   	
   	  break;
-
+  	  
+    //isbn duplicates
+  	case "repository_items_duplicates:page_2":
+	    $vals = _cals_importer_query_duplicate_titles("isbn");
+	    $query->where[1]['conditions'][1] = array(
+	          "field" => "node.nid",
+	          "value" => $vals,
+	          "operator" => "in",
+	    );      
+  	  break;
+    //isbn duplicates
+  	case "repository_items_duplicates:page_3":
+	    $vals = _cals_importer_query_duplicate_titles("oclc");
+	    $query->where[1]['conditions'][1] = array(
+	          "field" => "node.nid",
+	          "value" => $vals,
+	          "operator" => "in",
+	    );      
+  	  break;
+  	  
+		//custom query to find duplicate system control numbers  
   	case "repository_items_duplicates:page_8":
   	case "repository_item_admin_views:page_8":
- 
-
-	    //custom query to find duplicate system control numbers  
-	    $vals = array();
-	    $rs = db_query("select entity_id, field_system_control_number_value
-	      from {field_data_field_system_control_number} 
-	      where field_system_control_number_value
-	      
-	      in (select field_system_control_number_value 
-	         from {field_data_field_system_control_number}
-	         group by field_system_control_number_value
-	         having count(*) > 1)
-	      order by field_system_control_number_value");
-	    foreach ($rs as $row) {
-	      $vals[] = $row->entity_id;
-	    }
-	
+	    $vals = _cals_importer_query_duplicate_titles("syscontrolnumber");
 	    $query->where[1]['conditions'][1] = array(
 	          "field" => "node.nid",
 	          "value" => $vals,
