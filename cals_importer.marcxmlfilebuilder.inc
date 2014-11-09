@@ -96,9 +96,6 @@ function _cals_importer_generate_marcxml_files_all_records(&$entity, $context = 
       	$xml .= $node->field_xml_string[LANGUAGE_NONE][0]['value'];
       	//dpm($xml);
       }
-      else {
-        drupal_set_message("WHAT???");
-      }
   }
 
   if ($context['progress']['current'] == $context['progress']['total']) {
