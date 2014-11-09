@@ -12,8 +12,17 @@
  
 function _cals_importer_generate_marcxml_files(&$entity, $context = array() ) {
 
-  $nid = $context['node']->nid;
-  $node = node_load($nid);
+  if (isset($entity->nid)) {
+    $node = node_load($entity->nid);
+    //safety check to make sure we're parsing repos items!!    
+    $content_types = array('repository_item');
+    if (!in_array($node->type, $content_types)  ) {
+      drupal_set_message(t("Invalid selection: not a repos item"));
+      return '';
+    }
+
+  }//end main if
+
   //static variable: we want to populate the parent recordset
   //static $parent_nid = $node->field_record_set[LANGUAGE_NONE][0]['nid'];
   static $xml = '';
@@ -51,6 +60,67 @@ function _cals_importer_generate_marcxml_files(&$entity, $context = array() ) {
 
 
 }
+
+
+/**
+ * Invokes Drupal's batch api to generate new marc xml files with 856 tags, etc.
+ * Unlike _cals_importer_generate_marcxml_files, this function generates an
+ * un-managed file called "nnels_marcxml_all_records.xml".
+ * 
+ */
+ 
+function _cals_importer_generate_marcxml_files_all_records(&$entity, $context = array() ) {
+
+  if (isset($entity->nid)) {
+    $node = node_load($entity->nid);
+    //safety check to make sure we're parsing repos items!!    
+    $content_types = array('repository_item');
+    if (!in_array($node->type, $content_types)  ) {
+      drupal_set_message(t("Invalid selection: not a repos item"));
+      return '';
+    }
+
+  }//end main if
+
+	//dpm($node);
+  //static variable: we want to populate the parent recordset
+  //static $parent_nid = $node->field_record_set[LANGUAGE_NONE][0]['nid'];
+  static $xml = '';
+
+  if (!empty($node->field_xml_string) &&
+      !empty($node->field_nnels_856_tag) &&
+      $node->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] == 1 ) {
+      $xml_test = _cals_get_marc_xml_string($node);
+      //dpm($xml_test);
+      if($xml_test !== 0) {
+      	$xml .= $node->field_xml_string[LANGUAGE_NONE][0]['value'];
+      	//dpm($xml);
+      }
+      else {
+        drupal_set_message("WHAT???");
+      }
+  }
+
+  if ($context['progress']['current'] == $context['progress']['total']) {
+    $filename = 'public://nnels_marcxml_all_records.xml';
+    $uri = file_create_url($filename);
+    $xml = '<marc:collection 
+          xmlns:marc="http://www.loc.gov/MARC21/slim" 
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+          xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd"
+        >' . $xml . '</marc:collection>';     
+		//dpm($xml);
+    $xml = simplexml_load_string($xml);
+    $file = file_save_data($xml->asXml(), $filename, FILE_EXISTS_REPLACE);
+    drupal_set_message(t("File saved: please download via <a href='@url'>@url</a>", 
+    	array("@url" => $uri ) ) );
+  }
+
+
+
+}
+
+
 
 /**
  * Simple wrapper to call main parser; if preferred, can invoke batch api instead. 
