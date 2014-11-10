@@ -572,30 +572,33 @@ function _cals_get_node_with_duplicate_s3($data) {
 
 function _cals_importer_query_duplicate_titles($type) {
 
+	$vals = array(0);
 	$arr = array(
 		"title" => array("tbl" => "field_data_title_field", "field" => "title_field_value"),
 	  "isbn" => array("tbl" => "field_data_field_isbn", "field" => "field_isbn_value"),
 	  "oclc" => array("tbl" => "field_data_field_oclc_number", "field" => "field_oclc_number_value"),
-	  "syscontrolnum" => array("tbl" => "field_data_field_system_control_number", "field" => "field_system_control_number_value"),
+	  "syscontrolnumber" => array("tbl" => "field_data_field_system_control_number", "field" => "field_system_control_number_value"),
 	); 
-	$field = $arr[$type]['field'];
-	$tbl = $arr[$type]['tbl'];
-
-  $vals = array();
-  //, $field as field
-  $rs = db_query("select entity_id as nid
-    from {" . $tbl . "} 
-    where $field != '' and $field
-    in (select $field 
-       from {" . $tbl . "}
-       group by $field
-       having count(*) > 1)
-    order by $field");
-  foreach ($rs as $row) {
-    $vals[] = $row->nid;
-  } 
-  
-  return $vals;
+	if(array_key_exists($type, $arr)) {
+		$field = $arr[$type]['field'];
+		$tbl = $arr[$type]['tbl'];
+		//printAndDie("HERE?", $type);
+	
+	  //, $field as field
+	  $rs = db_query("select entity_id as nid
+	    from {" . $tbl . "} 
+	    where $field != '' and $field
+	    in (select $field 
+	       from {" . $tbl . "}
+	       group by $field
+	       having count(*) > 1)
+	    order by $field");
+	  foreach ($rs as $row) {
+	    $vals[] = $row->nid;
+	  } 
+		
+	}
+	return $vals;
 
 }
 
