@@ -29,14 +29,17 @@ function _cals_importer_generate_marcxml_files(&$entity, $context = array() ) {
   //static 
   
   $parent_nid = $node->field_record_set[LANGUAGE_NONE][0]['nid'];
-
-  if ( !empty($parent_nid) &&
-      !empty($node->field_xml_string) &&
+	// !empty($parent_nid) && -removed this from the if statement to relax requirements for generating export files
+      
+  if (!empty($node->field_xml_string) &&
       !empty($node->field_nnels_856_tag) &&
       $node->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] == 1 ) {
 
     $xml .=  $node->field_xml_string[LANGUAGE_NONE][0]['value'];
 
+  }
+  else {
+    dpm(l($node->title, "node/" . $nid . "/edit"));
   }
 
   if ($context['progress']['current'] == $context['progress']['total']) {
@@ -47,8 +50,8 @@ function _cals_importer_generate_marcxml_files(&$entity, $context = array() ) {
           xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd"
         >' . $xml . '</marc:collection>';     
 
-    $xml = simplexml_load_string($xml);
-    $file = file_save_data($xml->asXml(), 'public://' . $filename);
+    $xml_string = simplexml_load_string($xml);
+    $file = file_save_data($xml_string->asXml(), 'public://' . $filename);
     $file->display = 1;
     $file->description = '';
     
