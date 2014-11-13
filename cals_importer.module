@@ -322,7 +322,7 @@ function cals_importer_action_info() {
     '_cals_importer_generate_marcxml_files' => array(
       'label' => t('4. Generate downloadable MARC XML files'),
       'type' => 'node',
-      'configurable' => FALSE,
+      'configurable' => TRUE,
       'triggers' => array('any'),
     ),
 
@@ -401,6 +401,25 @@ function cals_importer_action_info() {
   );
 }
 
+
+function _cals_importer_generate_marcxml_files_form($options) {
+  $form = array();
+  $filename = (is_numeric(arg(1)) && arg(0) == 'node' ) ? 'nnels_marcxml' . "_" . arg(1) . '.xml' : 'nnels_marcxml,xml';
+  $form['filename'] = array(
+    '#type' => 'textfield', 
+    '#title' => t('filename'),
+    '#description' => t("Please provide a filename."),
+    '#required' => TRUE,
+    '#default_value' => $filename,
+  );
+  return $form;
+
+}
+function _cals_importer_generate_marcxml_files_submit($form, $form_state) {
+  $return = array();
+  $return['filename'] = $form_state['values']['filename'];
+  return $return;
+}
 /*
 
     //batch update creator field, stripping out trailing periods, commas, etc.
