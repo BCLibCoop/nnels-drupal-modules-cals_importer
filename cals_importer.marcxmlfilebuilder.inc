@@ -45,14 +45,6 @@ function _cals_importer_generate_marcxml_files(&$entity, $context = array() ) {
   }
 
   if ($context['progress']['current'] == $context['progress']['total']) {
-    /*
-    $xml =  .   $context['xml-string'] . '</marc:collection>';     
-
-    $xml_string = simplexml_load_string($xml);
-    
-    */
-    $parent_nid = $node->field_record_set[LANGUAGE_NONE][0]['nid'];
-    $parent = node_load($parent_nid);
     $header = '<marc:collection 
             xmlns:marc="http://www.loc.gov/MARC21/slim" 
             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
@@ -64,8 +56,10 @@ function _cals_importer_generate_marcxml_files(&$entity, $context = array() ) {
     $file = file_save_data($xml->asXml(), $filename, FILE_EXISTS_REPLACE);
     $file->display = 1;
     $file->description = '';
- 
-
+		$parent_nid = $node->field_record_set[LANGUAGE_NONE][0]['nid'];
+    $parent = node_load($parent_nid);
+    //dpm($parent);
+		$parent->field_marc_xml_output_file[LANGUAGE_NONE][0] = (array)$file;
     node_save($parent);
   }
 
