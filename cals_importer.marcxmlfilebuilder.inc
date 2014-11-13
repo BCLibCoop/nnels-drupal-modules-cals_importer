@@ -23,38 +23,41 @@ function _cals_importer_generate_marcxml_files(&$entity, $context = array() ) {
 
   }//end main ifx_affected_rows(resource result_id)
   $filename = 'public://' . $context['filename'];
-	if($context['progress']['current'] == 1) {
+  if($context['progress']['current'] == 1) {
 
-		file_put_contents($filename, '');
-	}
+    file_put_contents($filename, '');
+  }
         
-	// !empty($parent_nid) && -removed this from the if statement to relax requirements for generating export files
+  // !empty($parent_nid) && -removed this from the if statement to relax requirements for generating export files
       
   if (!empty($node->field_xml_string) &&
       !empty($node->field_nnels_856_tag) &&
       $node->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] == 1 ) {
-    $str =  $node->field_xml_string[LANGUAGE_NONE][0]['value'];
-    //dpm($context);
- 		file_put_contents($filename, $str, FILE_APPEND | LOCK_EX);
+    
+    $xml_test = _cals_get_marc_xml_string($node);
+    if($xml_test !== 0) {
+      $str =  $node->field_xml_string[LANGUAGE_NONE][0]['value'];
+      file_put_contents($filename, $str, FILE_APPEND | LOCK_EX);
+    } 
   }
   else {
     dpm(l($node->title, "node/" . $nid . "/edit"));
   }
 
   if ($context['progress']['current'] == $context['progress']['total']) {
-   	/*
+    /*
     $xml =  .   $context['xml-string'] . '</marc:collection>';     
 
     $xml_string = simplexml_load_string($xml);
     
     */
-		$parent_nid = $node->field_record_set[LANGUAGE_NONE][0]['nid'];
-		$parent = node_load($parent_nid);
-		$header = '<marc:collection 
-	          xmlns:marc="http://www.loc.gov/MARC21/slim" 
-	          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-	          xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd"
-	        >';
+    $parent_nid = $node->field_record_set[LANGUAGE_NONE][0]['nid'];
+    $parent = node_load($parent_nid);
+    $header = '<marc:collection 
+            xmlns:marc="http://www.loc.gov/MARC21/slim" 
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+            xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd"
+          >';
     //add closing marc:collection tag
     $content = $header . file_get_contents($filename) . '</marc:collection>';
     $xml = simplexml_load_string($content);
@@ -92,10 +95,10 @@ function _cals_importer_generate_marcxml_files_all_records(&$entity, $context = 
   }//end main if
 
   //static $xml = '';
-	$filename = 'public://nnels_marcxml_all_records.xml';
-	if($context['progress']['current'] == 1) {
-		file_put_contents($filename, '');
-	}
+  $filename = 'public://nnels_marcxml_all_records.xml';
+  if($context['progress']['current'] == 1) {
+    file_put_contents($filename, '');
+  }
 
   if (!empty($node->field_xml_string) &&
       !empty($node->field_nnels_856_tag) &&
@@ -103,9 +106,9 @@ function _cals_importer_generate_marcxml_files_all_records(&$entity, $context = 
       $xml_test = _cals_get_marc_xml_string($node);
       //dpm($xml_test);
       if($xml_test !== 0) {
-      	$str =  $node->field_xml_string[LANGUAGE_NONE][0]['value'];
-	    	//dpm($context);
- 				file_put_contents($filename, $str, FILE_APPEND | LOCK_EX);
+        $str =  $node->field_xml_string[LANGUAGE_NONE][0]['value'];
+        //dpm($context);
+        file_put_contents($filename, $str, FILE_APPEND | LOCK_EX);
       }
   }
 
@@ -117,17 +120,17 @@ function _cals_importer_generate_marcxml_files_all_records(&$entity, $context = 
           xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd"
         >' . $xml . '</marc:collection>';     
 
-		$header = '<marc:collection 
-	          xmlns:marc="http://www.loc.gov/MARC21/slim" 
-	          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-	          xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd"
-	        >';
+    $header = '<marc:collection 
+            xmlns:marc="http://www.loc.gov/MARC21/slim" 
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+            xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd"
+          >';
     //add closing marc:collection tag
     $content = $header . file_get_contents($filename) . '</marc:collection>';
     $xml = simplexml_load_string($content);
     $file = file_save_data($xml->asXml(), $filename, FILE_EXISTS_REPLACE);
     drupal_set_message(t("File saved: please download via <a href='@url'>@url</a>", 
-    	array("@url" => $uri ) ) );
+      array("@url" => $uri ) ) );
   }
 
 }
