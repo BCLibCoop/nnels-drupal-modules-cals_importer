@@ -123,49 +123,219 @@ function _cals_normalize_record_values(&$entity, $context = array()) {
  */
 function _cals_normalize_record_entry($node) {
 
-  //titles
-	_cals_importer_strip_square_brackets($node);
-  $title = rtrim($node->title);
-  
-
-  $msg = array();
-  $title = rtrim($title, ", /"); 
-  $title = _cals_importer_strip_parentheses_from_values($title);
-
-	
-  
-  if ($title != $node->title) {
-    $node->title = $title;
-    //node_save($node);
-    $msg[] = t("title: %t", array('%t' => $title) );
+  //create a shadow copy to track changes
+  $node2 = new stdClass();
+  $fields_to_update = array("title", "field_dc_creator", "field_dc_contributor", "field_publisher");
+  $msg = array(); //used to track changes; if count > 1, we save node
+  foreach($fields_to_update as $field) {
+  	if(!empty($node->{$field})) {
+ 			$node2->{$field} = $node->{$field};
+ 			switch($field) {
+ 			  case "title":
+					_cals_importer_strip_square_brackets($node, $field);
+					_cals_importer_normalize_title($node);
+ 			  	//if($node2->title != $node->title) $msg[] = t("Updated title: %t", array('%t' => $title) );
+ 			  	break;
+ 			  case "field_dc_creator":
+				case "field_dc_contributor":	
+					_cals_importer_strip_square_brackets($node, $field);
+					_cals_importer_normalize_creators($node, $field);
+ 			  	break;
+ 			  case "field_publisher":
+					//_cals_importer_strip_square_brackets($node, "title");
+ 			  	_cals_importer_normalize_publisher($node);
+ 			  	break;
+ 			
+ 			
+ 			}
+ 			
+ 			//generate error messages
+	    if($field == 'title') {
+	      if($node2->title != $node->title) $msg[] = t("title: ORIGINAL = !title || NEW title = !title2", 
+	      	array("!title" => $node2->title, "!title2" => $node->title));
+	    }
+	    else {
+	      if(!empty($node->$field)) {
+	        foreach($node->{$field}[LANGUAGE_NONE] as $k => $v) {
+	          if($node2->{$field}[LANGUAGE_NONE][$k]['value'] != $v['value']) 
+	            $msg[] = t("!fieldname: ORIGINAL = @value || NEW = @value2",
+	            	array("!fieldname" => $field, "@value" => $node2->{$field}[LANGUAGE_NONE][$k]['value'], "@value2" => $v['value'] ));
+	        }
+	      }
+	    } 			
+  	}
   }
-  
-  //creators
-	_cals_importer_normalize_creators($node);
-	_cals_importer_strip_trailing_periods($node);
- //publisher
-  if(!empty($node->field_publisher)) {
-    foreach($node->field_publisher[LANGUAGE_NONE] as $k => $publisher) {
-      $tmp = _cals_importer_normalize_publisher_entry($publisher['value']);
-      if($tmp != $publisher['value']) {
-        $node->field_publisher[LANGUAGE_NONE][$k]['value'] = $tmp;
-        $msg[] = t("updated publisher:") . " " .  $tmp;
-      }
-    }   
-  
-  }
-  //if there's multiple messages, save node 
-  if (count($msg) ) {
-    $dmsg = t("Updated")  . $title . ": " . implode(" | ", $msg);  
+ 
+  if (count($msg)) {
+		$dmsg = theme('item_list', array('items' => $msg, 'title' => t("Updated !title", array("!title" => $node->title) ) ));
+    //$dmsg = t("Updated")  . $title . ": " . implode(" | ", $msg);  
     drupal_set_message($dmsg);
-    node_save($node);
+    $action['description'] = implode("\n", $msg);
+    $action['activity'] = 3;
+   	_cals_importer_update_admin_audit($node,  $action);
+   	node_save($node);
   }
   else {
     drupal_set_message(t("Not updated: @title", array('@title' => $title ) ) );
   }
 
- 
 }
+
+
+function _cals_importer_normalize_publisher(&$node) {
+
+  if(!empty($node->field_publisher)) {
+    foreach($node->field_publisher[LANGUAGE_NONE] as $k => $publisher) {
+      $tmp = _cals_importer_normalize_publisher_entry($publisher['value']);
+      if($tmp != $publisher['value']) {
+        $node->field_publisher[LANGUAGE_NONE][$k]['value'] = $tmp;
+      }
+    }   
+  
+  }
+  
+}
+
+function _cals_importer_normalize_title(&$node) {
+  $title = rtrim($node->title);
+  $msg = array();
+  $title = rtrim($title, ", /"); 
+  $title = _cals_importer_strip_parentheses_from_values($title);
+  
+  if ($title != $node->title) {
+    $node->title = $title;
+    //node_save($node);
+  }
+
+}
+
+
+/**
+ * Strips opening and closing parentheses from creators,  
+ */
+function _cals_importer_normalize_creators(&$node, $field) {
+
+  if(!empty($node->{$field})) {
+    foreach($node->{$field}[LANGUAGE_NONE] as $k => $v) {
+     $tmp = rtrim($v['value']); //trim various ascii chars
+     //logic to determine if there's a ...
+     $q = "?";
+     $tmp = str_replace($q, "", $tmp);
+     $len = strlen($tmp);
+     $sub = substr($tmp, 0, ($len - 1)); //substring minus 1 character to figure out # of potential replacements
+     $count = substr_count($sub, ".") + substr_count($sub, ",");  
+     if ($count != 0) { 
+      $tmp = _cals_importer_strip_years_from_creator_values($tmp);
+      $tmp = rtrim($tmp, ", -"); //strip remaining trailing periods, dashes, etc.;
+      //check to see if original value matches new value
+      //$tmp = str_replace("??", "", $tmp);
+      if ($tmp != $v['value']) {
+        $node->{$field}[LANGUAGE_NONE][$k]['value'] = $tmp;
+        //$msg[] = t("updated author:") . " " .  $tmp;
+      }
+     }
+     
+  
+    }
+    _cals_importer_strip_trailing_periods($node, $field); 
+  } 
+	//printAndDie($node->field_dc_creator);
+}
+
+
+/**
+ * wrapper function to strip punctuation where applicable  
+ */
+function _cals_importer_strip_trailing_periods(&$node, $field) {
+  if(!empty($node->{$field})) {
+    foreach($node->{$field}[LANGUAGE_NONE] as $k => $v) {
+     	$tmp = _cals_importer_strip_trailing_periods_value($v['value']); 
+      if ($tmp != $v['value'] && !empty($tmp)) {
+        $node->{$field}[LANGUAGE_NONE][$k]['value'] = $tmp;
+      }
+     }
+    //printAndDie($node->{$field});
+  } 
+
+}
+/**
+ * Strips trailing punctuation, except abbreviations, etc.  
+ * e.g. a.b., A.B., A. B., Dave B.
+ */
+function _cals_importer_strip_trailing_periods_value($str) {
+	$tmp = str_replace("  ", " ", rtrim($str)); //trim various ascii chars
+	$tmp = trim($tmp, "  ");
+  $len = strlen($tmp);
+
+	$tmp2 = explode(" ", $tmp); // explode to isolate last segment
+  $n = count($tmp2);
+  $last = $tmp2[$n-1];
+  $len = strlen($last);
+  if( ($len >= 2 && $len <= 4) ) {
+  	if (preg_match("/^[A-Za-z\.]{1,5}(\.|!)$/", $last, $matches2)) {
+  		return $tmp;
+  	}
+  } 
+	$tmp = rtrim($tmp, ". ,!;");
+ 	return trim($tmp); //one last, in case we miss something... may need to recurse this?
+
+}  
+
+
+/**
+ * Strips opening and closing parentheses from title, publisher fields  
+ */
+function _cals_importer_strip_square_brackets(&$node, $field) {
+  //$str = str_replace(array("[", "]"), "", $str);
+  if($field == 'title') {
+	  $node->title = str_replace(array("[", "]"), "", $node->title);
+		$node->title_field[LANGUAGE_NONE][$k]['value'] = $node->title;
+  }
+  else {
+  	foreach($node->{$field} as $k => $v) {
+  		$tmp = str_replace(array("[", "]"), "", $v['value']);
+  		if($tmp != $node->{$field}[LANGUAGE_NONE][$k]['value']) $node->{$field}[LANGUAGE_NONE][$k]['value'] = $tmp;
+  	}
+		
+  }
+}
+
+/**
+ * Strips opening and closing parentheses from title, publisher fields  
+ */
+function _cals_importer_strip_parentheses_from_values($str) {
+	$skip = 0;
+	$str = rtrim($str);
+	//end of string, e.g. : [xyz]	
+	$regexp = "/ [\[a-zA-Z0-9_\]]{1,}$/";
+	preg_match($regexp, $str, $matches, PREG_OFFSET_CAPTURE);
+	if (count($matches) )  {
+		//we know this should be a single match because its end of string
+		$count = $matches[0][1];
+		$str = substr($str, 0, $count) .  str_replace(array("[", "]"), "", substr($str, $count));
+	}
+		
+	return rtrim($str);
+
+
+}
+
+/**
+ * Strips dates and date ranges from creator values  
+ */
+function _cals_importer_strip_years_from_creator_values($str) {
+
+  $patterns = array();
+  $patterns = '([0-9]{4}-[0-9]{4}|[0-9]{4})';
+  $replacements = array();
+  $replacements  = '';
+  $tmp = preg_replace($patterns, $replacements, $str);
+  $tmp = preg_replace( "{\s+}", ' ', $tmp );
+  return rtrim($tmp); 
+}
+
+
+
 /**
  * Simple wrapper to preview the normalization process
  */
@@ -210,150 +380,9 @@ function _cals_importer_normalize_creators_preview_query($node) {
 
 }
 
-/**
- * Strips opening and closing parentheses from creators,  
- */
-function _cals_importer_normalize_creators(&$node) {
-  if(!empty($node->field_dc_creator)) {
-    foreach($node->field_dc_creator[LANGUAGE_NONE] as $k => $author) {
-  	
-     $tmp = rtrim($author['value']); //trim various ascii chars
-     //logic to determine if there's a ...
-     $q = "?";
-     $tmp = str_replace($q, "", $tmp);
-     $len = strlen($tmp);
-     $sub = substr($tmp, 0, ($len - 1)); //substring minus 1 character to figure out # of potential replacements
-     $count = substr_count($sub, ".") + substr_count($sub, ",");  
-     if ($count != 0) { 
-      $tmp = _cals_importer_strip_years_from_creator_values($tmp);
-      $tmp = rtrim($tmp, ", -"); //strip remaining trailing periods, dashes, etc.;
-      
-      
-      
-      //check to see if original value matches new value
-      //$tmp = str_replace("??", "", $tmp);
-      if ($tmp != $author['value']) {
-        $node->field_dc_creator[LANGUAGE_NONE][$k]['value'] = $tmp;
-        $msg[] = t("updated author:") . " " .  $tmp;
-      }
-     }
-     
-  
-    }
-  } 
-
-}
-/**
- * Strips opening and closing parentheses from creators,  
- */
-function _cals_importer_strip_trailing_periods(&$node) {
-  if(!empty($node->field_dc_creator)) {
-    foreach($node->field_dc_creator[LANGUAGE_NONE] as $k => $author) {
-    	$tmp = rtrim($author['value']); //trim various ascii chars
-     	//$tmp = "Hatter, A. C."; // replace with other patterns for testing purposes
-      $len = strlen($tmp);
-      $sub = substr($tmp, 0, ($len - 1)); //substring minus 1 character to figure out # of potential replacements
-      $count = substr_count($sub, ".");  
-      $last = strrpos($tmp, ".");
-      $secondlast = 0; 
-      if($last > 0) {
-      	
-      	$tmp2 = substr($tmp, 0, $last);
-        $secondlast = (strrpos($tmp2, ".") === FALSE)? 0 : strrpos($tmp2, ".");
-        $diff = $last - $secondlast;
-        $test_char = substr($tmp2, -2, -1); //we want to test for this, if space, we 
-
-        if($secondlast > 0 && $diff > 4) {
-        	$tmp = rtrim($tmp, "."); //strip remaining trailing periods, dashes, etc.;
-        	//printPre("1");
-        }
-        if($secondlast == 0 && $test_char != " ") {
-        	$tmp = rtrim($tmp, "."); //strip remaining trailing periods, dashes, etc.;
-        	//printPre("2");
-        }
-        $tmp = rtrim($tmp, ", -"); //strip remaining trailing periods, dashes, etc.;
-        
-
-        if ($tmp != $author['value']) {
-          $node->field_dc_creator[LANGUAGE_NONE][$k]['value'] = $tmp;
-          $msg[] = t("updated author:") . " " .  $tmp;
-        }
-				/* 
-				printAndDie(
-					"last = " . $last, 
-					"secondlast = " . $secondlast, 
-					"diff = " . $diff, 
-					"original: " . rtrim($author['value']),  
-					"normalized: " . $node->field_dc_creator[LANGUAGE_NONE][$k]['value'],  
-					"substring: " . $tmp2,
-					"test_char: " . $test_char
-					);
-				//*/
-      }
-    }
-  } 
-
-}
   
 /**
- * Strips opening and closing parentheses from title, publisher fields  
- */
-function _cals_importer_strip_square_brackets(&$node) {
-	//printPre($node);
-  //$str = str_replace(array("[", "]"), "", $str);
-  
-  $node->title = str_replace(array("[", "]"), "", $node->title);
-  $arr = array("title_field", "field_dc_creator", "field_publisher");
- 	
-  foreach($arr as $field) {
-  	$arr2 = $node->{$field}[LANGUAGE_NONE];
-  	
-  	foreach($arr2 as $k => $v) {
-  	  $val = str_replace(array("[", "]"), "", $v['value']);
-  	  $node->{$field}[LANGUAGE_NONE][$k]['value'] = $val;
-
-  	}
-  
-  }
-
-}
-
-/**
- * Strips opening and closing parentheses from title, publisher fields  
- */
-function _cals_importer_strip_parentheses_from_values($str) {
-	$skip = 0;
-	$str = rtrim($str);
-	//end of string, e.g. : [xyz]	
-	$regexp = "/ [\[a-zA-Z0-9_\]]{1,}$/";
-	preg_match($regexp, $str, $matches, PREG_OFFSET_CAPTURE);
-	if (count($matches) )  {
-		//we know this should be a single match because its end of string
-		$count = $matches[0][1];
-		$str = substr($str, 0, $count) .  str_replace(array("[", "]"), "", substr($str, $count));
-	}
-		
-	return rtrim($str);
-
-
-}
-
-/**
- * Strips dates and date ranges from creator values  
- */
-function _cals_importer_strip_years_from_creator_values($str) {
-
-  $patterns = array();
-  $patterns = '([0-9]{4}-[0-9]{4}|[0-9]{4})';
-  $replacements = array();
-  $replacements  = '';
-  $tmp = preg_replace($patterns, $replacements, $str);
-  $tmp = preg_replace( "{\s+}", ' ', $tmp );
-  return rtrim($tmp); 
-}
-  
-/**
- * Updates the node with NNELS 856 tag 
+ * Updates the publisher value
  *
  * @param $value
  *   the original publisher value

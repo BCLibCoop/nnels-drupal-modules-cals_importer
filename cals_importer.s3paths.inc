@@ -73,17 +73,7 @@ function _cals_batch_update_s3_paths($nid) {
     }
   }
   
-  //printAndDie($arr);
-  
-  /*
-  foreach ($arr as $v) {
-    $sysnum = $v[0];
-    $nid = _cals_get_node_by_sysnum($sysnum);
-    printPre($nid);
-  
-  }
-  
-  */
+
   $batch = array(
     'title' => t('Update S3 Paths'),
     //'operations' => array('_cals_run_batch_update_s3_path', array($nid, $arr) ),
@@ -94,7 +84,7 @@ function _cals_batch_update_s3_paths($nid) {
     'error_message' => t('Error!'),
     'finished' => '_cals_batch_update_s3_path_finished',
   );
-    ($batch);
+	($batch);
   batch_set($batch);
   batch_process('admin/content/cals/s3-record-sets');
 }
@@ -299,7 +289,7 @@ function _cals_get_array_csv_by_file($file) {
 
 
 /**
- * TO DEPRECATE: Updates the s3 paths
+ * TO DEPRECATE?: Updates the s3 paths
  */
 function _cals_load_s3_file($start, $limit) {
 
@@ -340,6 +330,9 @@ function _cals_load_s3_file($start, $limit) {
   }
 
 }
+/**
+ * TO DEPRECATE?: Updates the s3 paths
+ */
 
 function _cals_update_s3_paths() {
 
@@ -383,5 +376,3 @@ function _cals_update_s3_paths() {
 
 
 }
-
-

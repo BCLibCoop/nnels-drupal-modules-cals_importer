@@ -108,6 +108,8 @@ function _cals_get_taxonomy_vid($name) {
 function _cals_get_tid_by_name($vid, $name) {
   //$name = $v['value'];
   // Get the parent term's ID.
+	$name = _cals_importer_strip_trailing_periods_value($name);
+
   $tid = db_query(
     "SELECT tid FROM {taxonomy_term_data} 
     WHERE vid = :vid and name = :name

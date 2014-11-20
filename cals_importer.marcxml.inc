@@ -101,7 +101,8 @@ function _cals_parse_record_details($node) {
     _cals_importer_get_array_from_marcxml($record, $arr);
   }
   
-  $node->title = _cals_get_truncated_value($arr['repos']['title'], 250);        
+  $node->title = _cals_get_truncated_value($arr['repos']['title'], 250);    
+    
   $node->status = 1;
   
   _cals_delete_duplicate_oclc_numbers($node);
@@ -123,8 +124,28 @@ function _cals_parse_record_details($node) {
     else {
       ($k == "title") ? $node->{$k} = $v : $node->{$k}[LANGUAGE_NONE][]['value'] = $v; 
     }
+		//normalize fields
+		switch($k) {
+		  case "title":
+				_cals_importer_strip_square_brackets($node, $k);
+				_cals_importer_normalize_title($node);
+		  	//if($node2->title != $node->title) $msg[] = t("Updated title: %t", array('%t' => $title) );
+		  	break;
+		  case "field_dc_creator":
+			case "field_dc_contributor":	
+				_cals_importer_strip_square_brackets($node, $k);
+				_cals_importer_normalize_creators($node, $k);
+		  	break;
+		  case "field_publisher":
+				//_cals_importer_strip_square_brackets($node, "title");
+		  	_cals_importer_normalize_publisher($node);
+		  	break;
+		}
+
+
 
   } 
+
 
   //genre
   if (array_key_exists("repos_tf", $arr) ) {
@@ -138,8 +159,13 @@ function _cals_parse_record_details($node) {
   }
   //save the populated node
   node_save($node);
-  
   //populate the field collections
   _cals_importer_populate_repos_item_fieldcollections($node, $arr_tax, $arr['fc']);
+	$action['description'] = "";
+  $action['activity'] = 2;
+  _cals_importer_update_admin_audit($node,  $action);
+	$action['description'] = "";
+  $action['activity'] = 3;
+  _cals_importer_update_admin_audit($node,  $action);
   
 }

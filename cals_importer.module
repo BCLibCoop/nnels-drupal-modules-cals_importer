@@ -16,6 +16,8 @@
   module_load_include('inc', 'cals_importer', 'cals_importer.mappings');
   module_load_include('inc', 'cals_importer', 'cals_importer.marcxml');
   module_load_include('inc', 'cals_importer', 'cals_importer.s3paths');
+  module_load_include('inc', 'cals_importer', 'cals_importer.createrecords');
+  
   module_load_include('inc', 'cals_importer', 'cals_importer.clean_up');
   module_load_include('inc', 'cals_importer', 'cals_importer.deduper');
   module_load_include('inc', 'cals_importer', 'cals_importer.marcxmlfilebuilder');
@@ -105,7 +107,6 @@ function cals_importer_menu() {
   );
 
   $items['node/%node/parse-marcxml-new'] = array(
-    'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_import_skeletal_records',
     'title' => "Generate / Update Stub Entries",
     'type' => MENU_CALLBACK,
@@ -115,7 +116,18 @@ function cals_importer_menu() {
     'access arguments' => array('parse s3 paths'),
   
   );
+  $items['node/%node/parse-marcxml-new2'] = array(
+    'page callback' => '_cals_importer_create_repo_items',
+		'file' => "cals_importer.createrecords.inc",
+    'title' => "Generate / Update Stub Entries 2",
+    'type' => MENU_CALLBACK,
+    //'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'page arguments' => array(1),
+    'weight' => 100,
 
+    'access arguments' => array('parse s3 paths'),
+  
+  );
   $items['node/%node/parse-record'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_importer_update_repository_item',
@@ -191,7 +203,7 @@ function cals_importer_menu() {
   );
   
   //generate cors s3 file via s3 path (field collection)
-	$items['admin/%node/update-file-upload-from-field-collection'] = array(
+  $items['admin/%node/update-file-upload-from-field-collection'] = array(
     'page callback' => '_cals_update_filecollection_file',
     'title' => "Update via Field Collection",
     'type' => MENU_CALLBACK,
@@ -248,16 +260,6 @@ function cals_importer_menu() {
   
   );
 
-  $items['node/%node/parse-s3-path'] = array(
-    'access arguments' => array('administer site configuration'),
-    'page callback' => '_cals_update_s3_path',
-    'title' => 'Parse S3 Path',
-    'type' => MENU_LOCAL_TASK,
-    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
-    'page arguments' => array(1),
-    'weight' => 100,
-  
-  );
   */
   return $items; 
 
@@ -402,6 +404,15 @@ function cals_importer_action_info() {
 }
 
 
+function cals_importer_custom_theme() {
+
+  $alias = drupal_get_path_alias();
+  if(strpos($alias, "admin/") !== FALSE) {
+    return "rubik";
+  }
+
+}
+
 function _cals_importer_generate_marcxml_files_form($options) {
   $form = array();
   $filename = (is_numeric(arg(1)) && arg(0) == 'node' ) ? 'nnels_marcxml' . "_" . arg(1) . '.xml' : 'nnels_marcxml,xml';
@@ -452,6 +463,8 @@ function cals_importer_menu_alter(&$items) {
   $items['node/%node/parse-access-rights']['access callback'] = '_cals_importer_tab_checker_parse_record';
   $items['node/%node/parse-record']['access callback'] = '_cals_importer_tab_checker_parse_record';
   $items['node/%node/parse-marcxml-new']['access callback'] = '_cals_importer_tab_checker';
+  $items['node/%node/parse-marcxml-new2']['access callback'] = '_cals_importer_tab_checker';
+  
   $items['node/%node/normalize-publisher']['access callback'] = '_cals_importer_tab_checker_parse_record';
   $items['node/%node/normalize-title']['access callback'] = '_cals_importer_tab_checker_parse_record';
   $items['node/%node/clean-author']['access callback'] = '_cals_importer_tab_checker_parse_record';
@@ -498,45 +511,80 @@ function _cals_importer_tab_checker_parse_s3_paths() {
 
 
 function cals_importer_form_alter(&$form, &$form_state, $form_id) {
-	global $user;
-	//dpm($form_id);
-	switch($form_id) {
-		
-		case "field_collection_item_formx":
-			//$form['#submit'][] = 
-			$form['nid'] = array('#type' => 'value', '#default_value' => 9724);
-			$form['actions']['submit']['#submit'][] = '_cals_importer_s3_cors_field_submit';
-			dpm($form);
-			
-			break;
-	}
+  global $user;
+  //dpm($form_id);
+  switch($form_id) {
+    
+    case "field_collection_item_formx":
+      //$form['#submit'][] = 
+      $form['nid'] = array('#type' => 'value', '#default_value' => 9724);
+      $form['actions']['submit']['#submit'][] = '_cals_importer_s3_cors_field_submit';
+      dpm($form);
+      
+      break;
+  }
 
 }
 
 function cals_importer_entity_presave($entity, $type) {
   if ($type == 'field_collection_item' && $entity->field_name == 'field_file_resource') {
-  	//printAndDie($type, $entity);
-}
+    //printAndDie($type, $entity);
+  }
 }
  
+/**
+ * Inserts new entries into the "field_admin_audit" field collection.
+ *
+ * @param $node
+ *   the node being updated
+ * @param $action
+ *   an array containing the description, activity, etc.
+ *
+ **/
 
+function _cals_importer_update_admin_audit($node, $action) {
+
+  global $user;
+  $value = array(
+    'field_name' => 'field_admin_audit',
+
+    'field_activity' => array(
+      LANGUAGE_NONE => array(array('value' => $action['activity']))
+    ),
+    'field_user' => array(
+      LANGUAGE_NONE => array(array('uid' => $user->uid)),
+    ),
+    'field_date_action' => array(
+      LANGUAGE_NONE => array(array('value' => time())),
+    ),
+  );
+  if( !empty($action['description']) ) {
+  	$value['field_description'][LANGUAGE_NONE][0]['value'] = $action['description'];
+  }
+  
+  $e = entity_create('field_collection_item', $value);
+  // Attach the field_collection entity to the application node.
+  $e->setHostEntity('node', $node);
+  // Save the entity. 
+  $e->save(); 
+}
 
 
  
 function _cals_importer_s3_cors_field_submit($form, &$form_state){
-	$filepath = "NO";
-	//printAndDie($form_state['values']['field_s3_to_cors_update'][LANGUAGE_NONE][0]['value']);
+  $filepath = "NO";
+  //printAndDie($form_state['values']['field_s3_to_cors_update'][LANGUAGE_NONE][0]['value']);
   if($form_state['values']['field_s3_to_cors_update'][LANGUAGE_NONE][0]['value'] == 1) {
-  	if(isset($form_state['values']['nid']) && !empty($form_state['values']['field_s3_path'])) {
-  	  $node = node_load($form_state['values']['nid']); 
-  	  $filepath = $form_state['values']['field_s3_path'][LANGUAGE_NONE][0]['value'];
-  	  $file = _cals_importer_file_updater($node, $filepath);
-  	}	
-  	//  $test = db_query('SELECT n.fid FROM {file_managed} n WHERE n.uri = :uri', array(':uri' => $filepath));
+    if(isset($form_state['values']['nid']) && !empty($form_state['values']['field_s3_path'])) {
+      $node = node_load($form_state['values']['nid']); 
+      $filepath = $form_state['values']['field_s3_path'][LANGUAGE_NONE][0]['value'];
+      $file = _cals_importer_file_updater($node, $filepath);
+    } 
+    //  $test = db_query('SELECT n.fid FROM {file_managed} n WHERE n.uri = :uri', array(':uri' => $filepath));
 
-		//printAndDie("here", $filepath, $file, $form_state['values']);
-		
-		$form_state['values']['field_s3_file_upload'][LANGUAGE_NONE][0] = (array)$file;
+    //printAndDie("here", $filepath, $file, $form_state['values']);
+    
+    $form_state['values']['field_s3_file_upload'][LANGUAGE_NONE][0] = (array)$file;
 
     
   }
@@ -591,33 +639,33 @@ function _cals_get_node_with_duplicate_s3($data) {
 
 function _cals_importer_query_duplicate_titles($type) {
 
-	$vals = array(0);
-	$arr = array(
-		"title" => array("tbl" => "field_data_title_field", "field" => "title_field_value"),
-	  "isbn" => array("tbl" => "field_data_field_isbn", "field" => "field_isbn_value"),
-	  "oclc" => array("tbl" => "field_data_field_oclc_number", "field" => "field_oclc_number_value"),
-	  "syscontrolnumber" => array("tbl" => "field_data_field_system_control_number", "field" => "field_system_control_number_value"),
-	); 
-	if(array_key_exists($type, $arr)) {
-		$field = $arr[$type]['field'];
-		$tbl = $arr[$type]['tbl'];
-		//printAndDie("HERE?", $type);
-	
-	  //, $field as field
-	  $rs = db_query("select entity_id as nid
-	    from {" . $tbl . "} 
-	    where $field != '' and $field
-	    in (select $field 
-	       from {" . $tbl . "}
-	       group by $field
-	       having count(*) > 1)
-	    order by $field");
-	  foreach ($rs as $row) {
-	    $vals[] = $row->nid;
-	  } 
-		
-	}
-	return $vals;
+  $vals = array(0);
+  $arr = array(
+    "title" => array("tbl" => "field_data_title_field", "field" => "title_field_value"),
+    "isbn" => array("tbl" => "field_data_field_isbn", "field" => "field_isbn_value"),
+    "oclc" => array("tbl" => "field_data_field_oclc_number", "field" => "field_oclc_number_value"),
+    "syscontrolnumber" => array("tbl" => "field_data_field_system_control_number", "field" => "field_system_control_number_value"),
+  ); 
+  if(array_key_exists($type, $arr)) {
+    $field = $arr[$type]['field'];
+    $tbl = $arr[$type]['tbl'];
+    //printAndDie("HERE?", $type);
+  
+    //, $field as field
+    $rs = db_query("select entity_id as nid
+      from {" . $tbl . "} 
+      where $field != '' and $field
+      in (select $field 
+         from {" . $tbl . "}
+         group by $field
+         having count(*) > 1)
+      order by $field");
+    foreach ($rs as $row) {
+      $vals[] = $row->nid;
+    } 
+    
+  }
+  return $vals;
 
 }
 
@@ -632,64 +680,64 @@ function cals_importer_views_query_alter(&$view, &$query) {
 
 
     //system control number duplicates
-  	case "repository_items_duplicates:page_1":
-  	  
-	    //custom query to find duplicate system control numbers  
-	    $vals = array();
-	    $rs = db_query("select nid, title
-	      from {node} n 
-	      where title != '' and title
-	      in (select title 
-	         from {node}
-	         group by title
-	         having count(*) > 1)
-	      order by title");
-	    foreach ($rs as $row) {
-	      $vals[] = $row->nid;
-	    }
-	    $vals = _cals_importer_query_duplicate_titles("title");
-	    $query->where[1]['conditions'][] = array(
-	          "field" => "node.nid",
-	          "value" => $vals,
-	          "operator" => "in",
-	    );      
+    case "repository_items_duplicates:page_1":
       
-			//printAndDie($query);  
-  	
-  	  break;
-  	  
+      //custom query to find duplicate system control numbers  
+      $vals = array();
+      $rs = db_query("select nid, title
+        from {node} n 
+        where title != '' and title
+        in (select title 
+           from {node}
+           group by title
+           having count(*) > 1)
+        order by title");
+      foreach ($rs as $row) {
+        $vals[] = $row->nid;
+      }
+      $vals = _cals_importer_query_duplicate_titles("title");
+      $query->where[1]['conditions'][] = array(
+            "field" => "node.nid",
+            "value" => $vals,
+            "operator" => "in",
+      );      
+      
+      //printAndDie($query);  
+    
+      break;
+      
     //isbn duplicates
-  	case "repository_items_duplicates:page_2":
-	    $vals = _cals_importer_query_duplicate_titles("isbn");
-	    $query->where[1]['conditions'][1] = array(
-	          "field" => "node.nid",
-	          "value" => $vals,
-	          "operator" => "in",
-	    );      
-  	  break;
+    case "repository_items_duplicates:page_2":
+      $vals = _cals_importer_query_duplicate_titles("isbn");
+      $query->where[1]['conditions'][1] = array(
+            "field" => "node.nid",
+            "value" => $vals,
+            "operator" => "in",
+      );      
+      break;
     //isbn duplicates
-  	case "repository_items_duplicates:page_3":
-	    $vals = _cals_importer_query_duplicate_titles("oclc");
-	    $query->where[1]['conditions'][1] = array(
-	          "field" => "node.nid",
-	          "value" => $vals,
-	          "operator" => "in",
-	    );      
-  	  break;
-  	  
-		//custom query to find duplicate system control numbers  
-  	case "repository_items_duplicates:page_8":
-  	case "repository_item_admin_views:page_8":
-	    $vals = _cals_importer_query_duplicate_titles("syscontrolnumber");
-	    $query->where[1]['conditions'][1] = array(
-	          "field" => "node.nid",
-	          "value" => $vals,
-	          "operator" => "in",
-	    );      
+    case "repository_items_duplicates:page_3":
+      $vals = _cals_importer_query_duplicate_titles("oclc");
+      $query->where[1]['conditions'][1] = array(
+            "field" => "node.nid",
+            "value" => $vals,
+            "operator" => "in",
+      );      
+      break;
+      
+    //custom query to find duplicate system control numbers  
+    case "repository_items_duplicates:page_8":
+    case "repository_item_admin_views:page_8":
+      $vals = _cals_importer_query_duplicate_titles("syscontrolnumber");
+      $query->where[1]['conditions'][1] = array(
+            "field" => "node.nid",
+            "value" => $vals,
+            "operator" => "in",
+      );      
         
       break;
 
-  }	
+  } 
 
   switch ($view->name) {
   
@@ -735,7 +783,7 @@ function cals_importer_views_query_alter(&$view, &$query) {
           );
       }
       break;
-  	
+    
 
       
     case "organizations_vbo":
@@ -789,6 +837,10 @@ function cals_importer_node_view($node, $view_mode, $langcode) {
         $node->content['additional-text'] = array(
           '#markup' => l($label, "node/{$node->nid}/parse-marcxml-new"), '#weight' => 10, 
         );
+        $node->content['additional-text'] = array(
+          '#markup' => l($label, "node/{$node->nid}/parse-marcxml-new2"), '#weight' => 10, 
+        ); 
+        
       }
       break;
 
@@ -818,7 +870,8 @@ function _cals_prepare_new_item_repos() {
  */
 function _cals_import_skeletal_records($node) {
   $max = 50; //clear buffer, etc.
-  
+	ini_set('memory_limit', '1024M');
+	ini_set('max_execution_time', '600');
   global $user;
   //module_load_include('inc', 'entity', 'includes/entity.controller');
   foreach (taxonomy_get_vocabularies() as $k => $v) {
@@ -955,7 +1008,7 @@ function _cals_importer_fix_oclc_numbers_batch(&$entity, $context = array()) {
     //safety check to make sure we're parsing repos items!!    
     $content_types = array('repository_item');
     if (in_array($node->type, $content_types)  ) {
-    	_cals_importer_update_oclc_numbers_query($node);
+      _cals_importer_update_oclc_numbers_query($node);
       drupal_set_message(t('OCLC Number updated for ') . l($node->title, "node/" . $node->nid . "/edit") ); 
       
     }
@@ -971,15 +1024,15 @@ function _cals_importer_fix_oclc_numbers_batch(&$entity, $context = array()) {
 
 function _cals_importer_update_oclc_numbers_query($node) {
 
-	$vals = $node->field_system_control_number[LANGUAGE_NONE];
-	//reset sys control number
-	$node->field_system_control_number[LANGUAGE_NONE] = array();
+  $vals = $node->field_system_control_number[LANGUAGE_NONE];
+  //reset sys control number
+  $node->field_system_control_number[LANGUAGE_NONE] = array();
   foreach($vals as $value) {
-  	$val = $value['value'];
+    $val = $value['value'];
     if(strpos($val, "(OCoLC)") !== false) {
-    	if (_cals_isvalid_oclc_number($val) === 1) {
-    		$node->field_oclc_number[LANGUAGE_NONE][]['value'] = $val; 
-    	}	
+      if (_cals_isvalid_oclc_number($val) === 1) {
+        $node->field_oclc_number[LANGUAGE_NONE][]['value'] = $val; 
+      } 
     }
     else { //repopulate the sys control numbers
       $node->field_system_control_number[LANGUAGE_NONE][]['value'] = $val;
@@ -1015,14 +1068,14 @@ function _cals_isvalid_oclc_number($string) {
 function _cals_delete_duplicate_oclc_numbers(&$node){
   if(!empty($node->field_oclc_number)) {
     $arr = array();
-		foreach($node->field_oclc_number[LANGUAGE_NONE] as $k => $v) if(!in_array($v['value'], $arr)) $arr[] = $v['value'];
+    foreach($node->field_oclc_number[LANGUAGE_NONE] as $k => $v) if(!in_array($v['value'], $arr)) $arr[] = $v['value'];
     $node->field_oclc_number[LANGUAGE_NONE] = array();
     //if multiple oclc numbers, throw an error message
     if(count($arr) > 1) {
-    	drupal_set_message(t("There are multiple OCLC numbers. Please check entry: ") . 
-    		l($node->title, "node/" . $node->nid . "/edit") );  
-    }	
-		foreach($arr as $val)   $node->field_oclc_number[LANGUAGE_NONE][] = array("value" => $val);
+      drupal_set_message(t("There are multiple OCLC numbers. Please check entry: ") . 
+        l($node->title, "node/" . $node->nid . "/edit") );  
+    } 
+    foreach($arr as $val)   $node->field_oclc_number[LANGUAGE_NONE][] = array("value" => $val);
   }
 }
 
@@ -1055,10 +1108,10 @@ function _cals_importer_update_system_control_numbers(&$entity, $context = array
  */
 
 function _cals_parse_system_control_number($node) {
-	$xml = _cals_get_marc_xml_string($node);
-	if($xml === 0) return;
+  $xml = _cals_get_marc_xml_string($node);
+  if($xml === 0) return;
 
-	$tmp = $xml->xpath("//marc:datafield[@tag='035']/marc:subfield[@code='a']");
+  $tmp = $xml->xpath("//marc:datafield[@tag='035']/marc:subfield[@code='a']");
 
   //$tmp = $xml->xpath("//marc:datafield[@tag='035']");
   unset($node->field_system_control_number);
@@ -1115,8 +1168,8 @@ function _cals_importer_update_licensed_access(&$entity, $context = array()) {
  */
 
 function _cals_parse_licensed_access($node) {
-	$xml = _cals_get_marc_xml_string($node);
-	if($xml === 0) return;
+  $xml = _cals_get_marc_xml_string($node);
+  if($xml === 0) return;
   
   $str = 'xyz';//placeholder string
   $tmp = $xml->xpath("//marc:datafield[@tag='506']/marc:subfield[@code='a']");
@@ -1133,7 +1186,7 @@ function _cals_parse_licensed_access($node) {
   return '';  
 
 }
-
+//deprecate?
 function _cals_get_subjects($xml) {
   
   //let's grab the date issued!
@@ -1164,7 +1217,12 @@ function _cals_get_subjects($xml) {
 
 
 }
-
+/**
+ * grabs the title from the record
+ *
+ * @param $record
+ *   the record passed to the parser
+ */
 
 function _cals_get_title_from_xml($record) {
   $arr = array();
@@ -1181,38 +1239,30 @@ function _cals_get_title_from_xml($record) {
       $str = trim((string) $subfield);
       $str = trim($str);
 
-    
       switch ($tag) {
-      
         case 245:
           if ($code == 'a') $arr['repos']['title'] =  $str;
           if ($code == 'b') $arr['repos']['title'] .=  " " . $str;
           $arr['repos']['title'] = _cals_get_truncated_value($arr['repos']['title'], 250);
-          
           break;
           
         case "035":
           if ($code == 'a') {
-  
             if (strpos($str, "(OCoLC)") !== false) {
               $arr['repos']["field_oclc_number"][] = $str;
             }
             else {
               $arr['repos']["field_system_control_number"][] = $str;
-              
             }
           } 
-
           break;  
-  
-        
-        
       }
     }
   }
   return $arr;
   
 }
+
 
 /**
  * Get an array of cataloging agencies
@@ -1287,24 +1337,4 @@ function _cals_importer_xml2php($xml) {
   }
   if ($fils==0) return (string)$xml;
   return $array;
-}
-
-
-
-/********************/
-//to deprecate??
-
-function _cals_update_s3_path($node) {
-  $paths = array();
-  foreach ($node->field_s3_path[LANGUAGE_NONE] as $k => $v) {
-    $paths[] = $v['value'];
-  }
-  $paths = array_unique($paths);
-  unset($node->field_s3_path[LANGUAGE_NONE]);
-  foreach ($paths as $path) {
-    $node->field_s3_path[LANGUAGE_NONE][]['value'] = $path;
-  }
-  node_save($node);
-  return "yah!";
-
 }

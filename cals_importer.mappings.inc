@@ -438,7 +438,6 @@ function _cals_get_commom_fields_from_marc(&$arr, $xml) {
     
     if (count($tmp)>=1) {
       foreach ($tmp as $me) {
-      
         $val = (string) trim($me[0]);
         if (isset($map['qualifier']) ) {
           $arr[$key][$fieldname][] = array( $map['qualifier'] => $map['enum'], "value" => $val );

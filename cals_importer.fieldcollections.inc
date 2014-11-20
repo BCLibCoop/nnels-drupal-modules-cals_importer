@@ -76,7 +76,10 @@ function _cals_get_entity_value($key, $arr, $arr_tax) {
       
         $vid = $arr_tax['Subject'];
         $name = $v['value'];
+        //$name = $name . " A.z.";
       // Get the term's ID.
+      		
+
         $tid = _cals_get_tid_by_name($vid, $name);
       
         $me = array(
@@ -221,6 +224,7 @@ function _cals_importer_populate_repos_item_fieldcollections( $node, $arr_tax, $
       case "field_dc_coverage":
       case "field_date":
         $values = _cals_get_entity_value($k, $v, $arr_tax);
+        //if($k == 'field_dc_subject') printAndDie($values);
         //printPre("ya", $v);
         break;
 
