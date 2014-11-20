@@ -78,6 +78,10 @@ function _cals_add_856_tag($node) {
     $node->revision = 1;
     $node->log = "Added NNELS 856 tag to XML String:"; // Log message
     //drupal_set_message(t('%log' => array('%log', $node->log));
+    $action['description'] = '';
+    $action['activity'] = 5;
+   	_cals_importer_update_admin_audit($node,  $action);
+    
     node_save($node);
   
   }
