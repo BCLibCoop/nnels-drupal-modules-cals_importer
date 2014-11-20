@@ -840,7 +840,10 @@ function cals_importer_node_view($node, $view_mode, $langcode) {
         $node->content['additional-text'] = array(
           '#markup' => l($label, "node/{$node->nid}/parse-marcxml-new2"), '#weight' => 10, 
         ); 
-        
+        $view = views_embed_view("repository_item_by_recordsets", "embed_1", $node->nid);
+         $node->content['WHATS-UP'] = array(
+          '#markup' => $view, '#weight' => 20, 
+        );  
       }
       break;
 
