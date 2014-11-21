@@ -47,44 +47,6 @@ function _cals_importer_update_admin_audit($node, $action) {
 
  
 /**
- * Inserts new entries into the "field_admin_audit" field collection.
- *
- * @param $node
- *   the node being updated
- * @param $action
- *   an array containing the description, activity, etc.
- *
- **/
-
-function _cals_importer_update_admin_audit($node, $action) {
-
-  global $user;
-  $value = array(
-    'field_name' => 'field_admin_audit',
-
-    'field_activity' => array(
-      LANGUAGE_NONE => array(array('value' => $action['activity']))
-    ),
-    'field_user' => array(
-      LANGUAGE_NONE => array(array('uid' => $user->uid)),
-    ),
-    'field_date_action' => array(
-      LANGUAGE_NONE => array(array('value' => time())),
-    ),
-  );
-  if( !empty($action['description']) ) {
-  	$value['field_description'][LANGUAGE_NONE][0]['value'] = $action['description'];
-  }
-  
-  $e = entity_create('field_collection_item', $value);
-  // Attach the field_collection entity to the application node.
-  $e->setHostEntity('node', $node);
-  // Save the entity. 
-  $e->save(); 
-}
-
- 
-/**
  * Helper function to return the nid for a given system number (MARC)
  * 
  * @param $num
@@ -187,8 +149,6 @@ function _cals_get_taxonomy_vid($name) {
 function _cals_get_tid_by_name($vid, $name) {
   //$name = $v['value'];
   // Get the parent term's ID.
-	$name = _cals_importer_strip_trailing_periods_value($name);
-
   $tid = db_query(
     "SELECT tid FROM {taxonomy_term_data} 
     WHERE vid = :vid and name = :name
