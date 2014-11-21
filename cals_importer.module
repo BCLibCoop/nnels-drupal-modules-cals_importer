@@ -797,7 +797,7 @@ function cals_importer_node_view($node, $view_mode, $langcode) {
           $label = t("Update existing Repository Records (titles + S3 paths)");
         }
         $node->content['additional-text'] = array(
-          '#markup' => l($label, "node/{$node->nid}/parse-marcxml-new"), '#weight' => 10, 
+          '#markup' => l($label, "node/{$node->nid}/parse-marcxml-new", array("attributes" => array("class" => "generate-stub"))), '#weight' => 10, 
         );
         $node->content['additional-text'] = array(
           '#markup' => l($label, "node/{$node->nid}/parse-marcxml-new2"), '#weight' => 10, 
