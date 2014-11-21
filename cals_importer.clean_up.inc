@@ -275,7 +275,12 @@ function _cals_importer_strip_trailing_periods_value($str) {
   $n = count($tmp2);
   $last = $tmp2[$n-1];
   $len = strlen($last);
+<<<<<<< HEAD
   if( ($len >= 2 && $len <= 4) ) {
+=======
+  //($len >= 2 && $len <= 4)
+  if( ($len == 2) ) {
+>>>>>>> dk
   	if (preg_match("/^[A-Za-z\.]{1,5}(\.|!)$/", $last, $matches2)) {
   		return $tmp;
   	}

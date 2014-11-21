@@ -531,6 +531,7 @@ function cals_importer_entity_presave($entity, $type) {
     //printAndDie($type, $entity);
   }
 }
+<<<<<<< HEAD
  
 /**
  * Inserts new entries into the "field_admin_audit" field collection.
@@ -569,6 +570,8 @@ function _cals_importer_update_admin_audit($node, $action) {
   $e->save(); 
 }
 
+=======
+>>>>>>> dk
 
  
 function _cals_importer_s3_cors_field_submit($form, &$form_state){
