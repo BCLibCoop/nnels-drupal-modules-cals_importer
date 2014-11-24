@@ -89,7 +89,7 @@ function _cals_add_856_tag($node) {
  */
 
 function _cals_normalize_record_value($node) {
-  _cals_normalize_record_entry($node);
+	_cals_normalize_record_entry($node);
   drupal_goto("node/" . $node->nid);
 }
 
@@ -98,12 +98,14 @@ function _cals_normalize_record_value($node) {
  */
 function _cals_normalize_record_values(&$entity, $context = array()) {
   if (isset($entity->nid)) {
+    
     $node = node_load($entity->nid);
     //safety check to make sure we're parsing repos items!!    
     $content_types = array('repository_item');
     
     if (in_array($node->type, $content_types)  ) {
-      _cals_normalize_record_entry($node);
+      //$stopwords = $context['cals_importer_stop_words'];
+		  _cals_normalize_record_entry($node);
     }
     else{
       drupal_set_message(t("Invalid selection: not a repos item"));
@@ -264,8 +266,17 @@ function _cals_importer_strip_trailing_periods(&$node, $field) {
  */
 function _cals_importer_strip_trailing_periods_value($str) {
 	$tmp = str_replace("  ", " ", rtrim($str)); //trim various ascii chars
-	$tmp = trim($tmp, "  ");
+	$tmp = (string) trim($tmp, "  ");
   $len = strlen($tmp);
+
+  //stopwords
+  $stopwords = explode("\r\n", variable_get('cals_importer_stop_words'));
+
+  foreach($stopwords as $word) {
+  	$x = 0;
+  	$pos = strripos($tmp, $word);
+  	if($pos === $len - strlen($word) ) return $tmp; //return if we find a match at the end of the string!
+  }
 
 	$tmp2 = explode(" ", $tmp); // explode to isolate last segment
   $n = count($tmp2);
