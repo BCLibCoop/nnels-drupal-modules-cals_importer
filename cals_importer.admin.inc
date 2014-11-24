@@ -16,7 +16,7 @@
 function cals_importer_config_form($form, &$form_state) {
   $form['cals_importer_stop_words'] = array(
     '#type' => 'textarea',
-    '#title' => t('End of String Stop Words'),
+    '#title' => t('End of String Stop Words (one per line)'),
     '#default_value' => variable_get('cals_importer_stop_words'),
     '#rows' => 10,
     '#resizable' => TRUE,
