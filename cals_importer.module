@@ -17,7 +17,6 @@
   module_load_include('inc', 'cals_importer', 'cals_importer.marcxml');
   module_load_include('inc', 'cals_importer', 'cals_importer.s3paths');
   module_load_include('inc', 'cals_importer', 'cals_importer.createrecords');
-  
   module_load_include('inc', 'cals_importer', 'cals_importer.clean_up');
   module_load_include('inc', 'cals_importer', 'cals_importer.deduper');
   module_load_include('inc', 'cals_importer', 'cals_importer.marcxmlfilebuilder');
@@ -29,6 +28,17 @@
  */
 function cals_importer_menu() {
   $items = array();
+  
+   $items['admin/config/cals_importer/normalization'] = array(
+    'title' => 'Configure normalization settings',
+    'description' => 'Configuration for the normalization settings in CALS IMPORTER',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('cals_importer_config_form'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'cals_importer.admin.inc',
+  );
+  
 
   /*
    * Parses S3 sets, can be invoked directly - e.g:
@@ -52,8 +62,6 @@ function cals_importer_menu() {
   /**
    * Fix to move OCLC entries out of the system control field
    * - deactivated so we don't run accidentally
-
-   * 
    */
   $items['node/%node/fix-oclc-entry'] = array(
     'access arguments' => array('administer site configuration'),
@@ -68,7 +76,6 @@ function cals_importer_menu() {
   
   /**
    * Parses S3 sets via node page
-   * 
    */
 
   $items['node/%node/parse-s3-path-node'] = array(
@@ -266,6 +273,10 @@ function cals_importer_menu() {
 }
 
 
+//normalization_config_form
+
+
+
 /**
  * Implements hook_permission().
  */
@@ -308,7 +319,7 @@ function cals_importer_action_info() {
     '_cals_normalize_record_values' => array(
       'label' => t('2. Normalize Title, Publisher, Creators'),
       'type' => 'node',
-      'configurable' => FALSE,
+      'configurable' => FALSE, //TRUE,
       'triggers' => array('any'),
     ),
     
@@ -412,6 +423,7 @@ function cals_importer_custom_theme() {
   }
 
 }
+
 
 function _cals_importer_generate_marcxml_files_form($options) {
   $form = array();
