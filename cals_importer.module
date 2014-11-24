@@ -435,6 +435,8 @@ function _cals_importer_generate_marcxml_files_form($options) {
     '#required' => TRUE,
     '#default_value' => $filename,
   );
+  //printAndDie($options);
+  
   return $form;
 
 }
