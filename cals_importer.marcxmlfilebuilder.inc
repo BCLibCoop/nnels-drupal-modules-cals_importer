@@ -65,8 +65,6 @@ function _cals_importer_generate_marcxml_files(&$entity, $context = array() ) {
     node_save($parent);
   }
 
-
-
 }
 
 
