@@ -24,8 +24,8 @@ function _cals_importer_generate_marcxml_files(&$entity, $context = array() ) {
   }//end main ifx_affected_rows(resource result_id)
   $filename = 'public://' . $context['filename'];
   if($context['progress']['current'] == 1) {
-
     file_put_contents($filename, '');
+    dpm($filename);
   }
         
   // !empty($parent_nid) && -removed this from the if statement to relax requirements for generating export files
@@ -33,27 +33,28 @@ function _cals_importer_generate_marcxml_files(&$entity, $context = array() ) {
   if (!empty($node->field_xml_string) &&
       !empty($node->field_nnels_856_tag) &&
       $node->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] == 1 ) {
-    
-    $xml_test = _cals_get_marc_xml_string($node);
+    $xml_test = 1;
+    //$xml_test = _cals_get_marc_xml_string($node);
     if($xml_test !== 0) {
-      $str =  $node->field_xml_string[LANGUAGE_NONE][0]['value'];
+  		$str =   $node->field_xml_string[LANGUAGE_NONE][0]['value'];
       file_put_contents($filename, $str, FILE_APPEND | LOCK_EX);
+    }
+    else {
+			dpm("NOT VALID " . $node->field_xml_string[LANGUAGE_NONE][0]['value']);
+
     } 
   }
   else {
     dpm(l($node->title, "node/" . $nid . "/edit"));
   }
-
+  //dpm($context);
+	//dpm($context['progress']['current'] . " of " . $context['progress']['total']);
   if ($context['progress']['current'] == $context['progress']['total']) {
-    $header = '<marc:collection 
-            xmlns:marc="http://www.loc.gov/MARC21/slim" 
-            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-            xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd"
-          >';
+
     //add closing marc:collection tag
-    $content = $header . file_get_contents($filename) . '</marc:collection>';
-    $xml = simplexml_load_string($content);
-    $file = file_save_data($xml->asXml(), $filename, FILE_EXISTS_REPLACE);
+    $string = file_get_contents($filename);
+ 		$xml = _cals_importer_get_marcxml_wrapper($string);
+ 	  $file = file_save_data($xml->asXml(), $filename, FILE_EXISTS_REPLACE);
     $file->display = 1;
     $file->description = '';
 		$parent_nid = $node->field_record_set[LANGUAGE_NONE][0]['nid'];
@@ -63,10 +64,21 @@ function _cals_importer_generate_marcxml_files(&$entity, $context = array() ) {
     node_save($parent);
   }
 
-
-
 }
 
+
+function _cals_importer_get_marcxml_wrapper($string) {
+	$string = str_replace("</marc:collection>", "", $string);
+	$header = '<marc:collection 
+          xmlns:marc="http://www.loc.gov/MARC21/slim" 
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+          xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd"
+        >';
+	$content = $header . $string . '</marc:collection>';
+  $xml = simplexml_load_string($content);
+
+  return $xml;
+}
 
 /**
  * Invokes Drupal's batch api to generate new marc xml files with 856 tags, etc.
