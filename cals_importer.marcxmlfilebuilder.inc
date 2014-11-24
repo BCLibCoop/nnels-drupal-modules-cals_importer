@@ -51,6 +51,8 @@ function _cals_importer_generate_marcxml_files(&$entity, $context = array() ) {
             xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd"
           >';
     //add closing marc:collection tag
+    $records = file_get_contents($filename);
+    $records = str_replace("</marc:collection>", "", $records);
     $content = $header . file_get_contents($filename) . '</marc:collection>';
     $xml = simplexml_load_string($content);
     $file = file_save_data($xml->asXml(), $filename, FILE_EXISTS_REPLACE);
