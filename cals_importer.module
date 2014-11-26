@@ -125,7 +125,7 @@ function cals_importer_menu() {
   );
   $items['node/%node/parse-marcxml-new2'] = array(
     'page callback' => '_cals_importer_create_repo_items',
-		'file' => "cals_importer.createrecords.inc",
+    'file' => "cals_importer.createrecords.inc",
     'title' => "Generate / Update Stub Entries 2",
     'type' => MENU_CALLBACK,
     //'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
@@ -424,7 +424,9 @@ function cals_importer_custom_themexxx() {
 
 }
 
-
+/**
+ * VBO form to update the filename used in the MARC XML generation.
+ */
 function _cals_importer_generate_marcxml_files_form($options) {
   $form = array();
   $filename = (is_numeric(arg(1)) && arg(0) == 'node' ) ? 'nnels_marcxml' . "_" . arg(1) . '.xml' : 'nnels_marcxml,xml';
@@ -435,8 +437,6 @@ function _cals_importer_generate_marcxml_files_form($options) {
     '#required' => TRUE,
     '#default_value' => $filename,
   );
-  //printAndDie($options);
-  
   return $form;
 
 }
@@ -556,33 +556,11 @@ function _cals_importer_s3_cors_field_submit($form, &$form_state){
       $filepath = $form_state['values']['field_s3_path'][LANGUAGE_NONE][0]['value'];
       $file = _cals_importer_file_updater($node, $filepath);
     } 
-    //  $test = db_query('SELECT n.fid FROM {file_managed} n WHERE n.uri = :uri', array(':uri' => $filepath));
-
-    //printAndDie("here", $filepath, $file, $form_state['values']);
-    
     $form_state['values']['field_s3_file_upload'][LANGUAGE_NONE][0] = (array)$file;
-
-    
   }
 
 }
 
-
-function cals_importer_views_bulk_operations_form_alter(&$form, &$form_state, $vbo) {
-  if ($form_state['step'] == 'views_form_views_form') {
-    // Alter the first step of the VBO form (the selection page).
-    //$form['select']['#title'] = t('Bulk operations YO!');
-
-  }
-/*
-  elseif ($form_state['step'] == 'views_bulk_operations_config_form') {
-    // Alter the configuration step of the VBO form.
-  }
-  elseif ($form_state['step'] == 'views_bulk_operations_confirm_form') {
-    // Alter the confirmation step of the VBO form.
-  }
-*/
-}
 
 
 /**
@@ -650,14 +628,9 @@ function _cals_importer_query_duplicate_titles($type) {
  * Implements hook_views_query_alter().
  */
 function cals_importer_views_query_alter(&$view, &$query) {
-
-
   switch ($view->name . ":" . $view->current_display) {
-
-
     //system control number duplicates
     case "repository_items_duplicates:page_1":
-      
       //custom query to find duplicate system control numbers  
       $vals = array();
       $rs = db_query("select nid, title
@@ -849,8 +822,8 @@ function _cals_prepare_new_item_repos() {
  */
 function _cals_import_skeletal_records($node) {
   $max = 50; //clear buffer, etc.
-	ini_set('memory_limit', '1024M');
-	ini_set('max_execution_time', '600');
+  ini_set('memory_limit', '1024M');
+  ini_set('max_execution_time', '600');
   global $user;
   //module_load_include('inc', 'entity', 'includes/entity.controller');
   foreach (taxonomy_get_vocabularies() as $k => $v) {
