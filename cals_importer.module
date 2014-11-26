@@ -273,10 +273,6 @@ function cals_importer_menu() {
 }
 
 
-//normalization_config_form
-
-
-
 /**
  * Implements hook_permission().
  */
@@ -415,7 +411,11 @@ function cals_importer_action_info() {
 }
 
 
-function cals_importer_custom_theme() {
+/**
+ * Implements hook_custom_theme().
+ *   - disabled for now.
+ */
+function cals_importer_custom_themexxx() {
 
   $alias = drupal_get_path_alias();
   if(strpos($alias, "admin/") !== FALSE) {
