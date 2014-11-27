@@ -87,6 +87,27 @@ function _cals_add_856_tag($node) {
   }
 }
 
+/**
+ * bulk operation to normalize taxonomy terms.
+ */
+
+function _cals_normalize_taxonomy_terms(&$entity, $context = array()) {
+ 
+  if (isset($entity->tid)) {
+  	//$term = entity_load($entity->tid);
+    $term = taxonomy_term_load($entity->tid);
+    $name = _cals_importer_strip_trailing_periods_value($term->name);
+    if($name !== $term->name) {
+			dpm($term->name . " => " . $name);
+ 
+			$term->name = $name;
+			taxonomy_term_save($term);
+    }
+    
+  }//end main if
+ 
+  return "";
+}
 
 /**
  * Simple wrapper to call main batch api parse to standardize author, title and publisher values
@@ -264,6 +285,7 @@ function _cals_importer_strip_trailing_periods(&$node, $field) {
   } 
 
 }
+//168 B.C.-135 A.D.
 /**
  * Strips trailing punctuation, except abbreviations, etc.  
  * e.g. a.b., A.B., A. B., Dave B.
@@ -286,12 +308,27 @@ function _cals_importer_strip_trailing_periods_value($str) {
   $n = count($tmp2);
   $last = $tmp2[$n-1];
   $len = strlen($last);
+  //e.g. patterns like A.D.
+  if($len == 4 || $len == 5) {
+    $num_per = substr_count($last, ".");
+
+    if($num_per > 1) {
+    	return $tmp;
+    }
+    else {
+			$tmp = rtrim($tmp, ".");
+			dpm("LEN = $len | num_per = $num_per | $tmp");
+
+    }	
+  }
+  
   //($len >= 2 && $len <= 4)
   if( ($len == 2) ) {
   	if (preg_match("/^[A-Za-z\.]{1,5}(\.|!)$/", $last, $matches2)) {
   		return $tmp;
   	}
   } 
+  
 	$tmp = rtrim($tmp, ". ,!;");
  	return trim($tmp); //one last, in case we miss something... may need to recurse this?
 

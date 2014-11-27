@@ -34,12 +34,7 @@ function _cals_get_entity_value($key, $arr, $arr_tax) {
         
         $dates[$v['field_qualifier_date']]++;
         $allow = ($dates[$v['field_qualifier_date']] == 1) ? TRUE : FALSE;
-
-        //"field_qualifier_date" => "Issued", "field_dc_date"
-        
         if ($allow) {
-        
-        
           $values[] = array(
             'field_name' =>  "field_date",
             'field_dc_date' => array(
@@ -56,7 +51,6 @@ function _cals_get_entity_value($key, $arr, $arr_tax) {
         break;
     
       case "field_dc_relation":
-      
         $values[] = array(
           'field_name' =>  "field_dc_relation",
           'field_dc_relation_value' => array(
@@ -71,15 +65,10 @@ function _cals_get_entity_value($key, $arr, $arr_tax) {
         break;
     
       case "field_dc_subject":
-      
-        
-      
         $vid = $arr_tax['Subject'];
         $name = $v['value'];
         //$name = $name . " A.z.";
       // Get the term's ID.
-      		
-
         $tid = _cals_get_tid_by_name($vid, $name);
       
         $me = array(

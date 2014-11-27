@@ -141,9 +141,6 @@ function _cals_parse_record_details($node) {
 		  	_cals_importer_normalize_publisher($node);
 		  	break;
 		}
-
-
-
   } 
 
 

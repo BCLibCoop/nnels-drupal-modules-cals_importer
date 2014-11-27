@@ -319,6 +319,21 @@ function cals_importer_action_info() {
       'triggers' => array('any'),
     ),
     
+    //batch update Genre, Subjects.
+    '_cals_normalize_taxonomy_terms2' => array(
+      'label' => t('CALS: Normalize Taxonomy Terms 2'),
+      'type' => 'taxonomy_term',
+      'configurable' => FALSE, //TRUE,
+      'triggers' => array('any'),
+    ),
+    
+    //batch update Genre, Subjects.
+    '_cals_normalize_taxonomy_terms' => array(
+      'label' => t('CALS: Normalize Taxonomy Terms'),
+      'type' => 'entity',
+      'configurable' => FALSE, //TRUE,
+      'triggers' => array('any'),
+    ),
     //bulk update to generate marc xml strings w/ 856 tag
     '_cals_importer_generate_marc_xml_856' => array(
       'label' => t('3. Generate MARC with 856 strings'),
