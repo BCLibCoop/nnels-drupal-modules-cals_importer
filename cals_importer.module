@@ -38,8 +38,15 @@ function cals_importer_menu() {
     'type' => MENU_NORMAL_ITEM,
     'file' => 'cals_importer.admin.inc',
   );
-  
-
+   $items['admin/config/cals_importer/normalization/narrator'] = array(
+    'title' => 'Normalization - Narrator / Performer values',
+    'description' => 'Configuration for the narrator / performer normalization',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('cals_importer_narrator_config_form'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'cals_importer.admin.inc',
+  );
   /*
    * Parses S3 sets, can be invoked directly - e.g:
    * http://me/cals_staging/admin/content/cals/batch-update-s3-paths/5429
