@@ -88,6 +88,31 @@ function _cals_add_856_tag($node) {
 }
 
 /**
+ * bulk operation action to normalize performer values.
+ * Can likely delete this after run since the action is
+ * now baked directly into the initial parse
+ */
+
+function _cals_normalize_performer(&$entity, $context = array()) {
+
+
+	if(function_exists("_cals_importer_get_normalized_performer") && isset($entity->field_performer[LANGUAGE_NONE])) {
+	  $p1 = $entity->field_performer[LANGUAGE_NONE][0]['value'];
+	  $p2 = _cals_importer_get_normalized_performer($p1);
+	  if($p1 != $p2) {
+		  $entity->field_performer[LANGUAGE_NONE][0]['value'] = $p2;
+			$entity->save();
+		  dpm($p1 . " => " . $p2);
+	  
+	  }
+	}
+
+
+
+} 
+
+
+/**
  * bulk operation to normalize taxonomy terms.
  */
 

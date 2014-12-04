@@ -319,6 +319,9 @@ function _cals_importer_get_performer_from_marcxml(&$arr, $xml) {
     //replace ";" to ","  
     $val = str_replace("Narrated by ", "", $val);
     $val = str_replace(".", "", $val);
+    
+    $val = _cals_importer_get_normalized_performer($val);
+    
     //valid??
     $tmp2 = explode(",", $val);
 
@@ -327,6 +330,22 @@ function _cals_importer_get_performer_from_marcxml(&$arr, $xml) {
     }
   }
   
+}
+
+/**
+ *
+ * @param $string
+ *   the peformer value to normalize
+ *
+ * @return
+ *   the normalized value
+ *
+ */
+function _cals_importer_get_normalized_performer($string) {
+
+  $prefixes = variable_get('cals_importer_prefix_stopwords_narrators');
+  $arr = explode("\r\n", $prefixes );
+  return trim(str_replace($arr, "", $string));
 }
 
 /**

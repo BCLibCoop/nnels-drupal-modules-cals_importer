@@ -162,7 +162,7 @@ function _cals_get_entity_value($key, $arr, $arr_tax) {
  * delete existing field collection items before resaving the node!
  * @ see also: http://drupal.stackexchange.com/questions/68765/how-to-properly-delete-a-field-collection
  */
-function _cals_delete_existing_field_collection_items($node,$keys) {
+function _cals_delete_existing_field_collection_items($node, $keys) {
   $ids = array();
 
   foreach($keys as $field) {
