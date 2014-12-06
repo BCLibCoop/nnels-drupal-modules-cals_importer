@@ -23,11 +23,15 @@
   module_load_include('inc', 'cals_importer', 'cals_importer.corsS3');
   module_load_include('inc', 'entity', 'includes/entity.controller');
 
+
+
+
 /**
  * Implements hook_menu().
  */
 function cals_importer_menu() {
   $items = array();
+  
   
    $items['admin/config/cals_importer/normalization'] = array(
     'title' => 'Configure normalization settings',
@@ -38,6 +42,8 @@ function cals_importer_menu() {
     'type' => MENU_NORMAL_ITEM,
     'file' => 'cals_importer.admin.inc',
   );
+
+  
  
   /*
    * Parses S3 sets, can be invoked directly - e.g:
@@ -433,6 +439,7 @@ function cals_importer_action_info() {
   
   );
 }
+
 
 
 /**
