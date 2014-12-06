@@ -80,7 +80,7 @@ function _cals_add_856_tag($node) {
     //drupal_set_message(t('%log' => array('%log', $node->log));
     $action['description'] = '';
     $action['activity'] = 5;
-   	_cals_importer_update_admin_audit($node,  $action);
+    _cals_importer_update_admin_audit($node,  $action);
     
     node_save($node);
   
@@ -96,16 +96,16 @@ function _cals_add_856_tag($node) {
 function _cals_normalize_performer(&$entity, $context = array()) {
 
 
-	if(function_exists("_cals_importer_get_normalized_performer") && isset($entity->field_performer[LANGUAGE_NONE])) {
-	  $p1 = $entity->field_performer[LANGUAGE_NONE][0]['value'];
-	  $p2 = _cals_importer_get_normalized_performer($p1);
-	  if($p1 != $p2) {
-		  $entity->field_performer[LANGUAGE_NONE][0]['value'] = $p2;
-			$entity->save();
-		  dpm($p1 . " => " . $p2);
-	  
-	  }
-	}
+  if(function_exists("_cals_importer_get_normalized_performer") && isset($entity->field_performer[LANGUAGE_NONE])) {
+    $p1 = $entity->field_performer[LANGUAGE_NONE][0]['value'];
+    $p2 = _cals_importer_get_normalized_performer($p1);
+    if($p1 != $p2) {
+      $entity->field_performer[LANGUAGE_NONE][0]['value'] = $p2;
+      $entity->save();
+      dpm($p1 . " => " . $p2);
+    
+    }
+  }
 
 
 
@@ -119,14 +119,14 @@ function _cals_normalize_performer(&$entity, $context = array()) {
 function _cals_normalize_taxonomy_terms(&$entity, $context = array()) {
  
   if (isset($entity->tid)) {
-  	//$term = entity_load($entity->tid);
+    //$term = entity_load($entity->tid);
     $term = taxonomy_term_load($entity->tid);
     $name = _cals_importer_strip_trailing_periods_value($term->name);
     if($name !== $term->name) {
-			dpm($term->name . " => " . $name);
+      dpm($term->name . " => " . $name);
  
-			$term->name = $name;
-			taxonomy_term_save($term);
+      $term->name = $name;
+      taxonomy_term_save($term);
     }
     
   }//end main if
@@ -139,7 +139,7 @@ function _cals_normalize_taxonomy_terms(&$entity, $context = array()) {
  */
 
 function _cals_normalize_record_value($node) {
-	_cals_normalize_record_entry($node);
+  _cals_normalize_record_entry($node);
   drupal_goto("node/" . $node->nid);
 }
 
@@ -155,7 +155,7 @@ function _cals_normalize_record_values(&$entity, $context = array()) {
     
     if (in_array($node->type, $content_types)  ) {
       //$stopwords = $context['cals_importer_stop_words'];
-		  _cals_normalize_record_entry($node);
+      _cals_normalize_record_entry($node);
     }
     else{
       drupal_set_message(t("Invalid selection: not a repos item"));
@@ -180,52 +180,52 @@ function _cals_normalize_record_entry($node) {
   $fields_to_update = array("title", "field_dc_creator", "field_dc_contributor", "field_publisher");
   $msg = array(); //used to track changes; if count > 1, we save node
   foreach($fields_to_update as $field) {
-  	if(!empty($node->{$field})) {
- 			$node2->{$field} = $node->{$field};
- 			switch($field) {
- 			  case "title":
-					_cals_importer_strip_square_brackets($node, $field);
-					_cals_importer_normalize_title($node);
- 			  	//if($node2->title != $node->title) $msg[] = t("Updated title: %t", array('%t' => $title) );
- 			  	break;
- 			  case "field_dc_creator":
-				case "field_dc_contributor":	
-					_cals_importer_strip_square_brackets($node, $field);
-					_cals_importer_normalize_creators($node, $field);
- 			  	break;
- 			  case "field_publisher":
-					//_cals_importer_strip_square_brackets($node, "title");
- 			  	_cals_importer_normalize_publisher($node);
- 			  	break;
- 			
- 			
- 			}
- 			
- 			//generate error messages
-	    if($field == 'title') {
-	      if($node2->title != $node->title) $msg[] = t("title: ORIGINAL = !title || NEW title = !title2", 
-	      	array("!title" => $node2->title, "!title2" => $node->title));
-	    }
-	    else {
-	      if(!empty($node->$field)) {
-	        foreach($node->{$field}[LANGUAGE_NONE] as $k => $v) {
-	          if($node2->{$field}[LANGUAGE_NONE][$k]['value'] != $v['value']) 
-	            $msg[] = t("!fieldname: ORIGINAL = @value || NEW = @value2",
-	            	array("!fieldname" => $field, "@value" => $node2->{$field}[LANGUAGE_NONE][$k]['value'], "@value2" => $v['value'] ));
-	        }
-	      }
-	    } 			
-  	}
+    if(!empty($node->{$field})) {
+      $node2->{$field} = $node->{$field};
+      switch($field) {
+        case "title":
+          _cals_importer_strip_square_brackets($node, $field);
+          _cals_importer_normalize_title($node);
+          //if($node2->title != $node->title) $msg[] = t("Updated title: %t", array('%t' => $title) );
+          break;
+        case "field_dc_creator":
+        case "field_dc_contributor":  
+          _cals_importer_strip_square_brackets($node, $field);
+          _cals_importer_normalize_creators($node, $field);
+          break;
+        case "field_publisher":
+          //_cals_importer_strip_square_brackets($node, "title");
+          _cals_importer_normalize_publisher($node);
+          break;
+      
+      
+      }
+      
+      //generate error messages
+      if($field == 'title') {
+        if($node2->title != $node->title) $msg[] = t("title: ORIGINAL = !title || NEW title = !title2", 
+          array("!title" => $node2->title, "!title2" => $node->title));
+      }
+      else {
+        if(!empty($node->$field)) {
+          foreach($node->{$field}[LANGUAGE_NONE] as $k => $v) {
+            if($node2->{$field}[LANGUAGE_NONE][$k]['value'] != $v['value']) 
+              $msg[] = t("!fieldname: ORIGINAL = @value || NEW = @value2",
+                array("!fieldname" => $field, "@value" => $node2->{$field}[LANGUAGE_NONE][$k]['value'], "@value2" => $v['value'] ));
+          }
+        }
+      }       
+    }
   }
  
   if (count($msg)) {
-		$dmsg = theme('item_list', array('items' => $msg, 'title' => t("Updated !title", array("!title" => $node->title) ) ));
+    $dmsg = theme('item_list', array('items' => $msg, 'title' => t("Updated !title", array("!title" => $node->title) ) ));
     //$dmsg = t("Updated")  . $title . ": " . implode(" | ", $msg);  
     drupal_set_message($dmsg);
     $action['description'] = implode("\n", $msg);
     $action['activity'] = 3;
-   	_cals_importer_update_admin_audit($node,  $action);
-   	node_save($node);
+    _cals_importer_update_admin_audit($node,  $action);
+    node_save($node);
   }
   else {
     drupal_set_message(t("Not updated: @title", array('@title' => $title ) ) );
@@ -291,7 +291,7 @@ function _cals_importer_normalize_creators(&$node, $field) {
     }
     _cals_importer_strip_trailing_periods($node, $field); 
   } 
-	//printAndDie($node->field_dc_creator);
+  //printAndDie($node->field_dc_creator);
 }
 
 
@@ -301,7 +301,7 @@ function _cals_importer_normalize_creators(&$node, $field) {
 function _cals_importer_strip_trailing_periods(&$node, $field) {
   if(!empty($node->{$field})) {
     foreach($node->{$field}[LANGUAGE_NONE] as $k => $v) {
-     	$tmp = _cals_importer_strip_trailing_periods_value($v['value']); 
+      $tmp = _cals_importer_strip_trailing_periods_value($v['value']); 
       if ($tmp != $v['value'] && !empty($tmp)) {
         $node->{$field}[LANGUAGE_NONE][$k]['value'] = $tmp;
       }
@@ -316,20 +316,20 @@ function _cals_importer_strip_trailing_periods(&$node, $field) {
  * e.g. a.b., A.B., A. B., Dave B.
  */
 function _cals_importer_strip_trailing_periods_value($str) {
-	$tmp = str_replace("  ", " ", rtrim($str)); //trim various ascii chars
-	$tmp = (string) trim($tmp, "  ");
+  $tmp = str_replace("  ", " ", rtrim($str)); //trim various ascii chars
+  $tmp = (string) trim($tmp, "  ");
   $len = strlen($tmp);
 
   //stopwords
   $stopwords = explode("\r\n", variable_get('cals_importer_stop_words'));
 
   foreach($stopwords as $word) {
-  	$x = 0;
-  	$pos = strripos($tmp, $word);
-  	if($pos === $len - strlen($word) ) return $tmp; //return if we find a match at the end of the string!
+    $x = 0;
+    $pos = strripos($tmp, $word);
+    if($pos === $len - strlen($word) ) return $tmp; //return if we find a match at the end of the string!
   }
 
-	$tmp2 = explode(" ", $tmp); // explode to isolate last segment
+  $tmp2 = explode(" ", $tmp); // explode to isolate last segment
   $n = count($tmp2);
   $last = $tmp2[$n-1];
   $len = strlen($last);
@@ -338,24 +338,22 @@ function _cals_importer_strip_trailing_periods_value($str) {
     $num_per = substr_count($last, ".");
 
     if($num_per > 1) {
-    	return $tmp;
+      return $tmp;
     }
     else {
-			$tmp = rtrim($tmp, ".");
-			dpm("LEN = $len | num_per = $num_per | $tmp");
-
-    }	
+      $tmp = rtrim($tmp, ".");
+    } 
   }
   
   //($len >= 2 && $len <= 4)
   if( ($len == 2) ) {
-  	if (preg_match("/^[A-Za-z\.]{1,5}(\.|!)$/", $last, $matches2)) {
-  		return $tmp;
-  	}
+    if (preg_match("/^[A-Za-z\.]{1,5}(\.|!)$/", $last, $matches2)) {
+      return $tmp;
+    }
   } 
   
-	$tmp = rtrim($tmp, ". ,!;");
- 	return trim($tmp); //one last, in case we miss something... may need to recurse this?
+  $tmp = rtrim($tmp, ". ,!;");
+  return trim($tmp); //one last, in case we miss something... may need to recurse this?
 
 }  
 
@@ -366,15 +364,15 @@ function _cals_importer_strip_trailing_periods_value($str) {
 function _cals_importer_strip_square_brackets(&$node, $field) {
   //$str = str_replace(array("[", "]"), "", $str);
   if($field == 'title') {
-	  $node->title = str_replace(array("[", "]"), "", $node->title);
-		$node->title_field[LANGUAGE_NONE][$k]['value'] = $node->title;
+    $node->title = str_replace(array("[", "]"), "", $node->title);
+    $node->title_field[LANGUAGE_NONE][$k]['value'] = $node->title;
   }
   else {
-  	foreach($node->{$field} as $k => $v) {
-  		$tmp = str_replace(array("[", "]"), "", $v['value']);
-  		if($tmp != $node->{$field}[LANGUAGE_NONE][$k]['value']) $node->{$field}[LANGUAGE_NONE][$k]['value'] = $tmp;
-  	}
-		
+    foreach($node->{$field} as $k => $v) {
+      $tmp = str_replace(array("[", "]"), "", $v['value']);
+      if($tmp != $node->{$field}[LANGUAGE_NONE][$k]['value']) $node->{$field}[LANGUAGE_NONE][$k]['value'] = $tmp;
+    }
+    
   }
 }
 
@@ -382,18 +380,18 @@ function _cals_importer_strip_square_brackets(&$node, $field) {
  * Strips opening and closing parentheses from title, publisher fields  
  */
 function _cals_importer_strip_parentheses_from_values($str) {
-	$skip = 0;
-	$str = rtrim($str);
-	//end of string, e.g. : [xyz]	
-	$regexp = "/ [\[a-zA-Z0-9_\]]{1,}$/";
-	preg_match($regexp, $str, $matches, PREG_OFFSET_CAPTURE);
-	if (count($matches) )  {
-		//we know this should be a single match because its end of string
-		$count = $matches[0][1];
-		$str = substr($str, 0, $count) .  str_replace(array("[", "]"), "", substr($str, $count));
-	}
-		
-	return rtrim($str);
+  $skip = 0;
+  $str = rtrim($str);
+  //end of string, e.g. : [xyz] 
+  $regexp = "/ [\[a-zA-Z0-9_\]]{1,}$/";
+  preg_match($regexp, $str, $matches, PREG_OFFSET_CAPTURE);
+  if (count($matches) )  {
+    //we know this should be a single match because its end of string
+    $count = $matches[0][1];
+    $str = substr($str, 0, $count) .  str_replace(array("[", "]"), "", substr($str, $count));
+  }
+    
+  return rtrim($str);
 
 
 }
@@ -447,7 +445,7 @@ function _cals_importer_normalize_creators_preview_vbo(&$entity, $context = arra
 
 
 function _cals_importer_normalize_creators_preview_query($node) {
-	_cals_importer_strip_square_brackets($node);
+  _cals_importer_strip_square_brackets($node);
 
   _cals_importer_normalize_creators($node);
   _cals_importer_strip_trailing_periods($node);
