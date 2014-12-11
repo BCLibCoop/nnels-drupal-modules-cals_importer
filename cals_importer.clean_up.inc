@@ -233,6 +233,10 @@ function _cals_normalize_record_entry($node) {
 
 }
 
+/**
+ * loops thru publisher array, calling _cals_importer_normalize_publisher_entry() 
+ *
+ */
 
 function _cals_importer_normalize_publisher(&$node) {
 
@@ -248,17 +252,18 @@ function _cals_importer_normalize_publisher(&$node) {
   
 }
 
+/**
+ * trims the title field, stripping off commas, spaces, dashes, parentheses 
+ *
+ */
 function _cals_importer_normalize_title(&$node) {
   $title = rtrim($node->title);
   $msg = array();
   $title = rtrim($title, ", /"); 
   $title = _cals_importer_strip_parentheses_from_values($title);
-  
   if ($title != $node->title) {
     $node->title = $title;
-    //node_save($node);
   }
-
 }
 
 
@@ -291,7 +296,6 @@ function _cals_importer_normalize_creators(&$node, $field) {
     }
     _cals_importer_strip_trailing_periods($node, $field); 
   } 
-  //printAndDie($node->field_dc_creator);
 }
 
 
@@ -306,11 +310,9 @@ function _cals_importer_strip_trailing_periods(&$node, $field) {
         $node->{$field}[LANGUAGE_NONE][$k]['value'] = $tmp;
       }
      }
-    //printAndDie($node->{$field});
   } 
 
 }
-//168 B.C.-135 A.D.
 /**
  * Strips trailing punctuation, except abbreviations, etc.  
  * e.g. a.b., A.B., A. B., Dave B.
@@ -322,7 +324,6 @@ function _cals_importer_strip_trailing_periods_value($str) {
 
   //stopwords
   $stopwords = explode("\r\n", variable_get('cals_importer_stop_words'));
-
   foreach($stopwords as $word) {
     $x = 0;
     $pos = strripos($tmp, $word);
@@ -390,10 +391,7 @@ function _cals_importer_strip_parentheses_from_values($str) {
     $count = $matches[0][1];
     $str = substr($str, 0, $count) .  str_replace(array("[", "]"), "", substr($str, $count));
   }
-    
   return rtrim($str);
-
-
 }
 
 /**
@@ -446,7 +444,6 @@ function _cals_importer_normalize_creators_preview_vbo(&$entity, $context = arra
 
 function _cals_importer_normalize_creators_preview_query($node) {
   _cals_importer_strip_square_brackets($node);
-
   _cals_importer_normalize_creators($node);
   _cals_importer_strip_trailing_periods($node);
   //dpm($node->field_dc_creator);
@@ -489,39 +486,3 @@ function _cals_importer_normalize_publisher_entry($value) {
      return $tmp;
    }
 } 
- 
-
-
- 
-
-
-
-
-function _cals_clean_up_creator_entry_TO_DEPRECATE($node) {
-
-  $save_node = FALSE;
-  foreach($node->field_dc_creator[LANGUAGE_NONE] as $k => $author) {
-   //printPre($author['value']);
-   $tmp = rtrim($author['value']); //trim various ascii chars
-
-   //logic to determine if there's a ...
-   $len = strlen($tmp);
-   $sub = substr($tmp, 0, ($len - 1)); //substring minus 1 character to figure out # of potential replacements
-   $count = substr_count($sub, ".") + substr_count($sub, ",");  
-   if ($count == 0) { 
-     drupal_set_message(t("skipped: @author", array('@author' => $author['value']) ) );
-   }
-   else {
-     $tmp = _cals_importer_strip_years_from_creator_values($tmp);
-     $tmp = rtrim($tmp, ", .-"); //strip remaining trailing periods, dashes, etc.;
-     $node->field_dc_creator[LANGUAGE_NONE][$k]['value'] = $tmp;
-     $save_node = TRUE;
-     drupal_set_message(t("updated: @author => @tmp", array('@author' =>  $author['value'], '@tmp' => $tmp) ) );
-   }
-   
-
-  } 
-  if ($save_node)  node_save($node);
- 
-
-}
