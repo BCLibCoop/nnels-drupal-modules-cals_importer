@@ -300,7 +300,13 @@ function _cals_importer_convert_to_title_case(&$node, $field) {
     	if(strpos($tmp, ",")) {
     	  
     	  $tmp2 = ucwords(strtolower($tmp)); 
-    		dpm($tmp . " => " . $tmp2);
+    	  if($tmp2 != $tmp) {
+    	  	$node->{$field}[LANGUAGE_NONE][$k]['value'] = $tmp2;
+    	  	node_save($node);
+    	  	$link = l("view record", "node/" . $node->nid, array('attributes' => array('target' => '_blank')));
+					drupal_set_message($tmp . " => " . $tmp2 . " view record: " . $link);
+    	  }
+    		
     	}
       
     }
