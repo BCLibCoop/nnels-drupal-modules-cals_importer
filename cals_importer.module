@@ -331,7 +331,15 @@ function cals_importer_action_info() {
       'configurable' => FALSE, //TRUE,
       'triggers' => array('any'),
     ),
+    //batch titlecase creator names
+    '_cals_titlecase_creators' => array(
+      'label' => t('CALS: Convert Creators to Title Case'),
+      'type' => 'entity',
+      'configurable' => FALSE, //TRUE,
+      'triggers' => array('any'),
+    ),
 
+    
     
     //batch update Genre, Subjects.
     '_cals_normalize_taxonomy_terms2' => array(
@@ -660,6 +668,15 @@ function _cals_importer_query_duplicate_titles($type) {
  */
 function cals_importer_views_query_alter(&$view, &$query) {
   switch ($view->name . ":" . $view->current_display) {
+  
+  	//lets find upper case creators; need to use BINARY operator
+  	case "cals_creators:page_1":
+  	
+			$query->where[1]['conditions'][0]['value'] = "^[A-Z][A-Z]";
+			$query->where[1]['conditions'][0]['operator'] = "rlike BINARY";
+     
+  		break;
+  
     //system control number duplicates
     case "repository_items_duplicates:page_1":
       //custom query to find duplicate system control numbers  

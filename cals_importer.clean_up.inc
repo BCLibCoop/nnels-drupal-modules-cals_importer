@@ -94,8 +94,6 @@ function _cals_add_856_tag($node) {
  */
 
 function _cals_normalize_performer(&$entity, $context = array()) {
-
-
   if(function_exists("_cals_importer_get_normalized_performer") && isset($entity->field_performer[LANGUAGE_NONE])) {
     $p1 = $entity->field_performer[LANGUAGE_NONE][0]['value'];
     $p2 = _cals_importer_get_normalized_performer($p1);
@@ -103,13 +101,13 @@ function _cals_normalize_performer(&$entity, $context = array()) {
       $entity->field_performer[LANGUAGE_NONE][0]['value'] = $p2;
       $entity->save();
       dpm($p1 . " => " . $p2);
-    
     }
   }
-
-
-
 } 
+
+
+
+
 
 
 /**
@@ -266,6 +264,49 @@ function _cals_importer_normalize_title(&$node) {
   }
 }
 
+
+/**
+ * bulk operation action to covert creator names to title case.
+ */
+
+function _cals_titlecase_creators(&$entity, $context = array()) {
+  if (isset($entity->nid)) {
+    
+    $node = node_load($entity->nid);
+    //safety check to make sure we're parsing repos items!!    
+    $content_types = array('repository_item');
+    
+    if (in_array($node->type, $content_types)  ) {
+      _cals_importer_convert_to_title_case($node, "field_dc_creator");
+    }
+    else{
+      drupal_set_message(t("Invalid selection: not a repos item"));
+    }
+
+  }//end main if
+ 
+  return "";
+} 
+
+
+/**
+ * Converts Creator fields to title case  
+ */
+function _cals_importer_convert_to_title_case(&$node, $field) {
+	
+  if(!empty($node->{$field})) {
+    foreach($node->{$field}[LANGUAGE_NONE] as $k => $v) {
+    	$tmp = $v['value'];
+    	if(strpos($tmp, ",")) {
+    	  
+    	  $tmp2 = ucwords(strtolower($tmp)); 
+    		dpm($tmp . " => " . $tmp2);
+    	}
+      
+    }
+
+  } 
+}
 
 /**
  * Strips opening and closing parentheses from creators,  
