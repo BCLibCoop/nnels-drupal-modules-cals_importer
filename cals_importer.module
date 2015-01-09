@@ -6,8 +6,8 @@
 /**
  * set memory limit and max execution times to higher than normal!
  */
-  //ini_set('memory_limit', '1024M');
-  //ini_set('max_execution_time', '600');
+  ini_set('memory_limit', '1024M');
+  ini_set('max_execution_time', '600');
   //the MARC namespace
   define("NAME_SPACE", "http://www.loc.gov/MARC21/slim");
   //require these files..
@@ -136,10 +136,20 @@ function cals_importer_menu() {
     //'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'page arguments' => array(1),
     'weight' => 100,
-
     'access arguments' => array('parse s3 paths'),
-  
   );
+  $items['node/%node/preview-titles'] = array(
+    'page callback' => '_cals_importer_preview_repo_items',
+    'file' => "cals_importer.createrecords.inc",
+    'title' => "Preview New Titles in Collection",
+    'type' => MENU_CALLBACK,
+    //'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'page arguments' => array(1),
+    'weight' => 100,
+    'access arguments' => array('parse s3 paths'),
+  );
+  
+  
   $items['node/%node/parse-record'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_importer_update_repository_item',
@@ -825,8 +835,7 @@ function cals_importer_views_query_alter(&$view, &$query) {
 function cals_importer_node_view($node, $view_mode, $langcode) {
   switch ($node->type) {
     case "record_set":
-     
-      if (user_access("generate repo records") || user_access("parse marc records") ) {
+      if ($view_mode == 'full' && (user_access("generate repo records") || user_access("parse marc records")) ) {
         $label = t("Generate new stub Repository Records");
         if (count($node->field_parsed_nodes)) {
           $label = t("Update existing Repository Records (titles + S3 paths)");
@@ -835,7 +844,9 @@ function cals_importer_node_view($node, $view_mode, $langcode) {
           '#markup' => l($label, "node/{$node->nid}/parse-marcxml-new", array("attributes" => array("class" => "generate-stub"))), '#weight' => 10, 
         );
         $node->content['additional-text'] = array(
-          '#markup' => l($label, "node/{$node->nid}/parse-marcxml-new2", array("attributes" => array("class" => "generate-stub"))), '#weight' => 10, 
+          '#markup' => 
+       			l(t("Preview titles"), "node/{$node->nid}/preview-titles", array("attributes" => array("class" => "generate-stub"))) . ' ' . 
+       			l($label, "node/{$node->nid}/parse-marcxml-new2", array("attributes" => array("class" => "generate-stub"))), '#weight' => 10, 
         ); 
         $view = views_embed_view("repository_item_by_recordsets", "embed_1", $node->nid);
          $node->content['view-repo-items'] = array(

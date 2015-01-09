@@ -1,7 +1,7 @@
 <?php
 /**
  * @file
- * Dedupes repository items
+ * parses various marc xml elements
  */
  
 /**
@@ -20,6 +20,8 @@ function _cals_get_marc_mappings() {
     array("c", "date", "issued", "_cals_get_iso_date", ),
   );
 }
+
+
 
 function _cals_get_date_issued($xml) {
   
