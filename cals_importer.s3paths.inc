@@ -119,7 +119,7 @@ function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
   $i = $context['sandbox']['progress'];
   $total = $i + 10;
   if ($total > $context['sandbox']['max']) $total = $context['sandbox']['max'];
-  for ($i = $context['sandbox']['progress']; $i < $total; $i++) {
+  for ($i = $context['sandbox']['progress']; $i < $context['sandbox']['max']; $i++) {
  
     $current_row = $context['sandbox']['progress'];
     $data = $context['sandbox']['arr'][$current_row];
