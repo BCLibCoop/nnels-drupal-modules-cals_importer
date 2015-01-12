@@ -102,8 +102,9 @@ function _cals_parse_record_details($node) {
   }
   
   $node->title = _cals_get_truncated_value($arr['repos']['title'], 250);    
-    
-  $node->status = 1;
+  
+  //newly ingested records are set to un-published. Leave status unchanged. 
+  //$node->status = 0;
   
   _cals_delete_duplicate_oclc_numbers($node);
   
