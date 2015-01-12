@@ -212,7 +212,6 @@ function cals_importer_menu() {
   
   );
 
-
   $items['node/%node/convert-s3-paths'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_importer_update_cors_file_table',
