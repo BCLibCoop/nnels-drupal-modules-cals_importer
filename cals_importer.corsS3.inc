@@ -24,7 +24,7 @@ class NNELSStreamWrapper extends AmazonS3StreamWrapper {
   }
 	public function list_objects() {
 		$bucket = $this->bucket;
-		//$bucket = 'download.nnels.ca';
+		$bucket = 'download.nnels.ca';
 	  return $this->s3->list_objects($bucket);
 	}
 }
