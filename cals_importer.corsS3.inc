@@ -59,17 +59,18 @@ function _cals_update_filecollection_file_filesize($node, $item_id) {
 			*/
 			$ObjectsListResponse = $wrapper->list_objects($bucket);
 			
-			printAndDie($ObjectsListResponse);
+			$metadata = $wrapper->get_object_metadata();
+			
+			printAndDie($ObjectsListResponse, "METADATA", $metadata);
 			
 			$Objects = $ObjectsListResponse->body->Contents;
 			foreach ($Objects as $Object) {
         printPre($Object->Key . "\t" . $Object->Size . "\t" . $Object->LastModified . "\n");
 			}	
 			printAndDie($ObjectsListResponse);
-		
+	}
 
 }
-
  
 /**
  * Invokes Drupal's batch api to update existing s3 paths into the managed file table
