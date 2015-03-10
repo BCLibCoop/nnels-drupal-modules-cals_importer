@@ -5,6 +5,72 @@
  * CALS Importer Cors s3.
  */
  
+
+/**
+ * Simple class to piggby back off AmazonS3StreamWrapper
+ * 
+ */
+ 
+class NNELSStreamWrapper extends AmazonS3StreamWrapper {
+
+  public function get_object_metadata() {
+  	$uri = $this->uri;
+    //$this->uri = $uri;
+    return $this->getS3()->get_object_metadata($this->bucket, $this->getLocalPath($uri));
+
+  }
+  public function getS3v2() {
+    return $this->s3;
+  }
+	public function list_objects() {
+		$bucket = $this->bucket;
+		//$bucket = 'download.nnels.ca';
+	  return $this->s3->list_objects($bucket);
+	}
+}
+
+
+
+/**
+ * Invokes Drupal's batch api to update existing managed files with filesize values
+ * 
+ * @param $nid
+ *   the node id
+ */
+
+function _cals_update_filecollection_file_filesize($node, $item_id) {
+	$ent = entity_load_single('field_collection_item', $item_id);
+	
+	//	  $ent->field_s3_to_cors_update[LANGUAGE_NONE][0]['value'] == 1  &&
+	if(!empty($ent->field_s3_path) && empty($ent->field_s3_file_upload)){
+			$wrapper = new NNELSStreamWrapper;
+			$file = _cals_importer_get_file_from_filepath($ent->field_s3_path[LANGUAGE_NONE][0]['value']);
+			$uri = $file->uri;
+			$wrapper->setUri($uri);
+			
+			//$bucket = $wrapper->get
+			
+			/*
+			$s3 = $wrapper->getS3v2();
+
+			$md = $s3->get_object_metadata($bucket, $uri);
+			//$metadata = $s3->get_object_info($bucket, $uri);
+			printPre("METADATA", $md);
+			*/
+			$ObjectsListResponse = $wrapper->list_objects($bucket);
+			
+			printAndDie($ObjectsListResponse);
+			
+			$Objects = $ObjectsListResponse->body->Contents;
+			foreach ($Objects as $Object) {
+        printPre($Object->Key . "\t" . $Object->Size . "\t" . $Object->LastModified . "\n");
+			}	
+			printAndDie($ObjectsListResponse);
+		
+
+}
+
+ 
 /**
  * Invokes Drupal's batch api to update existing s3 paths into the managed file table
  * 
@@ -87,7 +153,7 @@ function _cals_update_filecollection_file($node, $item_id) {
  *   the s3 filepath
  */
 function _cals_importer_get_file_from_filepath($filepath) {
-
+	
   $filepath = str_replace("download.nnels.ca/", "", $filepath);
   $filepath = str_replace("download2.nnels.ca/", "", $filepath);
 
@@ -124,7 +190,7 @@ function _cals_importer_get_file_from_filepath($filepath) {
 		  return;
 		}
     
-    
+    dpm($file);
    	return $file;  
   }
 
@@ -279,6 +345,7 @@ function _cals_importer_populate_field_file_resource($node) {
     );
     try {
 			file_save($file);
+			dpm($filesize);
   	}
 		//catch exception
 		catch(Exception $e) {

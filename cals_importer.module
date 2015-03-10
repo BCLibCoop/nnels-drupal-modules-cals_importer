@@ -234,6 +234,20 @@ function cals_importer_menu() {
     'file' => 'cals_importer.corsS3.inc',
   
   );
+
+
+  //generate cors s3 filesize values
+  $items['admin/%node/update-filesize-field-collection'] = array(
+    'page callback' => '_cals_update_filecollection_file_filesize',
+    'title' => "Update via Field Collection",
+    'type' => MENU_CALLBACK,
+    'page arguments' => array(1,3),
+    'weight' => 100,
+    'access arguments' => array('parse s3 paths'),
+    'file' => 'cals_importer.corsS3.inc',
+  
+  );
+  
   
   /*
     
