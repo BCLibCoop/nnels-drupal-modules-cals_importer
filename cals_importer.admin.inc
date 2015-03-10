@@ -25,11 +25,11 @@ function cals_importer_config_form($form, &$form_state) {
   );
   $form['cals_importer_prefix_stopwords_narrators'] = array(
     '#type' => 'textarea',
-    '#title' => t('Prefixes to strip out of the narrator values (one per line)'),
+    '#title' => t('String to strip out of first narrator value'),
     '#default_value' => variable_get('cals_importer_prefix_stopwords_narrators'),
     '#rows' => 10,
     '#resizable' => TRUE,
-    '#description' => t('The normalizer will strip each of these prefixes out when they appear at the beginning of the narrator field.'),
+    '#description' => t('The normalizer will strip out the whole string that matches in the first narrator entry. Will not strip subsequent narrator entries.'),
     '#required' => TRUE,   
   );
   return system_settings_form($form);
