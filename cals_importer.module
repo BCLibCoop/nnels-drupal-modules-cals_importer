@@ -248,7 +248,14 @@ function cals_importer_menu() {
   
   );
   
-  
+  $items['admin/content/cals/files/update-s3-filesizes'] = array(
+    'title' => 'Update S3 Filesizes',
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_importer_batch_update_filesizes',
+    'file' => 'cals_importer.corsS3.inc',
+    'type' => MENU_CALLBACK,
+  );
+    
   /*
     
 
@@ -459,7 +466,6 @@ function cals_importer_action_info() {
       'configurable' => FALSE,
       'triggers' => array('any'),
     ),
-    //_cals_run_batch_update_field_collection_s3_path
     //batch copy existing S3 paths to Field Collection "field_file_resource"
     '_cals_run_batch_update_field_collection_s3_path' => array(
       'label' => t('CALS: Copy S3 paths to Field Collection'),
@@ -467,10 +473,15 @@ function cals_importer_action_info() {
       'configurable' => FALSE,
       'triggers' => array('any'),
     ),
-  
+    //batch update missing file-size values in Field Collection "field_file_resource"
+    '_cals_run_batch_update_field_collection_s3_filesizes' => array(
+      'label' => t('CALS: Batch update S3 Filesize Values'),
+      'type' => 'entity',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),  
   );
 }
-
 
 
 /**

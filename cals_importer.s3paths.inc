@@ -6,26 +6,26 @@
  */
 
 
-
+/**
+ * Sets up the batch process
+ * 
+ * @param $node
+ *  
+ */
 function _cals_batch_update_s3_paths_by_node($node) {
-
   global $user;
   $arr = _cals_get_array_csv($node->nid);
-  //printAndDie($arr);
   if (empty($arr)) {
     drupal_set_message(t("Problem parsing the file: can't access the file or generate an array. This is probably due to an issue reading / opening the file."), "error");
     drupal_goto("node/" . $node->nid);
   }
   else {
-    //check first row to ensure well structured.
-    $tmp = strpos($arr[0][1], "s3://");
+    $tmp = strpos($arr[0][1], "s3://"); //check first row to ensure well structured.
     if ($tmp === FALSE) {
-    
-	    drupal_set_message(t("Problem parsing the file: please check its structure, esp. the S3 paths."), "error");
+      drupal_set_message(t("Problem parsing the file: please check its structure, esp. the S3 paths."), "error");
       drupal_goto("node/" . $node->nid);
     }
   }
-
   $batch = array(
     'title' => t('Update S3 Paths'),
     //'operations' => array('_cals_run_batch_update_s3_path', array($nid, $arr) ),
@@ -36,7 +36,7 @@ function _cals_batch_update_s3_paths_by_node($node) {
     'error_message' => t('Error!'),
     'finished' => '_cals_batch_update_s3_path_finished',
   );
-	($batch);
+  ($batch);
   batch_set($batch);
   batch_process('node/' . $node->nid);
 
@@ -48,7 +48,6 @@ function _cals_batch_update_s3_paths_by_node($node) {
  * @param $nid
  *   the node id
  */
- 
 function _cals_batch_update_s3_paths($nid) {
   global $user;
   $null_path = "admin/content/cals/s3-record-sets";
@@ -57,8 +56,6 @@ function _cals_batch_update_s3_paths($nid) {
   
   //get array from csv file. Pass this into the initial batch
   $arr = _cals_get_array_csv($nid);
-  
-  
   if (empty($arr)) {
     drupal_set_message(t("Problem parsing the file: can't access the file or generate an array. This is probably due to an issue reading / opening the file."), "error");
     drupal_goto($null_path);
@@ -67,13 +64,10 @@ function _cals_batch_update_s3_paths($nid) {
     //check first row to ensure well structured.
     $tmp = strpos($arr[0][1], "s3://");
     if ($tmp === FALSE) {
-    
-	    drupal_set_message(t("Problem parsing the file: please check its structure, esp. the S3 paths."), "error");
+      drupal_set_message(t("Problem parsing the file: please check its structure, esp. the S3 paths."), "error");
       drupal_goto($null_path);
     }
   }
-  
-
   $batch = array(
     'title' => t('Update S3 Paths'),
     //'operations' => array('_cals_run_batch_update_s3_path', array($nid, $arr) ),
@@ -84,7 +78,7 @@ function _cals_batch_update_s3_paths($nid) {
     'error_message' => t('Error!'),
     'finished' => '_cals_batch_update_s3_path_finished',
   );
-	($batch);
+  ($batch);
   batch_set($batch);
   batch_process('admin/content/cals/s3-record-sets');
 }
@@ -111,7 +105,7 @@ function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
     $context['sandbox']['current'] = 0;
     $context['sandbox']['node'] = node_load($nid);
    
-   	//_cals_delete_s3_mapping($context['sandbox']['node']);
+    //_cals_delete_s3_mapping($context['sandbox']['node']);
     
     //watchdog('import', 'update s3 paths');
     //dpm($arr);
@@ -153,7 +147,7 @@ function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
     else {
       drupal_set_message(t("%c. could not find %s"), array('%c' => $current_row, '%s' => $sysnum));
     }
-		_cals_populate_s3_mapping($context['sandbox']['node'], $nid2, $path, $sysnum);
+    _cals_populate_s3_mapping($context['sandbox']['node'], $nid2, $path, $sysnum);
     
     $context['sandbox']['progress']++; // Used to keep track of rows processed
     //array_shift($context['sandbox']['arr']);
@@ -194,8 +188,8 @@ function _cals_populate_s3_mapping($node, $nid, $path, $sysnum) {
 
   $fc_item->save(); // Save field-collection item.
   node_save($node);
-	drupal_set_message( t("updated field collection: sysnum = @sysnum | nid = @nid", 
-		array('@sysnum' => $sysnum, '@nid' => $nid) ) );
+  drupal_set_message( t("updated field collection: sysnum = @sysnum | nid = @nid", 
+    array('@sysnum' => $sysnum, '@nid' => $nid) ) );
 
 }
 /**
@@ -228,16 +222,16 @@ function _cals_get_array_csv($nid) {
 
   $records = $node->field_s3_paths[LANGUAGE_NONE][0]['value'];
   $arr = array();
-	//printAndDie($arr);
-	//$records = explode("\n", $records);
-	$records = str_getcsv($records, "\n");
-	foreach($records as $k => $v) {
-	  if($k > 0) $arr[] = str_getcsv($v, "\t");	
-	}
-	return $arr;
+  //printAndDie($arr);
+  //$records = explode("\n", $records);
+  $records = str_getcsv($records, "\n");
+  foreach($records as $k => $v) {
+    if($k > 0) $arr[] = str_getcsv($v, "\t"); 
+  }
+  return $arr;
   //NOTE TO SELF, why does this return here???
   
- 	/* */
+  /* */
   $file = drupal_realpath($node->field_file_csv[LANGUAGE_NONE][0]['uri']);
   
   $row = 1;   
@@ -284,95 +278,4 @@ function _cals_get_array_csv_by_file($file) {
   
   
   return $arr;
-}
-
-
-
-/**
- * TO DEPRECATE?: Updates the s3 paths
- */
-function _cals_load_s3_file($start, $limit) {
-
-  $nid = arg(4);
-  $file = drupal_get_path('module', "cals_importer") . "/20130717-cals-systemnumber-file-all-dave.csv";
-  $arr = array();
-  $row = 1;
-  $num_updated = 0;
-  if (($handle = fopen($file, "r")) !== FALSE) {
-      while (($data = fgetcsv($handle, 1000, "\t")) !== FALSE) {
-        if ($row > 1) {
-          $arr[] = $data;
-          $bibid = $data[0];
-          $sysnum = $data[1];
-          $path = $data[2];
-          $nid = _cals_get_node_by_sysnum($sysnum);
-          if ($nid > 0) {
-            $node = node_load($nid);
-            //
-            //$node->field_system_control_number[LANGUAGE_NONE][]['value'] = $sysnum;
-            
-            $node->field_s3_path[LANGUAGE_NONE][]['value'] = $path;
-            $node->field_bibid[LANGUAGE_NONE][0]['value'] = $bibid;
-            node_save($node);
-            $num_updated++;
-            //drupal_set_message("saved {$node->title}: $path");
-          }
-
-        }
-        $row++;
-      }
-      fclose($handle);
-      return "updated {$num_updated}";
-  }
-  else {
-    return "can't find file??";
-  
-  }
-
-}
-/**
- * TO DEPRECATE?: Updates the s3 paths
- */
-
-function _cals_update_s3_paths() {
-
-  //require_once(drupal_get_path('module', "cals_importer") . "/cals_importer.mappings.inc");
-  $file = drupal_get_path('module', "cals_importer") . "/20130717-cals-systemnumber-file-all-dave.csv";
-  $arr = array();
-  $row = 1;
-  $num_updated = 0;
-
-  if (($handle = fopen($file, "r")) !== FALSE) {
-      while (($data = fgetcsv($handle, 1000, "\t")) !== FALSE) {
-        if ($row > 1) {
-          $arr[] = $data;
-          $bibid = $data[0];
-          $sysnum = $data[1];
-          $path = $data[2];
-          $nid = _cals_get_node_by_sysnum($sysnum);
-          if ($nid > 0) {
-            $node = node_load($nid);
-            //
-            //$node->field_system_control_number[LANGUAGE_NONE][]['value'] = $sysnum;
-            
-            $node->field_s3_path[LANGUAGE_NONE][]['value'] = $path;
-            $node->field_bibid[LANGUAGE_NONE][0]['value'] = $bibid;
-            node_save($node);
-            $num_updated++;
-            //drupal_set_message("saved {$node->title}: $path");
-          }
-
-        }
-        $row++;
-      }
-      fclose($handle);
-      return "updated {$num_updated}";
-  }
-  else {
-    return "can't find file??";
-  
-  }
-
-
-
 }

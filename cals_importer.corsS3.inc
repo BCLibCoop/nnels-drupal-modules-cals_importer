@@ -4,6 +4,9 @@
  * @file
  * CALS Importer Cors s3.
  */
+
+
+
  
 
 /**
@@ -12,65 +15,211 @@
  */
  
 class NNELSStreamWrapper extends AmazonS3StreamWrapper {
-
-  public function get_object_metadata() {
-  	$uri = $this->uri;
-    //$this->uri = $uri;
-    return $this->getS3()->get_object_metadata($this->bucket, $this->getLocalPath($uri));
-
+  public function get_filesize() {
+    $size = $this->getS3()->get_object_filesize($this->bucket, $this->getLocalPath($uri));
+    return $size;
   }
+ 
   public function getS3v2() {
     return $this->s3;
   }
 	public function list_objects() {
 		$bucket = $this->bucket;
-		$bucket = 'download.nnels.ca';
+		//$bucket = 'download.nnels.ca';
+		//$this->s3->enable_path_style();
 	  return $this->s3->list_objects($bucket);
 	}
 }
 
 
+/**
+ * bulk operation action to update file-size values
+ */
+
+function _cals_run_batch_update_field_collection_s3_filesizes(&$entity, $context = array()) {
+  if(!empty($entity->fid)) {
+ 		$file = file_load($entity->fid); //not sure this is required, could probably update the entity directly
+  	_cals_update_filesize_from_s3_value($file);
+  }
+} 
 
 /**
- * Invokes Drupal's batch api to update existing managed files with filesize values
+ * update the filesize value based
+ *
+ * @param $file
+ */
+function _cals_update_filesize_from_s3_value($file) {
+	//instantiate class
+	$wrapper = new NNELSStreamWrapper;
+	
+	$uri = $file->uri;
+	$wrapper->setUri($uri);
+	$filesize = $wrapper->get_filesize();
+	if( $filesize != $file->filesize) {
+		if(empty($filesize)) $filesize = 1;
+
+	  $file->filesize = $filesize;
+	  //file_save($file) overrides and resets filesize back to 0, so let's process as below:
+    drupal_write_record('file_managed', $file, 'fid');
+    module_invoke_all('file_update', $file);
+    module_invoke_all('entity_update', $file, 'file');
+    $msg =  ($filesize == 1)? t("S3 Object not found. Filesize set to 1 byte") : t("Filesize updated"); 
+		$msg .=  " (" . $file->filename . ": " . $file->filesize . ")";
+
+	}
+	drupal_set_message($msg);
+}
+
+
+/**
+ * Updates single field collection (file_resource) filesize values
  * 
  * @param $nid
  *   the node id
+ * @param $item_id
+ *   the field collection item id value
  */
 
 function _cals_update_filecollection_file_filesize($node, $item_id) {
+
 	$ent = entity_load_single('field_collection_item', $item_id);
+	//printPre($ent->field_s3_file_upload['und'][0]['filename'], $ent->field_s3_path[LANGUAGE_NONE][0]['value']);
 	
 	//	  $ent->field_s3_to_cors_update[LANGUAGE_NONE][0]['value'] == 1  &&
-	if(!empty($ent->field_s3_path) && empty($ent->field_s3_file_upload)){
-			$wrapper = new NNELSStreamWrapper;
-			$file = _cals_importer_get_file_from_filepath($ent->field_s3_path[LANGUAGE_NONE][0]['value']);
-			$uri = $file->uri;
-			$wrapper->setUri($uri);
-			
-			//$bucket = $wrapper->get
-			
-			/*
-			$s3 = $wrapper->getS3v2();
+	if(!empty($ent->field_s3_file_upload['und'][0]['filename']) && empty($ent->field_s3_file_upload['und'][0]['filesize'])){
 
-			$md = $s3->get_object_metadata($bucket, $uri);
-			//$metadata = $s3->get_object_info($bucket, $uri);
-			printPre("METADATA", $md);
-			*/
-			$ObjectsListResponse = $wrapper->list_objects($bucket);
-			
-			$metadata = $wrapper->get_object_metadata();
-			
-			printAndDie($ObjectsListResponse, "METADATA", $metadata);
-			
-			$Objects = $ObjectsListResponse->body->Contents;
-			foreach ($Objects as $Object) {
-        printPre($Object->Key . "\t" . $Object->Size . "\t" . $Object->LastModified . "\n");
-			}	
-			printAndDie($ObjectsListResponse);
+		if(empty($ent->field_s3_path)) {
+			$file = file_load($ent->field_s3_file_upload['und'][0]['fid']);
+		}
+		else {
+		  $file = _cals_importer_get_file_from_filepath($ent->field_s3_path[LANGUAGE_NONE][0]['value']);
+		}
+		_cals_update_filesize_from_s3_value($file);
 	}
+	else {
+	  dpm($ent);
+	  return "oops nothing to update here!";
+	}
+	drupal_goto("node/" . $node->nid);
+	
 
 }
+
+
+
+/**
+ * import / create skeletal marc records, i.e., just the title
+ *
+ * @param $node
+ *   the node passed to the parser
+ */
+function _cals_importer_batch_update_filesizes($node) {
+  global $user;
+	$wrapper = new NNELSStreamWrapper;
+	$ObjectsListResponse = $wrapper->list_objects();
+	$arr = array();
+	$Objects = $ObjectsListResponse->body->Contents;
+	foreach ($Objects as $Object) {
+		printPre($Object->Key[0]);
+	  $arr[] = array($Object[0]);
+	 // printPre($Object->Key);
+	}	
+	printAndDie($arr, $Objects);	
+  $batch = array(
+    'title' => t('Update Filesizes'),
+    'operations' => array(array('_cals_importer_filesizes_batch', array($array)), //unfortunately, we can't pass xml in this way
+    
+    ),
+    'progress_message' => t('Update. Operation @current out of @total.'),
+    'error_message' => t('Error!'),
+    'finished' => '_cals_importer_create_repo_items_finished',
+  );
+  //($batch);
+  batch_set($batch);
+  batch_process("node/" . $node->nid);
+}  
+
+
+/**
+ * The main batch process to update filesizes
+ *   
+ * @param $node
+ *   the node, i.e., the recordset node that contains the file being parsed
+ *
+ */
+ 
+function _cals_importer_filesizes_batch($node, &$context) {
+  //$limit = 400; //10;
+  if (empty($context['sandbox']['progress']) ) {
+  	
+    $context['sandbox']['progress'] = 0;
+    $context['sandbox']['xml'] = ''; //$xml;
+    $context['sandbox']['current'] = 0;
+    $context['sandbox']['node'] = $node; //$node; // node_load($nid);
+  	$file = drupal_realpath($node->field_marc_xml_file[LANGUAGE_NONE][0]['uri']); // FILE_FOLDER . ;
+  	$xml = simplexml_load_file($file); //load the file
+  	$context['sandbox']['xml'] = $xml;
+  	$context['sandbox']['max'] = $xml->children(NAME_SPACE)->count();
+
+  }
+ // $i = $context['sandbox']['progress'];
+  $total = $context['sandbox']['progress'] + $limit;
+	$pnode = $context['sandbox']['node']; //parent node, i.e., the record set node
+	$xml = $context['sandbox']['xml'];
+	
+  if ($total > $context['sandbox']['max']) $total = $context['sandbox']['max']; //reset total to max on final loop
+  
+  for ($i = $context['sandbox']['progress']; $i < $context['sandbox']['max']; $i++) {
+  	$record = $xml->children(NAME_SPACE)->$i;
+		
+		//builds and saves the new node.	
+		$n = _cals_build_skeleton_node($record, $pnode);
+
+    $result = "Skeletal record added. ";
+		
+		 // Update our progress information.
+    $context['sandbox']['progress']++;
+    $context['results'][] = check_plain($n->title); // Track nodes updated
+    $context['message'] = t('Now processing %node', array('%node' => $n->title));
+		dpm($context['sandbox']['progress'] . " of " . $context['sandbox']['max'] . ": " . $n->title );
+
+
+    if($context['sandbox']['progress'] === $context['sandbox']['max']) {
+  		$pnode->field_status[LANGUAGE_NONE][0]['value'] = 2;
+		  //save one last time.
+		  node_save($pnode);
+		  $num_records = count($context['sandbox']['parsed']);
+ 			dpm($context['sandbox']);
+		  
+		  /*
+		  $vars = array("items" => $context['sandbox']['max'] , "title" => "parsed list: $num_records records", "type" => "ol", "attributes" => array());
+		  $vars = theme_item_list($vars); 
+		  dpm(filter_xss($vars, $allowed_tags = array('a', 'em', 'strong', 'cite', 'blockquote', 'code', 'ul', 'ol', 'li', 'dl', 'dt', 'dd')));
+     */
+    }
+   
+
+    
+  }
+	if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
+	  $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
+	}
+}
+/**
+ * Finish batch: create records
+ */
+function _cals_importer_filesizes_finished($success, $results, $operations) {
+  if ($success) {
+    $message = format_plural(count($results), 'One node updated', '@count nodes created / updated.');
+  } 
+  else {
+    $message = t('Finished with an error.');
+  }
+  drupal_set_message($message);
+  //watchdog('update', 's3 paths updated');
+}
+
+
  
 /**
  * Invokes Drupal's batch api to update existing s3 paths into the managed file table
