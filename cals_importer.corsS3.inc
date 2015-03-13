@@ -60,11 +60,9 @@ function _cals_update_filesize_from_s3_value($file) {
 
 	  $file->filesize = $filesize;
 	  //file_save($file) overrides and resets filesize back to 0, so let's process as below:
-	  /*
     drupal_write_record('file_managed', $file, 'fid');
     module_invoke_all('file_update', $file);
     module_invoke_all('entity_update', $file, 'file');
-    */
     $msg =  ($filesize == 1)? t("S3 Object not found. Filesize set to 1 byte") : t("Filesize updated"); 
 
 	}
