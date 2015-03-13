@@ -51,7 +51,6 @@ function _cals_run_batch_update_field_collection_s3_filesizes(&$entity, $context
 function _cals_update_filesize_from_s3_value($file) {
 	//instantiate class
 	$wrapper = new NNELSStreamWrapper;
-	
 	$uri = $file->uri;
 	$wrapper->setUri($uri);
 	$filesize = $wrapper->get_filesize();
