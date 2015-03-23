@@ -275,19 +275,18 @@ function _cals_update_filecollection_file($node, $item_id) {
 
 	if(!empty($ent->field_s3_path) && empty($ent->field_s3_file_upload)){
 
-			$file = _cals_importer_get_file_from_filepath($ent->field_s3_path[LANGUAGE_NONE][0]['value']);
-			$file2 = (array)$file; //cast to array 
-			$file2['display'] = 1; //set file to display
-
-	    try {
-			  $ent->field_s3_file_upload[LANGUAGE_NONE][0] = $file2;
-			  entity_save('field_collection_item', $ent);
-        node_save($node);  //not certain if this is necessary?
-	    } catch (Exception $e) {
-	      printAndDie($e->getMessage());
-	      drupal_set_message($e->getMessage());
-	      watchdog('my_error', $e->getMessage());
-	    }
+		$file = _cals_importer_get_file_from_filepath($ent->field_s3_path[LANGUAGE_NONE][0]['value']);
+		$file2 = (array)$file; //cast to array 
+		$file2['display'] = 1; //set file to display
+    try {
+		  $ent->field_s3_file_upload[LANGUAGE_NONE][0] = $file2;
+		  entity_save('field_collection_item', $ent);
+      node_save($node);  //not certain if this is necessary?
+    } catch (Exception $e) {
+      //printAndDie($e->getMessage());
+      drupal_set_message($e->getMessage());
+      //watchdog('my_error', $e->getMessage());
+    }
 
 			
 	}

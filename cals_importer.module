@@ -23,17 +23,13 @@
   module_load_include('inc', 'cals_importer', 'cals_importer.corsS3');
   module_load_include('inc', 'entity', 'includes/entity.controller');
 
-
-
-
 /**
  * Implements hook_menu().
  */
 function cals_importer_menu() {
   $items = array();
   
-  
-   $items['admin/config/cals_importer/normalization'] = array(
+  $items['admin/config/cals_importer/normalization'] = array(
     'title' => 'Configure normalization settings',
     'description' => 'Configuration for the normalization settings in CALS IMPORTER',
     'page callback' => 'drupal_get_form',
