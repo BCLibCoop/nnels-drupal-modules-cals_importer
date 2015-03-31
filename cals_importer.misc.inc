@@ -237,7 +237,7 @@ function _cals_get_keyword_index_values($arr, $entries) {
 
 }
 function _cals_get_truncated_value($value, $length) {
-  if (strlen($value) > $length) return trim(substr($value, 0, $length) . "...");
+  if (strlen($value) > $length) return truncate_utf8($value, $length, FALSE, TRUE); //trim(substr($value, 0, $length) . "...");
   return trim($value);
 }
 
@@ -267,9 +267,6 @@ function _cals_get_subject_value($value, $ind) {
 //e.g., field_isbn, 50
 
 function _cals_increase_field_size($fieldname = "field_isbn", $size = "30") {
-
-  //printAndDie($fieldname, $size);
-
   $field_to_update = $fieldname; //'field_text_field_to_extend'; //Replace with field slug
   
   $new_chars = $size; //'500';  //Replace with extended character limit

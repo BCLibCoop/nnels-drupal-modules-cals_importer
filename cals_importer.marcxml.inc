@@ -95,14 +95,13 @@ function _cals_parse_record_details($node) {
   
   //language
   _cals_importer_get_isolanguage_from_marcxml($arr, $xml);
-
   //get the rest of the fields by looping thru the record
   foreach ($xml->children(NAME_SPACE) as $record) {
     _cals_importer_get_array_from_marcxml($record, $arr);
   }
   
   $node->title = _cals_get_truncated_value($arr['repos']['title'], 250);    
-  
+
   //newly ingested records are set to un-published. Leave status unchanged. 
   //$node->status = 0;
   
@@ -155,15 +154,21 @@ function _cals_parse_record_details($node) {
     }
   
   }
+
   //save the populated node
   node_save($node);
+
+  
   //populate the field collections
   _cals_importer_populate_repos_item_fieldcollections($node, $arr_tax, $arr['fc']);
+  
+
+  
 	$action['description'] = "";
   $action['activity'] = 2;
   _cals_importer_update_admin_audit($node,  $action);
 	$action['description'] = "";
   $action['activity'] = 3;
   _cals_importer_update_admin_audit($node,  $action);
-  
+
 }

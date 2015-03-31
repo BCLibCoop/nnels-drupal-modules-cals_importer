@@ -153,7 +153,7 @@ function cals_importer_menu() {
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'page arguments' => array(1),
-    'weight' => 100,
+    'weight' => 50,
     'file' => "cals_importer.marcxml.inc",
   
   );
@@ -609,16 +609,9 @@ function cals_importer_form_alter(&$form, &$form_state, $form_id) {
 
 }
 
-function cals_importer_entity_presave($entity, $type) {
-  if ($type == 'field_collection_item' && $entity->field_name == 'field_file_resource') {
-    //printAndDie($type, $entity);
-  }
-}
-
  
 function _cals_importer_s3_cors_field_submit($form, &$form_state){
   $filepath = "NO";
-  //printAndDie($form_state['values']['field_s3_to_cors_update'][LANGUAGE_NONE][0]['value']);
   if($form_state['values']['field_s3_to_cors_update'][LANGUAGE_NONE][0]['value'] == 1) {
     if(isset($form_state['values']['nid']) && !empty($form_state['values']['field_s3_path'])) {
       $node = node_load($form_state['values']['nid']); 
@@ -672,9 +665,6 @@ function _cals_importer_query_duplicate_titles($type) {
   if(array_key_exists($type, $arr)) {
     $field = $arr[$type]['field'];
     $tbl = $arr[$type]['tbl'];
-    //printAndDie("HERE?", $type);
-  
-    //, $field as field
     $rs = db_query("select entity_id as nid
       from {" . $tbl . "} 
       where $field != '' and $field
@@ -728,9 +718,6 @@ function cals_importer_views_query_alter(&$view, &$query) {
             "value" => $vals,
             "operator" => "in",
       );      
-      
-      //printAndDie($query);  
-    
       break;
       
     //isbn duplicates

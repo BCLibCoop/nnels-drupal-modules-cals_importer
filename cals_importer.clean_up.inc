@@ -62,9 +62,6 @@ function _cals_add_856_tag($node) {
   $xml_string = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
   $str = '<marc:datafield tag="856" ind1="4" ind2="1"><marc:subfield code="u">https://nnels.ca/node/' . $node->nid .
     '</marc:subfield></marc:datafield>';
-   
-  //printAndDie($node); 
-    
   if (strpos($xml_string, $str) ) {
     drupal_set_message(t("Did not update XML string for %string: 856 tag already included") , array('%string' => $node->title));
     $node->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] = 1;
@@ -413,10 +410,10 @@ function _cals_importer_strip_square_brackets(&$node, $field) {
   //$str = str_replace(array("[", "]"), "", $str);
   if($field == 'title') {
     $node->title = str_replace(array("[", "]"), "", $node->title);
-    $node->title_field[LANGUAGE_NONE][$k]['value'] = $node->title;
+    $node->title_field[LANGUAGE_NONE][0]['value'] = $node->title;
   }
   else {
-    foreach($node->{$field} as $k => $v) {
+    foreach($node->{$field}[LANGUAGE_NONE] as $k => $v) {
       $tmp = str_replace(array("[", "]"), "", $v['value']);
       if($tmp != $node->{$field}[LANGUAGE_NONE][$k]['value']) $node->{$field}[LANGUAGE_NONE][$k]['value'] = $tmp;
     }

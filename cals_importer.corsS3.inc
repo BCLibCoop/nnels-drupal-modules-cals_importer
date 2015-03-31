@@ -127,7 +127,6 @@ function _cals_importer_batch_update_filesizes($node) {
 	  $arr[] = array($Object[0]);
 	 // printPre($Object->Key);
 	}	
-	printAndDie($arr, $Objects);	
   $batch = array(
     'title' => t('Update Filesizes'),
     'operations' => array(array('_cals_importer_filesizes_batch', array($array)), //unfortunately, we can't pass xml in this way
@@ -283,15 +282,10 @@ function _cals_update_filecollection_file($node, $item_id) {
 		  entity_save('field_collection_item', $ent);
       node_save($node);  //not certain if this is necessary?
     } catch (Exception $e) {
-      //printAndDie($e->getMessage());
       drupal_set_message($e->getMessage());
       //watchdog('my_error', $e->getMessage());
     }
-
-			
 	}
-	//printAndDie($node);
-
 	drupal_goto("node/" . $node->nid);
 
 }

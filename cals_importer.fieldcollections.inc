@@ -164,23 +164,23 @@ function _cals_get_entity_value($key, $arr, $arr_tax) {
  */
 function _cals_delete_existing_field_collection_items($node, $keys) {
   $ids = array();
-
+	
   foreach($keys as $field) {
     if (isset($node->{$field}[LANGUAGE_NONE]) ) {
       //collection field values for multiple deletion!
       foreach( $node->{$field}[LANGUAGE_NONE] as $v) {
-        $ids[] = $v['value']; 
+        //$ids[] = $v['value']; 
+        $fci = field_collection_item_load($v['value']);
+        if($fci) $fci->delete();
       }
       unset($node->{$field}[LANGUAGE_NONE]);    
-      //printPre($node->{$field});
-    
     }
     
   }
-  // Delete field collection items.
  
-  if (count($ids)) entity_delete_multiple('field_collection_item', $ids);
-  return $node;
+ // Delete field collection items. Commented out due to bug reported here: https://www.drupal.org/node/2384323
+ //entity_delete_multiple('field_collection_item', $ids);
+ return $node;
 
 
 }
@@ -199,13 +199,11 @@ function _cals_delete_existing_field_collection_items($node, $keys) {
  *
  */ 
 function _cals_importer_populate_repos_item_fieldcollections( $node, $arr_tax, $arr ) {
-  
   foreach($arr as $k => $v) {
     $values = array();
     //run thru a switch so we can isolate fields that still
     //need to be worked on. Later, can remove switch? 
     switch($k) {
-    
       case "field_dc_subject":
       case "field_dc_relation":
       case "field_cataloguing_agency":
@@ -213,19 +211,12 @@ function _cals_importer_populate_repos_item_fieldcollections( $node, $arr_tax, $
       case "field_dc_coverage":
       case "field_date":
         $values = _cals_get_entity_value($k, $v, $arr_tax);
-        //if($k == 'field_dc_subject') printAndDie($values);
-        //printPre("ya", $v);
         break;
-
-    
-      default:
+		
+		  default:
         printAndDie(__FUNCTION__, $k, $v);
         break;
-    
-      
-    
     }
-    
     if (count($values)) {
       foreach ($values as $value) {
         if (is_array($value)) {
@@ -240,7 +231,7 @@ function _cals_importer_populate_repos_item_fieldcollections( $node, $arr_tax, $
       
 
   }
-  
+
     
 
 }

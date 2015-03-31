@@ -559,7 +559,7 @@ function _cals_get_value_from_tag($tags, &$arr) {
       case 245:
         if ($code == 'a') $arr['repos']['title'] =  $str;
         if ($code == 'b') $arr['repos']['title'] .=  " " . $str;
-
+				break;
       /**
       * COVERAGE.SPATIAL: 
       *   651 #0 $a: Geo Name indicator 0 = lcsh; 6 = Répertoire de vedettes-matièr
@@ -570,8 +570,9 @@ function _cals_get_value_from_tag($tags, &$arr) {
           
       case "008":
         //field collection
+        $substr = substr($str, 15, 3); 	
         $arr['fc']['field_dc_coverage'][] = array(
-          "field_value" => substr($str, 15, 3), 
+          "field_value" => $substr, 
           "field_dc_coverage_type" => "Spatial",
           "field_dc_coverage_scheme" => "http://www.loc.gov/marc/countries",
           "field_marc_tag" => $tag,
@@ -656,10 +657,7 @@ function _cals_get_value_from_tag($tags, &$arr) {
             $arr['repos']["field_system_control_number"][] = $str;
           }
         } 
-        
-        
-        //printAndDie("HERE", strpos($str, "(OCoLC)"), $arr);
-        
+		
         break;  
 
       //body field; description
