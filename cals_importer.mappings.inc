@@ -551,8 +551,6 @@ function _cals_get_value_from_tag($tags, &$arr) {
   foreach ($tags as $k => $v) {
     ${$k} = $v;
   }
-
-  
   switch ($tag) {
  
       //main title  
