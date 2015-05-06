@@ -75,8 +75,8 @@ function _cals_parse_record_details($node) {
   //let's grab date issued
   $date_issued =  _cals_get_date_issued($xml);
   
-  if (!empty($date_issued)) 
-    $arr['fc']['field_date'][] = array("field_qualifier_date" => "Issued", "field_dc_date" => $date_issued);
+  if (!empty($date_issued)) $arr['fc']['field_date'][] = 
+    array("field_qualifier_date" => "Issued", "field_dc_date" => $date_issued);
     
   //descriptions
   _cals_get_descriptors_from_marc($arr, $xml);
@@ -88,10 +88,11 @@ function _cals_parse_record_details($node) {
   _cals_get_commom_fields_from_marc($arr, $xml);
 
   //subjects
-  _cals_get_subject_from_marc($arr, $xml);
+  _cals_get_subject_from_marc($arr, $node, $xml, $vid = $arr_tax['Subject']);
   
   //genre
   _cals_get_genre_from_marc($arr, $xml);
+  
   
   //language
   _cals_importer_get_isolanguage_from_marcxml($arr, $xml);
@@ -109,7 +110,7 @@ function _cals_parse_record_details($node) {
   
   //delete the field collections so we have a fairly stripped down node if reparsing
   $node = _cals_delete_existing_field_collection_items($node, array_keys($arr['fc']));
-
+	
   foreach ($arr['repos'] as $k => $v) {
 
     if (is_array($v)) {
@@ -122,8 +123,16 @@ function _cals_parse_record_details($node) {
       }
     }
     else {
-      ($k == "title") ? $node->{$k} = $v : $node->{$k}[LANGUAGE_NONE][]['value'] = $v; 
+    	switch($k) {
+    	  case "title":
+    	    $node->{$k} = $v;
+    	    break;
+    	  default:
+    	    $node->{$k}[LANGUAGE_NONE][]['value'] = $v;
+    	    break;
+    	}
     }
+    //printAndDie($node);
 		//normalize fields
 		switch($k) {
 		  case "title":
@@ -144,17 +153,27 @@ function _cals_parse_record_details($node) {
   } 
 
 
-  //genre
+  //genre / subjects
   if (array_key_exists("repos_tf", $arr) ) {
-    foreach ($arr['repos_tf']['field_genre'] as $k => $v) {
+  	$node->field_genre[LANGUAGE_NONE] = array();
+    foreach($arr['repos_tf']['field_genre'] as $k => $v) {
       $vid = $arr_tax['Genre'];
       $name = $v['value'];
       $tid = _cals_get_tid_by_name($vid, $name);
       $node->field_genre[LANGUAGE_NONE][$k]['tid'] = $tid;
     }
+  	$node->field_subject[LANGUAGE_NONE] = array();
+    asort($arr['repos_tf']['field_subject']);
+    foreach($arr['repos_tf']['field_subject'] as $k => $v) {
+      $vid = $arr_tax['Subject'];
+      $tid = _cals_get_tid_by_name($vid, $v);
+      $node->field_subject[LANGUAGE_NONE][$k]['tid'] = $tid;
+    }
+      
   
   }
-
+  //printAndDie($node->field_subject, $arr['repos_tf']['field_subject']);
+	//printAndDie($arr['repos_tf'],$node->field_subject);
   //save the populated node
   node_save($node);
 

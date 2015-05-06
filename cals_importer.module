@@ -374,7 +374,14 @@ function cals_importer_action_info() {
       'configurable' => FALSE, //TRUE,
       'triggers' => array('any'),
     ),
-
+    
+    //batch copy subject field collection values to simpler subject field
+    '_cals_copy_field_collection_values_to_subjects' => array(
+      'label' => t('CALS: Copy Field Collections to Subject Field'),
+      'type' => 'node',
+      'configurable' => FALSE, //TRUE,
+      'triggers' => array('any'),
+    ),
     
     //batch update Genre, Subjects.
     '_cals_normalize_taxonomy_terms' => array(

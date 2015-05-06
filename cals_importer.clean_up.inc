@@ -102,8 +102,36 @@ function _cals_normalize_performer(&$entity, $context = array()) {
   }
 } 
 
+/**
+ * bulk operation to copy field collection values to subjects.
+ */
 
-
+function _cals_copy_field_collection_values_to_subjects(&$entity, $context = array()) {
+ 
+  if (isset($entity->nid)) {
+  	$nid = $entity->nid;
+    $node = node_load($nid);
+    $items = field_get_items('node', $node, 'field_dc_subject');
+		unset($node->field_subject[LANGUAGE_NONE]);
+		foreach ($items as $item) {
+	 		$fc = field_collection_field_get_entity($item);
+	 		$tid = $fc->field_dc_subject_value['und'][0]['tid'];
+			$term = taxonomy_term_load($fc->field_dc_subject_value['und'][0]['tid']);
+			$terms[$tid] = $term->name;
+		}
+		asort($terms);
+		foreach($terms as $tid => $name) {
+		  $node->field_subject[LANGUAGE_NONE][]['tid'] = $tid;
+		  $names[] = $name;
+		}
+		$names = implode(" | ", $names);
+    node_save($node);
+    $msg = l($node->title, "node/" . $nid) . " updated with " . count($terms) . " subjects: " . $names;
+    drupal_set_message($msg);
+  }//end main if
+ 
+  return "";
+}
 
 
 
@@ -492,7 +520,7 @@ function _cals_importer_normalize_creators_preview_query($node) {
   _cals_importer_strip_trailing_periods($node);
   //dpm($node->field_dc_creator);
   foreach($node->field_dc_creator[LANGUAGE_NONE] as $k => $author) {
-    drupal_set_message("ORIGINAL: " . $author['safe_value'] . " | NORMALIZED: " . $author['value']);
+    //drupal_set_message("ORIGINAL: " . $author['safe_value'] . " | NORMALIZED: " . $author['value']);
   }
 
 }

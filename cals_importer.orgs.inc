@@ -109,7 +109,6 @@ function cals_org_emails_import_form_submit(&$form, &$form_state) {
       $first = TRUE ;
       $line = fgetcsv($handle, 4096);
       while ( $line = fgetcsv($handle, 4096) ) {
-		  //printAndDie($node);
         /**
          * we use base64_encode to ensure we don't overload the batch
          * processor by stuffing complex objects into it
@@ -119,7 +118,6 @@ function cals_org_emails_import_form_submit(&$form, &$form_state) {
       fclose($handle);
     } // we caught this in _cals_csv_form_validate()
   } // we caught this in _cals_csv_form_validate()
-	//printAndDie($batch);
   batch_set($batch);
 }
 

@@ -222,7 +222,6 @@ function _cals_get_array_csv($nid) {
 
   $records = $node->field_s3_paths[LANGUAGE_NONE][0]['value'];
   $arr = array();
-  //printAndDie($arr);
   //$records = explode("\n", $records);
   $records = str_getcsv($records, "\n");
   foreach($records as $k => $v) {

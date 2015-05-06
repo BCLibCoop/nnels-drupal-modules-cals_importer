@@ -108,8 +108,7 @@ function _cals_get_genre_from_marc(&$arr, $xml) {
   }
 }
 
-function _cals_get_subject_from_marc(&$arr, $xml) {
-
+function _cals_get_subject_from_marc(&$arr, &$node, $xml, $vid) {
   //600
   $paths = array();
   $paths[] =  "//marc:datafield[@tag='600']/marc:subfield[@code='a']";
@@ -121,9 +120,7 @@ function _cals_get_subject_from_marc(&$arr, $xml) {
   }
   
   $path = implode("|", $paths);
-  
   $tmp = $xml->xpath($path);
-  
   foreach ($tmp as $me) {
     $str = (string) $me[0];
     $str = _cals_get_truncated_value($str, 250);
@@ -135,12 +132,12 @@ function _cals_get_subject_from_marc(&$arr, $xml) {
     if (!isset($arr['repos']['field_keyword_index'])) {
       $arr['repos']['field_keyword_index'] = array(); 
       $arr['fc']['field_dc_subject'] = array();
-
     } 
     if (!in_array($str, $arr['repos']['field_keyword_index'] )) {
       $arr['repos']['field_keyword_index'][] = $str; 
+      $arr['repos_tf']['field_subject'][] = $str;
+      //$node->field_subject[LANGUAGE_NONE][]['tid'] = _cals_get_tid_by_name($vid, $str);
       $arr['fc']['field_dc_subject'][] =_cals_get_subject_value($str, $ind2);
-
     }
   }
 

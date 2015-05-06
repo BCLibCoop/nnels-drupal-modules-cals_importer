@@ -79,7 +79,6 @@ function _cals_get_entity_value($key, $arr, $arr_tax) {
           $me['field_dc_subject_scheme'][LANGUAGE_NONE][]['value'] = strtoupper($v['scheme']);
         }
         $values[] = $me;
-        //printPre($values);
         break;
     
       case "description":
@@ -228,11 +227,6 @@ function _cals_importer_populate_repos_item_fieldcollections( $node, $arr_tax, $
         }
       }
     }   
-      
-
   }
-
-    
-
 }
 
