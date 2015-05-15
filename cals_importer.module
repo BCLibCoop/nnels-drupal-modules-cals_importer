@@ -327,6 +327,10 @@ function cals_importer_permission() {
       'title' => t('Parse / Update 506 entries'),
       'description' => t(''),
     ),
+		'access normalization configuration' => array(
+      'title' => t('Access normalization configuration'),
+      'description' => t('Used to configure end of string and other types of stopwords'),
+    ),
   );
 }
 /**
