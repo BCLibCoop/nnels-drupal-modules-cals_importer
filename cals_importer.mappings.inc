@@ -21,8 +21,6 @@ function _cals_get_marc_mappings() {
   );
 }
 
-
-
 function _cals_get_date_issued($xml) {
   
   //let's grab the date issued
@@ -85,7 +83,9 @@ function _cals_get_date_from_008($str) {
   return _cals_get_iso_date(substr($str, 7, 4));
 }
 
-function _cals_get_genre_from_marc(&$arr, $xml) {
+//function _cals_get_genre_from_marc(&$arr, $xml) {
+function _cals_get_genre_from_marc($xml, $k, &$map) {
+
   //<marc:datafield tag="655" ind1=" " ind2=" ">
   $tmp = $xml->xpath("//marc:datafield[@tag='655'][@ind1=' ']/marc:subfield[@code='a']|//marc:datafield[@tag='655'][@ind2=' ']/marc:subfield[@code='a']");
 
@@ -94,21 +94,19 @@ function _cals_get_genre_from_marc(&$arr, $xml) {
       $value = (string) $me[0];
       if (!empty($value) ) {
         //if not set, add these two arrays
-        if (!isset($arr['repos']['field_keyword_index'])) {
-          $arr['repos']['field_keyword_index'] = array(); 
-          $arr['fc']['field_dc_subject'] = array();
-        } 
-      
+        if (!isset($arr['repos_tf']['field_genre'])) $arr['repos_tf']['field_genre'] = array(); 
         $arr['repos_tf']['field_genre'][] = array("scheme" => "lcsh", "value" => $value);
-        $arr['repos']['field_keyword_index'][] = _cals_get_truncated_value($value, 250);
+        
+        $map[$k]['value'][] = array("scheme" => "lcsh", "value" => $value);
+        
+        
       }
-    
     }
- 
   }
 }
 
-function _cals_get_subject_from_marc(&$arr, &$node, $xml, $vid) {
+//function _cals_get_subject_from_marc(&$arr, &$node, $xml, &$map) {
+function _cals_get_subject_from_marc($xml, $k, &$map){
   //600
   $paths = array();
   $paths[] =  "//marc:datafield[@tag='600']/marc:subfield[@code='a']";
@@ -118,121 +116,41 @@ function _cals_get_subject_from_marc(&$arr, &$node, $xml, $vid) {
   foreach ($codes as $code)  {
     $paths[] = "//marc:datafield[@tag='650']/marc:subfield[@code='" . $code . "']";
   }
-  
   $path = implode("|", $paths);
+
   $tmp = $xml->xpath($path);
   foreach ($tmp as $me) {
     $str = (string) $me[0];
     $str = _cals_get_truncated_value($str, 250);
-    $ind2 = "";
-    $atts = $me->attributes();
-    foreach ($atts as $k => $v) {
-      if ($k == 'ind2') $ind2 = (string) $v;
-    }
-    if (!isset($arr['repos']['field_keyword_index'])) {
-      $arr['repos']['field_keyword_index'] = array(); 
-      $arr['fc']['field_dc_subject'] = array();
-    } 
-    if (!in_array($str, $arr['repos']['field_keyword_index'] )) {
-      $arr['repos']['field_keyword_index'][] = $str; 
-      $arr['repos_tf']['field_subject'][] = $str;
-      //$node->field_subject[LANGUAGE_NONE][]['tid'] = _cals_get_tid_by_name($vid, $str);
-      $arr['fc']['field_dc_subject'][] =_cals_get_subject_value($str, $ind2);
-    }
+		if(!in_array($str, $map[$k]['value']) ) $map[$k]['value'][] = $str;
+    //set array, if not exists
+    if (!isset($arr['repos_tf']['field_subject'])) $arr['repos_tf']['field_subject'] = array();
+    //add to array, if string not already added (check for duplicates first).
+    if (!in_array($str, $arr['repos_tf']['field_subject'] )) $arr['repos_tf']['field_subject'][] = $str; 
   }
 
 }
 
-function _cals_old_subjects() {
- 
-
-  switch ($nah) {
-
-      /**
-      * SUBJECTS: 
-      *   600 10 $a 
-      *   610 20 $a 
-      *   630 00 $alx 
-      *   650 #0 $azvxy: indicator 0 = lcsh; 6 = Répertoire de vedettes-matièr
-      */          
-      //subjects
-      //to do: find a way to compress this code and 650... v. redundant!
-      case 600:
-        if ($code == 'a') {
-          $str = _cals_get_truncated_value($str, 250);
-          if (!isset($arr['fc']['field_dc_subject'])) $arr['fc']['field_dc_subject'] = array();
-          if (!isset($arr['repos']['field_keyword_index'])) $arr['repos']['field_keyword_index'] = array();
-          $entries = $str; //explode(".", $str);
-          
-          if (!in_array($str, $arr['repos']['field_keyword_index'] )) {
-            $arr['repos']['field_keyword_index'][] = $str; 
-            $arr['fc']['field_dc_subject'][] =_cals_get_subject_value($str, $ind2);
-          }
-
-
-          
-        } 
-    
-        break;
-      
-      case 650:
-        /**
-         *<marc:datafield tag="650" ind1=" " ind2="0">
-         * <marc:subfield code="a">Ukrainian Canadians</marc:subfield>
-         * <marc:subfield code="v">Fiction.</marc:subfield>
-         * </marc:datafield>
-        */
-                  
-          $codes = array("a", "x", "v", "y", "z");
-          if (in_array($code, $codes)) { 
-            $str = _cals_get_truncated_value($str, 250);
-            if (!isset($arr['fc']['field_dc_subject'])) $arr['fc']['field_dc_subject'] = array();
-            if (!isset($arr['repos']['field_keyword_index'])) $arr['repos']['field_keyword_index'] = array();
-            //let's split multiple subject entries that are joined by a period.
-            $entries = $str; // explode(".", $str);
-            //$arr['repos']['field_keyword_index'] = _cals_get_keyword_index_values($arr['repos']['field_keyword_index'], $entries);
-            if (!in_array($str, $arr['repos']['field_keyword_index'] )) {
-            
-              $arr['repos']['field_keyword_index'][] = $str; 
-              $arr['fc']['field_dc_subject'][] =_cals_get_subject_value($str, $ind2);
-
-            }
-
-            
-            /*
-            foreach ($entries as $entry) {
-              $entry = _cals_get_truncated_value($str, 250);
-              if (strlen(trim($entry)) && (!in_array($entry, $arr['repos']['field_keyword_index'])))) {
-                
-                $arr['repos']['field_keyword_index'][] = trim($entry);
-              }
-            }
-            */
-          } 
-        break;
- 
-  
-  }
-  
-
-
-}
-
-function _cals_get_descriptors_from_marc(&$arr, $xml) {
+//function _cals_get_descriptors_from_marc(&$arr, $xml) {
+function _cals_get_descriptors_from_marc($xml, $k, &$map) {
   
   $fields = array(500, 504, 505, 511, 516, 533, 538, 586, 595, 598, 599, 541, );
   foreach ($fields as $field) {
     $tmp = $xml->xpath("//marc:datafield[@tag='" . $field . "']/marc:subfield");
     if (count($tmp) >= 1) {
       foreach ($tmp as $me) {
-      
         $val = (string) trim($me[0]);
-  
         $arr['fc']['field_dc_description'][] = array(
           "type" => _cals_get_description_type($field), 
           "value" => $val,
           "num_char" => strlen($val),
         );
+        
+       $map[$k]['value'][] = array(
+          "type" => _cals_get_description_type($field), 
+          "value" => $val,
+          "num_char" => strlen($val),
+        ); 
       
       }
     
@@ -267,7 +185,9 @@ function _cals_get_description_type($tag) {
   return "";
 }
 
-function _cals_importer_get_isbn_sysnums_from_marc(&$arr, $xml) {
+
+//function _cals_importer_get_isbn_sysnums_from_marc(&$arr, $xml) {
+function _cals_importer_get_isbn_sysnums_from_marc($xml, $k, $map) {
 //"field_isbn" => array("key" => "repos", "datafield" => 534, "subfield" => "z"),
   $tmp = $xml->xpath("//marc:datafield[@tag='534']/marc:subfield[@code='z']");
   foreach ($tmp as $me) {
@@ -284,6 +204,7 @@ function _cals_importer_get_isbn_sysnums_from_marc(&$arr, $xml) {
 
     foreach ($tmp2 as $val2) {
       $arr['repos']['field_isbn'][] = trim($val2);
+      $map[$k]['value'][] = trim($val2);
     }
   }
   
@@ -302,14 +223,13 @@ function _cals_importer_get_isbn_sysnums_from_marc(&$arr, $xml) {
  *   an array of Drupal-ready fields
  *
  */
-function _cals_importer_get_performer_from_marcxml(&$arr, $xml) {
+//function _cals_importer_get_performer_from_marcxml(&$arr, $xml) {
 
+function _cals_importer_get_performer_from_marcxml($xml, $k, &$map) {
 
-  if(!isset($arr['fc_files'])) $arr['fc_files'] = array();
+  //if(!isset($arr['fc_files'])) $arr['fc_files'] = array();
 
   //look for 511 tags
- 
-
   $tmp = $xml->xpath("//marc:datafield[@tag='511']/marc:subfield[@code='a']");
   
   foreach ($tmp as $me) {
@@ -326,9 +246,24 @@ function _cals_importer_get_performer_from_marcxml(&$arr, $xml) {
 
     foreach ($tmp2 as $val2) {
       $arr['fc_files']['field_performer'][]['value'] = trim($val2);
+      $map[$k]['value'][] = trim($val2);
     }
   }
   
+}
+
+function _cals_importer_get_basic_values_from_marc($xml, $k, &$map, $tags) {
+  foreach($tags as $tag) {
+    $t = $tag['tag'];
+    $c = $tag['code'];
+    $path = "//marc:datafield[@tag='{$t}']/marc:subfield[@code='{$c}']";
+    $tmp = $xml->xpath($path);
+    foreach ($tmp as $me) {
+      $val = (string) trim($me[0]); 
+      $map[$k]['value'][] = (isset($tag['qualifier'])) ? array( $tag['qualifier'] => $tag['enum'], "value" => $val ) : $val;
+    }
+  } 
+  printPre(__FUNCTION__, $k, $map[$k]['value']);
 }
 
 /**
@@ -380,11 +315,13 @@ function _cals_get_commom_fields_from_marc(&$arr, $xml) {
 
   $fields = array(
   
-    "field_dc_creator" => array("key" => "repos", "datafield" => 100, "subfield" => "a"),
+    /*
+"field_dc_creator" => array("key" => "repos", "datafield" => 100, "subfield" => "a"),
     "field_dc_contributor" => array("key" => "repos", "datafield" => 700, "subfield" => "a"),
       //uniform titles: 130 0# $a, 730  0# $a 
     "field_title_alternative" => array("key" => "repos", "datafield" => 130, "subfield" => "a"),
     "field_title_alternative" => array("key" => "repos", "datafield" => 730, "subfield" => "a"),
+*/
   
       /**
       * alt titles: 
@@ -393,15 +330,19 @@ function _cals_get_commom_fields_from_marc(&$arr, $xml) {
       *   210?
       *   242?
       */
-    "field_title_alternative" => array("key" => "repos", "datafield" => 240, "subfield" => "a"),
+    /*
+"field_title_alternative" => array("key" => "repos", "datafield" => 240, "subfield" => "a"),
     "field_title_alternative" => array("key" => "repos", "datafield" => 246, "subfield" => "a"),
+*/
 
-    "field_uri" => array("key" => "repos", "datafield" => 856, "subfield" => "u"),
+    /*
+"field_uri" => array("key" => "repos", "datafield" => 856, "subfield" => "u"),
 
     //identifiers
     
     "publisher_number" => array("key" => "identifier", "datafield" => "028", "subfield" => "a"),
     "producer" => array("key" => "identifier", "datafield" => "028", "subfield" => "a"),
+*/
 
       /**
       * RELATIONS: 
@@ -413,6 +354,7 @@ function _cals_get_commom_fields_from_marc(&$arr, $xml) {
       *
       */  
 
+/*
     "field_dc_relation" => array("key" => "fc", "datafield" => 800, "subfield" => "a", 
       'qualifier' => "type", 'enum' => "IsPartOf"),
     "field_dc_relation" => array("key" => "fc", "datafield" => 830, "subfield" => "a", 
@@ -420,17 +362,18 @@ function _cals_get_commom_fields_from_marc(&$arr, $xml) {
         
     "field_dc_relation" => array("key" => "fc", "datafield" => 760, "subfield" => "a", 
       'qualifier' => "type", 'enum' => "IsPartOf"),
+  
+    "field_dc_relation" => array("key" => "fc", "datafield" => 530, "subfield" => "a", 
+      'qualifier' => "type", 'enum' => "IsPartOf"),
+*/
+
       /*
       NO SUBFIELD???
       case 760:
         $arr['fc']['field_dc_relation'][] = array("value" => $str, "type" => 'IsPartOf');
         break;    
 
-      */    
-    "field_dc_relation" => array("key" => "fc", "datafield" => 530, "subfield" => "a", 
-      'qualifier' => "type", 'enum' => "IsPartOf"),
-
-
+      */  
     
   );
   

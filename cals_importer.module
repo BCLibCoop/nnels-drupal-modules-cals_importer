@@ -68,17 +68,46 @@ function cals_importer_menu() {
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_importer_update_oclc_numbers_single_node',
     'title' => 'Fix OCLC entry',
-    'type' => MENU_LOCAL_TASK,
-    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'type' => MENU_NORMAL_ITEM,
+    'menu_name' => 'menu-repository-item-processing',
+    //'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'page arguments' => array(1),
     'weight' => 100,
   
   );  
+  $items['node/%node/fix-oclc-entry3'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_importer_update_oclc_numbers_single_node',
+    'title' => 'Fix OCLC entry',
+    'type' => MENU_NORMAL_ITEM,
+    'menu_name' => 'menu-repository-item-processing',
+    //'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'page arguments' => array(1),
+    'weight' => 100,
   
+  );  
+    
+  /**
+   * Fix to move OCLC entries out of the system control field
+   * - deactivated so we don't run accidentally
+   */
+  $items['node/fix-oclc-entry2'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_importer_update_oclc_numbers_single_node',
+    'title' => 'Fix OCLC entry TEST',
+    'type' => MENU_NORMAL_ITEM,
+    'menu_name' => 'menu-repository-item-processing',
+    //'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'page arguments' => array(1),
+    'weight' => 100,
+  
+  );  
+    
   /**
    * Parses S3 sets via node page
    */
 
+/*
   $items['node/%node/parse-s3-path-node'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_batch_update_s3_paths_by_node',
@@ -91,6 +120,7 @@ function cals_importer_menu() {
   
   );
   
+*/
   
 
   $items['admin/content/cals/parse-org-emails'] = array(
@@ -146,6 +176,7 @@ function cals_importer_menu() {
   );
   
   
+/*
   $items['node/%node/parse-record'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_importer_update_repository_item',
@@ -157,6 +188,9 @@ function cals_importer_menu() {
     'file' => "cals_importer.marcxml.inc",
   
   );
+*/
+  
+/*
 
   $items['node/%node/normalize-record'] = array(
     'access arguments' => array('administer site configuration'),
@@ -183,7 +217,9 @@ function cals_importer_menu() {
   
   );
   
+*/
 
+/*
   $items['node/%node/generate-marc-856'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_importer_add_856_tag',
@@ -195,7 +231,9 @@ function cals_importer_menu() {
     'weight' => 150,
   
   );
+*/
   
+/*
   $items['node/%node/generate-marc-output'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_importer_generate_marcxml_file',
@@ -207,7 +245,9 @@ function cals_importer_menu() {
     'weight' => 200,
   
   );
+*/
 
+/*
   $items['node/%node/convert-s3-paths'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_importer_update_cors_file_table',
@@ -219,6 +259,7 @@ function cals_importer_menu() {
     'weight' => 200,
   );
   
+*/
   //generate cors s3 file via s3 path (field collection)
   $items['admin/%node/update-file-upload-from-field-collection'] = array(
     'page callback' => '_cals_update_filecollection_file',
@@ -490,17 +531,199 @@ function cals_importer_action_info() {
   );
 }
 
+/**
+ * Implements hook_block_info().
+ */
+
+function cals_importer_block_info() {
+  $blocks = array();
+
+  $blocks['_cals_importer_process_repo_item'] = array(
+    'info' => t('CALS Forms: Process Repo Item'),
+    'cache' => DRUPAL_NO_CACHE,
+  );  
+  return $blocks;
+}
 
 /**
- * Implements hook_custom_theme().
- *   - disabled for now.
+ * Implements hook_block_view()
  */
-function cals_importer_custom_themexxx() {
-
-  $alias = drupal_get_path_alias();
-  if(strpos($alias, "admin/") !== FALSE) {
-    return "rubik";
+function cals_importer_block_view($delta = '') {
+	switch($delta) {
+		//include with main repo page
+  	case "_cals_importer_process_repo_item":
+      $block = array();
+      global $user;
+      if(arg(0) == 'node') {
+        $node = node_load(arg(1));
+        if($node->type == 'repository_item') {
+          $block['subject'] = '';
+          $content = drupal_get_form('_cals_importer_block_process_repo_item');
+          $block['content'] = $content; //'HERE IN WILL LIE THE ADMIN BLOCK'; //drupal_render(drupal_get_form('user_register_form'));
+      	  return $block;
+        }
+      }
+      break;
   }
+}
+
+function _cals_importer_get_block_items() {
+
+  $items = array();
+  /**
+   * Fix to move OCLC entries out of the system control field
+   * - deactivated so we don't run accidentally
+   */
+/*
+  $items['node/%node/fix-oclc-entry'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_importer_update_oclc_numbers_single_node',
+    'title' => 'Fix OCLC entry',
+    'type' => MENU_NORMAL_ITEM,
+    'menu_name' => 'menu-repository-item-processing',
+    //'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'page arguments' => array(1),
+    'weight' => 100,
+  
+  ); 
+*/ 
+      
+
+  $items['_cals_importer_update_repository_item'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_importer_update_repository_item',
+    'title' => 'Parse MARC/XML',
+    'file' => "cals_importer.marcxml.inc",
+    'description' => "item parsed",
+  );
+
+  $items['_cals_normalize_record_value'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_normalize_record_value',
+    'file' => "cals_importer.clean_up.inc",
+    'title' => 'Normalize',
+    'description' => 'Title, author and publisher values normalized',
+  );
+/*
+  $items['_cals_normalize_record_value_preview'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_normalize_record_value_preview',
+    'file' => "cals_importer.clean_up.inc",
+    'title' => 'Preview Creator Normalization',
+    'description' => 'No updates: just previewing the normalization',
+  );
+  
+*/
+
+  $items['_cals_importer_add_856_tag'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_importer_add_856_tag',
+    'file' => "cals_importer.clean_up.inc",
+    'title' => 'Add 856 tag',
+    'description' => '856 tag added',
+  );
+  
+  $items['_cals_importer_generate_marcxml_file'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_importer_generate_marcxml_file',
+    'file' => "cals_importer.marcxmlfilebuilder.inc",
+    'title' => 'Create MARC Output File',
+    'description' => 'An XML file generated for this item',
+  
+  );
+  /**
+   * Parses S3 sets via node page
+   */
+
+/*
+  $items['_cals_batch_update_s3_paths_by_node'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_batch_update_s3_paths_by_node',
+    'file' => "cals_importer.s3paths.inc",
+    'title' => 'Parse S3 Paths',
+  );
+*/
+
+  $items['_cals_importer_update_cors_file_table'] = array(
+    'access arguments' => array('administer site configuration'),
+    'page callback' => '_cals_importer_update_cors_file_table',
+    'file' => "cals_importer.corsS3.inc",
+    'title' => 'Create attachment path from S3 path',
+    'description' => 'S3 path parsed and attempted to create new file',
+  );
+
+  
+
+  return $items;
+}
+
+function _cals_importer_block_process_repo_item($form_state) {
+  if(arg(0) == "node" && is_numeric(arg(1)) ) {
+ 
+		$nid = arg(1);
+		$node = node_load($nid);
+
+    if($node->type == 'repository_item') {
+		  //$options = array( l("parse record", "node/63268/parse-record") );
+		  
+		 	$form['nid'] = array(
+		    '#type' => "hidden",
+		    '#default_value' => $nid,
+		  );
+
+		  $items = _cals_importer_get_block_items();
+		  foreach($items as $i) {
+		    if(user_access($i['access arguments'][0]) ) {
+		      $cb = $i['page callback'];
+		      $options[$cb] = $i['title'];
+		      $form['op'][$cb] = array(
+		        '#type' => 'submit',
+		        '#id' => $cb,
+		        '#value' => $i['title'], 
+		      );
+		    }
+		  }
+
+
+/*
+      $form['#prefix'] = '<fieldset class="container-inline form-wrapper"><div class="fieldset-wrapper">';
+      $form['#suffix'] = '</div></fieldset>';
+*/
+		  return $form;
+    
+    }
+  
+  }
+  
+
+
+}
+
+function _cals_importer_block_process_repo_item_submit($form, &$form_state) {
+
+  
+
+  $op = $form_state['values']['op'];
+
+  $callback = array_search($op, $form_state['values']);
+
+
+  $nid = $form_state['values']['nid'];
+  $node =  node_load($nid);
+	$items = _cals_importer_get_block_items();
+	//printAndDie($function,$items);
+	if(empty($callback)) return;
+	else {
+	  $i = $items[$callback];
+	  if(!user_access($i['access arguments'][0])) return;
+	   //load inc file if exists
+	  if(isset($i['file'])) module_load_include('inc', 'cals_importer', str_replace($i['file'], ".inc", ""));
+	  if(isset($i['description'])) drupal_set_message($i['description']);
+	  $callback($node);
+	}
+	
+	
+
 
 }
 
@@ -566,6 +789,8 @@ function cals_importer_menu_alter(&$items) {
   $items['node/%node/generate-marc-output']['access callback'] = '_cals_importer_tab_checker_parse_record';
   $items['node/%node/convert-s3-paths']['access callback'] = '_cals_importer_tab_checker_parse_record';
   $items['node/%node/normalize-record']['access callback'] = '_cals_importer_tab_checker_parse_record';
+  $items['node/%node/fix-oclc-entry']['access callback'] = '_cals_importer_tab_checker_parse_record';
+  
   $items['node/%node/normalize-record-preview']['access callback'] = '_cals_importer_tab_checker_parse_record';
   
   $items['node/%node/parse-s3-path-node']['access callback'] = '_cals_importer_tab_checker_parse_s3_paths';
@@ -1023,6 +1248,7 @@ function _cals_import_skeletal_records($node) {
  */
 function _cals_importer_update_oclc_numbers_single_node($node) {
 
+  printAndDie($node);
   _cals_importer_update_oclc_numbers_query($node);
   drupal_goto("node/" . $node->nid);
 
