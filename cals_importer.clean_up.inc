@@ -284,9 +284,10 @@ function _cals_importer_normalize_title(&$node) {
   $msg = array();
   $title = rtrim($title, ", /"); 
   $title = _cals_importer_strip_parentheses_from_values($title);
-  if ($title != $node->title) {
-    $node->title = $title;
-  }
+  if ($title != $node->title) $node->title = $title;
+	//set title field to same value	
+	$node->title_field[LANGUAGE_NONE][0]['value'] = $title;
+
 }
 
 
@@ -436,7 +437,7 @@ function _cals_importer_strip_trailing_periods_value($str) {
  */
 function _cals_importer_strip_square_brackets(&$node, $field) {
   //$str = str_replace(array("[", "]"), "", $str);
-  if($field == 'title') {
+  if($field == 'title_field' || $field == 'title') {
     $node->title = str_replace(array("[", "]"), "", $node->title);
     $node->title_field[LANGUAGE_NONE][0]['value'] = $node->title;
   }

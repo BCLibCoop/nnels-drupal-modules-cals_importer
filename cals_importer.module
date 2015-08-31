@@ -711,7 +711,7 @@ function _cals_importer_block_process_repo_item_submit($form, &$form_state) {
   $nid = $form_state['values']['nid'];
   $node =  node_load($nid);
 	$items = _cals_importer_get_block_items();
-	//printAndDie($function,$items);
+  
 	if(empty($callback)) return;
 	else {
 	  $i = $items[$callback];
