@@ -63,7 +63,7 @@ function _cals_get_fields_repository_item() {
      'type' => 'text',
      'required' => 1,
      'values' => '',
-     'parser' => '_cals_get_title_from_marc',
+     'parser' => array("function" => '_cals_get_title_from_marc'),
    ),
   );
 
@@ -109,15 +109,16 @@ function _cals_importer_repo_field_callback($fieldname) {
         array('tag' => 520, 'code' => 'a'),
       )
     ),
-    "field_dc_coverage" => array('function' => '_cals_importer_get_coverage_marc'),
   	"field_iso_language" => array('function' => '_cals_importer_get_isolanguage_from_marcxml'),
   	"field_date" => array('function' => '_cals_get_date_issued_from_marc'),
+
+    "field_dc_coverage" => array('function' => '_cals_importer_get_coverage_marc'),
     "field_dc_description" => array('function' => '_cals_get_descriptors_from_marc'),
     
     "field_isbn" => array('function' => '_cals_importer_get_isbn_sysnums_from_marc'),
     'field_performer' => array('function' => '_cals_importer_get_performer_from_marcxml'),
 
-    "field_subject" => array("function" => '_cals_get_subject_from_marc'   ),
+    "field_subject" => array("function" => '_cals_get_subject_from_marc'),
     "field_genre" => array("function" => '_cals_get_genre_from_marc'), 
 
     
@@ -205,9 +206,16 @@ function _cals_importer_repo_field_callback($fieldname) {
 
 
 
-
+/**
+ * Normalizes title, creator, contributor and other fields
+ *
+ * @param $node
+ *   the node passed to the parser
+ * @param $field
+ *   the $node->{field} acted on
+ *
+ */ 
 function _cals_importer_normalize_node_field(&$node, $field) {
-
 	switch($field) {
 	  case "title":
 	  case "title_field":
@@ -218,7 +226,6 @@ function _cals_importer_normalize_node_field(&$node, $field) {
 		case "field_dc_contributor":	
 			_cals_importer_strip_square_brackets($node, $field);
 			_cals_importer_normalize_creators($node, $field);
-			
 			//if($field == 'field_dc_creator') printAndDie($node->field_dc_creator, $map);
 	  	break;
 	  case "field_publisher":
@@ -249,19 +256,16 @@ function _cals_parse_record_details($node) {
   //if (!strlen($xml)) return "no xml!";
   $arr = array();
   
-  //set file access to "Open Access" 
-  // NEW, as of 2014-03-12: this will be defined by the parent record set
-  //$arr['repos']['field_access_restrictions'][0] = 0;
-  
-  
+  $fc_fields = array(); // container for field collection array
+
   //loop thru map to populate node
   foreach($map as $k => $v) {
     $type = $v['type'];
 
     if(!empty($v['parser'])) {
+      if(!isset($v['parser']['function'])) printAndDie("???", $v);
       $function = $v['parser']['function'];
-      $params = $v['parser']['params'];
-    
+
       if(isset($v['parser']['tags'])) {
         $tags = $v['parser']['tags'];
         $function($xml, $k, $map, $tags);
@@ -272,10 +276,12 @@ function _cals_parse_record_details($node) {
 	    if($k != 'title' && $type != 'field_collection') {
 	      $node->{$k} = array();
 	      $key = ($type == 'taxonomy') ? "tid" : "value";
-	      foreach($map[$k]['values'] as $value) $node->{$k}[LANGUAGE_NONE][][$key] = $value;
 	      
-	      	//normalize fields
-	    
+	      
+	      if(isset($map[$k]['values'])) {
+		      $values = $map[$k]['values'];
+		      foreach($values as $value) $node->{$k}[LANGUAGE_NONE][][$key] = $value;
+	      }
 	    }
 	    if($type != 'field_collection' && $type != 'taxonomy') {
 	      _cals_importer_normalize_node_field($node, $k);
@@ -287,122 +293,10 @@ function _cals_parse_record_details($node) {
 	    
     }
   }
-  
-  //
-    
-  //descriptions
-  //_cals_get_descriptors_from_marc($arr, $xml);
-  
-  //isbns
-  //_cals_importer_get_isbn_sysnums_from_marc($arr, $xml);
-
-  //grabs some of the generic fields, e.g., titles, uri, publisher number, etc.
-  //_cals_get_commom_fields_from_marc($arr, $xml);
-
-  //subjects
-  //_cals_get_subject_from_marc($arr, $node, $xml, $vid = $arr_tax['Subject'], $map);
-  
-  //genre
-  //_cals_get_genre_from_marc($arr, $xml);
-  
-  //language
-  //_cals_importer_get_isolanguage_from_marcxml($arr, $xml);
-
-  //get the rest of the fields by looping thru the record
-  
-/*
-  foreach ($xml->children(NAME_SPACE) as $record) {
-    _cals_importer_get_array_from_marcxml($record, $arr);
-  }
-*/
-  //$node->title = _cals_get_truncated_value($arr['repos']['title'], 250);    
-  //$node->title = _cals_get_truncated_value($node->title, 250); 
-
-  //newly ingested records are set to un-published. Leave status unchanged. 
-  //$node->status = 0;
-	
   _cals_delete_duplicate_oclc_numbers($node);
-
-
-
-  //delete the field collections so we have a fairly stripped down node if reparsing
-  //$node = _cals_delete_existing_field_collection_items($node, array_keys($arr['fc']));
-	
-	
-
-/*
-	
-  foreach ($arr['repos'] as $k => $v) {
-
-    if (is_array($v)) {
-      //clean up existing values so we don't append
-      $node->{$k}[LANGUAGE_NONE] = array();
-      //populate fields
-      foreach ($v as $k2 => $v2) {
-        if (strlen($v2)) $node->{$k}[LANGUAGE_NONE][]['value'] = $v2;
-      }
-    }
-    else {
-    	switch($k) {
-    	  case "title":
-    	    $node->{$k} = $v;
-    	    break;
-    	  default:
-    	    $node->{$k}[LANGUAGE_NONE][]['value'] = $v;
-    	    break;
-    	}
-    }
-*/
-		//normalize fields
-/*
-		switch($k) {
-		  case "title":
-				_cals_importer_strip_square_brackets($node, $k);
-				_cals_importer_normalize_title($node);
-		  	break;
-		  case "field_dc_creator":
-			case "field_dc_contributor":	
-				_cals_importer_strip_square_brackets($node, $k);
-				_cals_importer_normalize_creators($node, $k);
-		  	break;
-		  case "field_publisher":
-				//_cals_importer_strip_square_brackets($node, "title");
-		  	_cals_importer_normalize_publisher($node);
-		  	break;
-		}
-  } 
-*/
-
-  //genre / subjects
-/*
-  if (array_key_exists("repos_tf", $arr) ) {
-  	$node->field_genre[LANGUAGE_NONE] = array();
-  	//printAnddie($arr);
-  	if(isset($arr['repos_tf']['field_genre'])) {
-	    foreach($arr['repos_tf']['field_genre'] as $k => $v) {
-	      $vid = $arr_tax['Genre'];
-	      $name = $v['value'];
-	      $tid = _cals_get_tid_by_name($vid, $name);
-	      $node->field_genre[LANGUAGE_NONE][$k]['tid'] = $tid;
-	    }
-  	
-  	}
-  	$node->field_subject[LANGUAGE_NONE] = array();
-  	if(isset($arr['repos_tf']['field_subject'])) {
-	    asort($arr['repos_tf']['field_subject']);
-	    foreach($arr['repos_tf']['field_subject'] as $k => $v) {
-	      $vid = $arr_tax['Subject'];
-	      $tid = _cals_get_tid_by_name($vid, $v);
-	      $node->field_subject[LANGUAGE_NONE][$k]['tid'] = $tid;
-	    }
-    }
-  }
-*/
   //save the populated node
   $node->status = 1;
   node_save($node);
-  //printAndDie($node);
-  
   //populate the field collections
   //_cals_importer_populate_repos_item_fieldcollections($node, $arr_tax, $arr['fc']);
   _cals_importer_populate_repos_item_fieldcollections($node, $fc_fields);

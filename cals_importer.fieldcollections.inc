@@ -215,22 +215,17 @@ function _cals_delete_existing_field_collection_items_TO_DEPRECATE($node, $keys)
  *
  * @param $node
  *   the node passed to the parser
- * @param $arr_tax
- *   taxonomy values
- * @param $arr
+ * @param $fields
  *   array of field collection values
  *
- * @return
- *   an array. 
- *
  */ 
-
 function _cals_importer_populate_repos_item_fieldcollections(&$node, $fields){
-
   foreach($fields as $field) {
-    if(count($field['values'])) {
-      foreach($field['values'] as $value) {
-        printPre($value);
+
+    if(is_array($field['values']) && count($field['values']) > 0) {
+      $values = $field['values'];
+      
+      foreach($values as $value) {
 	      $e = entity_create('field_collection_item', $value);
 	      // Attach the field_collection entity to the application node.
 	      $e->setHostEntity('node', $node);
@@ -241,84 +236,3 @@ function _cals_importer_populate_repos_item_fieldcollections(&$node, $fields){
   }
 
 }
-
-function _cals_importer_populate_repos_item_fieldcollections_TO_DEPRECATE( $node, $arr_tax, $arr ) {
-  foreach($arr as $k => $v) {
-    $values = array();
-    //run thru a switch so we can isolate fields that still
-    //need to be worked on. Later, can remove switch? 
-    switch($k) {
-      case "field_dc_subject":
-      case "field_dc_relation":
-      case "field_cataloguing_agency":
-      case "field_dc_description":
-      case "field_dc_coverage":
-      case "field_date":
-        $values = _cals_get_entity_value($k, $v, $arr_tax);
-        break;
-		
-		  default:
-        printAndDie(__FUNCTION__, $k, $v);
-        break;
-    }
-    if (count($values)) {
-      foreach ($values as $value) {
-        if (is_array($value)) {
-          $e = entity_create('field_collection_item', $value);
-          // Attach the field_collection entity to the application node.
-          $e->setHostEntity('node', $node);
-          // Save the entity. 
-          $e->save(); 
-        }
-      }
-    }   
-  }
-}
-
-/**
- * Populates Field Collection values
- *
- * @param $node
- *   the node passed to the parser
- * @param $arr_tax
- *   taxonomy values
- * @param $arr
- *   array of field collection values
- *
- * @return
- *   an array. 
- *
- */ 
-function _cals_importer_populate_repos_item_fieldcollections_TO_BE_DEPRECATED( $node, $arr_tax, $arr ) {
-  foreach($arr as $k => $v) {
-    $values = array();
-    //run thru a switch so we can isolate fields that still
-    //need to be worked on. Later, can remove switch? 
-    switch($k) {
-      case "field_dc_subject":
-      case "field_dc_relation":
-      case "field_cataloguing_agency":
-      case "field_dc_description":
-      case "field_dc_coverage":
-      case "field_date":
-        $values = _cals_get_entity_value($k, $v, $arr_tax);
-        break;
-		
-		  default:
-        printAndDie(__FUNCTION__, $k, $v);
-        break;
-    }
-    if (count($values)) {
-      foreach ($values as $value) {
-        if (is_array($value)) {
-          $e = entity_create('field_collection_item', $value);
-          // Attach the field_collection entity to the application node.
-          $e->setHostEntity('node', $node);
-          // Save the entity. 
-          $e->save(); 
-        }
-      }
-    }   
-  }
-}
-

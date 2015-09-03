@@ -442,9 +442,13 @@ function _cals_importer_strip_square_brackets(&$node, $field) {
     $node->title_field[LANGUAGE_NONE][0]['value'] = $node->title;
   }
   else {
-    foreach($node->{$field}[LANGUAGE_NONE] as $k => $v) {
-      $tmp = str_replace(array("[", "]"), "", $v['value']);
-      if($tmp != $node->{$field}[LANGUAGE_NONE][$k]['value']) $node->{$field}[LANGUAGE_NONE][$k]['value'] = $tmp;
+    if(isset($node->{$field}[LANGUAGE_NONE])) {
+    
+	    foreach($node->{$field}[LANGUAGE_NONE] as $k => $v) {
+	      $tmp = str_replace(array("[", "]"), "", $v['value']);
+	      if($tmp != $node->{$field}[LANGUAGE_NONE][$k]['value']) $node->{$field}[LANGUAGE_NONE][$k]['value'] = $tmp;
+	    }
+    
     }
     
   }

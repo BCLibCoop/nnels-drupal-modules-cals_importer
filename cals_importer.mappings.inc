@@ -57,7 +57,7 @@ function _cals_importer_get_coverage_marc($xml, $k, &$map){
 				LANGUAGE_NONE => array(array('value' => 'Spatial')),
 			),
 			'field_marc_tag' => array(
-				LANGUAGE_NONE => array(array('value' => $tag)),
+				LANGUAGE_NONE => array(array('value' => '008')),
 			),
 			'field_dc_coverage_scheme' => array(
 				LANGUAGE_NONE => array(array('value' => "http://www.loc.gov/marc/countries")),
@@ -67,15 +67,10 @@ function _cals_importer_get_coverage_marc($xml, $k, &$map){
 			),
 		);
     
-    
-    
-    
 	  $aud = substr($str, 22, 1);
     if (strlen($aud)) $map['field_audience']['values'][] = $aud;
-
-
-
 	}
+
 	$tags = array('043', '044');
 	foreach($tags as $tag) {
 	  $path = "//marc:datafield[@tag='" . $tag . "']";
@@ -256,15 +251,18 @@ function _cals_get_descriptors_from_marc($xml, $k, &$map) {
 function _cals_importer_get_system_numbers_from_marc($xml, $k, &$map) {
 	$path = "//marc:datafield[@tag='035']/marc:subfield[@code='a']";
 	$tmp = $xml->xpath($path);
-	$str = (string) trim($tmp[0]);
-  //oclc
-  if (strpos($str, "(OCoLC)") !== false) {
-  	//new check on valid oclc numbers
-  	if (_cals_isvalid_oclc_number($str) === 1) $map[$k]['values'][] = $str;
-  }
-  else {
-    $map["field_system_control_number"]['values'][] = $str;
-  }
+	if (count($tmp) >= 1) {
+		$str = (string) trim($tmp[0]);
+	  //oclc
+	  if (strpos($str, "(OCoLC)") !== false) {
+	  	//new check on valid oclc numbers
+	  	if (_cals_isvalid_oclc_number($str) === 1) $map[$k]['values'][] = $str;
+	  }
+	  else {
+	    $map["field_system_control_number"]['values'][] = $str;
+	  }
+	
+	}
 }
 
 function _cals_importer_get_access_restrictions($xml, $k, &$map) {
@@ -273,14 +271,16 @@ function _cals_importer_get_access_restrictions($xml, $k, &$map) {
 	$vals = array();
 	foreach($codes as $code) {
 	  $path = "//marc:datafield[@tag='506']/marc:subfield[@code='{$code}']";
-    $tmp = $xml->xpath($path);
-	  $vals[] = (string) trim($tmp[0]); 
-
-	}
-	if(count($vals)) {
-		$str = implode(" ", $vals);
-		$pos = strpos(strtolower($str),"restricted");
-	  $map[$k]['values'][] = (is_numeric($pos)) ? 1 : 0; 
+		$tmp = $xml->xpath($path);
+	  if (count($tmp) >= 1) {
+     
+	    $vals[] = (string) trim($tmp[0]); 
+			if(count($vals)) {
+				$str = implode(" ", $vals);
+				$pos = strpos(strtolower($str),"restricted");
+			  $map[$k]['values'][] = (is_numeric($pos)) ? 1 : 0; 
+			}
+	  }  
 	}
 }
 
@@ -468,7 +468,7 @@ function _cals_importer_get_basic_values_from_marc($xml, $k, &$map, $tags) {
       $map[$k]['values'][] = (isset($tag['qualifier'])) ? array( $tag['qualifier'] => $tag['enum'], "value" => $val ) : $val;
     }
   } 
-  //printPre(__FUNCTION__, $k, "VALUE = " . $map[$k][0]['value'], "path = " . $path);
+  //printPre(__FUNCTION__, $k, $map[$k]['values'], "path = " . $path);
 }
 
 /**

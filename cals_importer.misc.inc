@@ -74,6 +74,8 @@ function _cals_get_node_by_sysnum($num) {
  */
 function _cals_get_message_invalid_xml($node) {
 
+  printAndDie($node);
+
 	drupal_set_message(
 		t('Invalid XML. Please review: <a href="@url">@title</a>.', 
 			array('@url' => url('node/' . $node->nid . "/edit"), '@title' => $node->title )
