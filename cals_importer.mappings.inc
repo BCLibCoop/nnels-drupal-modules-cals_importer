@@ -148,8 +148,6 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
     //array()
     );
 
-dpm($dates, "DATES: ");
-
 //Set qualifiers for entries in $dates based on origin field and load the array for deduping
 
   if ( ! empty( $dates ) ) {
@@ -267,7 +265,6 @@ function _cals_parse_date_issue_dedupe_qualifiers($dx_sorted) {
 
   return $save;
 
-  dpm($years, "Duplicate years: ");
 }
 
 function _cals_parse_date_issue_copyright ($raw_date_value) {
