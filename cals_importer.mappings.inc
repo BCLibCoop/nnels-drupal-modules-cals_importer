@@ -108,33 +108,108 @@ function _cals_importer_get_coverage_marc($xml, $k, &$map){
 function _cals_get_date_issued_from_marc($xml, $k, &$map) {
   //let's grab the date issued
   $dates = array();
+
   $tmp = $xml->xpath("//marc:controlfield[@tag='008']");
   if (count($tmp) >= 1) {
     $str = (string) $tmp[0];
-    $str = substr($str, 7, 4);
-    if (is_numeric($str)) $dates[] = _cals_get_iso_year($str);
+    $str = substr($str, 7, 4); // 008/07-10 should be numeric
+    if (is_numeric($str)) $dates['008'] = _cals_get_iso_year($str);
   }
 
-  $tmp = $xml->xpath("//marc:datafield[@tag='264']/marc:subfield[@code='c']");
-  if (count($tmp) >= 1) {
-    $str = (string) $tmp[0];
-    $dates[] = _cals_get_iso_year($str);
+  $two64 = $xml->xpath("//marc:datafield[@tag='264']/marc:subfield[@code='c']");
+  if (count($two64) >= 1) {
+    $str = (string) $two64[0];
+    $dates['264'] = $str;
+  }
+  else $two64fallback = TRUE; //fallback on 260 value
+
+  if ( isset($two64falback) ) {
+    $two60 = $xml->xpath("//marc:datafield[@tag='260']/marc:subfield[@code='c']");
+    if (count($two60) >= 1) {
+      $str = (string) $two60[0];
+
+      $dates['260'] = $str;
+    }
   }
 
-  $tmp = $xml->xpath("//marc:datafield[@tag='260']/marc:subfield[@code='c']");
-  if (count($tmp) >= 1) {
-    $str = (string) $tmp[0];
-
-    $dates[] = _cals_get_iso_year($str);
+  $five_thirty3 = $xml->xpath("//marc:datafield[@tag='533']/marc:subfield[@code='d']");
+  if (count($five_thirty3) >= 1) {
+    $str = (string) $five_thirty3[0];
+    $dates['533'] .= $str;
   }
-  foreach($dates as $date) {
+
+  $five_thirty4 = $xml->xpath("//marc:datafield[@tag='534']/marc:subfield[@code='c']");
+  if (count($five_thirty4) >= 1) {
+    $str = (string) $five_thirty4[0];
+    $dates['534'] .= $str;
+  }
+
+  $dates_dupes = array( //qualified dates but potentially dupes
+    //array()
+    );
+
+dpm($dates, "DATES: ");
+
+//Set qualifiers for entries in $dates based on origin field and load the array for deduping
+
+  if ( ! empty( $dates ) ) {
+    foreach ( $dates as $code => $date_value ) {
+      switch ($code) {
+        case '008':
+
+        $date_dupes[] = array(
+            'qualifier' => 'Issued', 'date' => $date_value
+          );
+        break;
+
+        case '260':
+        case '264':
+        case '533':
+        //Might have copyright symbol, if not set to Created
+        $check_copyright = _cals_parse_date_issue_copyright($date_value);
+        $date_value = _cals_get_iso_year($date_value);
+
+        if ( $check_copyright == TRUE ) $date_dupes[] = array(
+          'qualifier' => 'Copyrighted', 'date' => $date_value
+          );
+        else $date_dupes[] = array(
+            'qualifier' => 'Created', 'date' => $date_value
+            );
+        break;
+
+        case '534':
+        //Might have copyright symbol, if not set to Issued
+        $check_copyright = _cals_parse_date_issue_copyright($date_value);
+        $date_value = _cals_get_iso_year($date_value);
+
+        if ( $check_copyright == TRUE ) $date_dupes[] = array(
+          'qualifier' => 'Copyrighted', 'date' => $date_value
+          );
+
+        else $date_dupes[] = array(
+        'qualifier' => 'Issued', 'date' => $date_value
+        );
+
+        break;
+
+      }
+    }
+  }
+
+  //Most recent years first
+  $dates = _cals_array_sort($date_dupes, 'date', SORT_DESC);
+
+  //Dedupe based on our Qualifier Precedence Policy
+  $dates = _cals_parse_date_issue_dedupe_qualifiers($dates);
+
+  foreach($dates as $qual => $date) {
     $map[$k]['values'][] = array(
 	    'field_name' =>  "field_date",
 	    'field_dc_date' => array(
 	      LANGUAGE_NONE => array(array('value' => $date) ),
 	    ),
 	    'field_qualifier_date' => array(
-	      LANGUAGE_NONE => array(array('value' => "Issued") ),
+	      LANGUAGE_NONE => array(array('value' => $qual) ),
 	    ),
     );
   }
@@ -142,6 +217,72 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
 
 }
 
+//Curiously particular deduper based on qualifier precedence as well as recency.
+
+function _cals_parse_date_issue_dedupe_qualifiers($dx_sorted) {
+
+  $save = array(); //keeping
+  $years = array(); //duplicates
+
+   $i = -1; //start just before first index
+
+  foreach ( $dx_sorted as $k => $v ) { //Loop through array of arrays
+
+        $i++;
+
+        $years[] .= $v['date'];
+        $qual = $v['qualifier'];
+        $year = $v['date'];
+
+        if ( $i > 0 && in_array( $year, $years ) ) { //After the first run, check if year is in dupe list
+
+            switch ( $qual ) {
+                default:
+                  if ( ! array_key_exists( $qual, $save ) && ! in_array( $year, $save ) ) { //if we havent already saved qualifier or the year (no match)
+                    $save[$qual] = $year;
+                  }
+
+                break;
+
+                case 'Copyrighted':
+                case 'Created':
+                  $superceded = array_search($year, $save ); //check for the current year in keeping array
+
+                  if ( $superceded && $superceded != 'Copyrighted' && $superceded != 'Created' ) {
+                    if ($save[$superceded] <= $year) { //check if the superceded key has value newer or same as one we're on,
+                      unset($save[$superceded]);  //unset if so, we have a newer key-value
+                    }
+                  }
+                  if ( ! array_key_exists( $qual, $save ) ) $save[$qual] = $year; //save the Copyrighted or Created value to supercede it
+
+                break; //otherwise keep the newer value
+            } //end switch
+        }
+
+         elseif ( ! array_key_exists( $qual, $save ) ) {
+            $save[$qual] = $year;
+          }
+
+  }//foreach
+
+  return $save;
+
+  dpm($years, "Duplicate years: ");
+}
+
+function _cals_parse_date_issue_copyright ($raw_date_value) {
+  $copyright = "/^c\\d{4}/";
+
+  preg_match($copyright, $raw_date_value, $matches);
+
+  if ($matches[0]) {
+    //$date_value_c =  explode('c', $matches[0] ); //remove the 'c'
+    //dpm($date_value_c, "Copyright returning: ");
+    return true;
+  }
+
+  else return;
+}
 
 /**
  * @param $arr
