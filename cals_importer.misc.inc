@@ -199,9 +199,18 @@ function _cals_get_iso_year($value) {
         if (strlen($newvalue) == 4 && is_numeric($newvalue)) return $newvalue;
       }
     }
-  
   }
 
+  else {
+    //We probably have a 534$c with a date at the end
+    //Copyright symbol if present, was already filtered, flagged by _cals_parse_date_issue_copyright.
+
+    $date_pattern = "/\s\d{4}$/";
+    preg_match($date_pattern, $value, $matches);
+
+    if ($matches[0]) $newvalue = $matches[0];
+    return trim( (int) $newvalue );
+  }
   
   
   return $value;
