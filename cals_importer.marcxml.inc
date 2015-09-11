@@ -188,7 +188,7 @@ function _cals_importer_repo_field_callback($fieldname) {
     'field_access_restrictions' => array('function' => '_cals_importer_get_access_restrictions'),
   
 		'field_oclc_number' => array('function' => '_cals_importer_get_system_numbers_from_marc'),  
-		//'field_system_control_number' => array('function' => '_cals_importer_get_system_numbers_from_marc'),
+		'field_system_control_number' => array('function' => '_cals_importer_get_system_numbers_from_marc'),
 		
 		'field_cataloging_agency' => array('function' => "_cals_importer_get_cataloging_agency_from_marc"),  
   
