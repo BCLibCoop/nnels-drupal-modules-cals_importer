@@ -134,6 +134,9 @@ function _cals_importer_repo_field_callback($fieldname) {
       "tags" => array(
         array('tag' => 264, 'code' => 'a'),
         array('tag' => 264, 'code' => 'b'),
+        array('tag' => 260, 'code' => 'a'),
+        array('tag' => 260, 'code' => 'b'),
+
       )
     ),
     'field_dc_contributor' => array('function' => '_cals_importer_get_basic_values_from_marc', 
