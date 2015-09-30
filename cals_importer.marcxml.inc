@@ -168,7 +168,7 @@ function _cals_importer_repo_field_callback($fieldname) {
         array('tag' => 800, 'code' => 'a', 'qualifier' => "type", 'enum' => "IsPartOf"),
 				array('tag' => 830, 'code' => 'a', 'qualifier' => "type", 'enum' => "IsPartOf"),
 				array('tag' => 760, 'code' => 'a', 'qualifier' => "type", 'enum' => "IsPartOf"),
-				array('tag' => 530, 'code' => 'a', 'qualifier' => "type", 'enum' => "IsFormatOf"),
+				array('tag' => 534, 'code' => 'e', 'qualifier' => "type", 'enum' => "IsFormatOf"),
       )
     ),
  

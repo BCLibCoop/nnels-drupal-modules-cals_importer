@@ -61,7 +61,7 @@ function _cals_get_entity_value($key, $arr, $arr_tax) {
           ),
           
         );
-        
+
         break;
     
       case "field_dc_subject":

@@ -556,7 +556,7 @@ function _cals_importer_get_dc_relations_from_marc($xml, $k, &$map, $tags) {
 	        LANGUAGE_NONE => array(array('value' => $val) ),
 	      ),
 	      'field_dc_relation_qualifiers' => array(
-	        LANGUAGE_NONE => array(array('value' => $q) ),
+	        LANGUAGE_NONE => array(array('value' => $e) ),
 	      ),
 	    );
     }
