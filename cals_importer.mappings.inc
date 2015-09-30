@@ -387,26 +387,32 @@ function _cals_get_descriptors_from_marc($xml, $k, &$map) {
 }
 
 function _cals_importer_get_system_numbers_from_marc($xml, $k, &$map) {
-	$path = "//marc:datafield[@tag='035']/marc:subfield[@code='a']";
+	
+  $str = array();
+  $path = "//marc:datafield[@tag='035']/marc:subfield[@code='a']";
 	$tmp = $xml->xpath($path);
-  $str = (string) trim($tmp[0]);
+  $str[] = (string) trim($tmp[0]);
 
-	if ( empty($str) ) { //fallback to 037 when 035 isn't present
-    $path = "//marc:datafield[@tag='037']/marc:subfield[@code='a']";
-    $tmp = $xml->xpath($path);
-    $str = (string) trim($tmp[0]);
-  }
+	//if ( empty($str) ) { //fallback to 037 when 035 isn't present
+  $path = "//marc:datafield[@tag='037']/marc:subfield[@code='a']";
+  $tmp = $xml->xpath($path);
+  $str[] = (string) trim($tmp[0]);
+  //}
 
   if ( !empty($str) ) { //proceed if we got something
     //oclc check
-    if (strpos($str, "(OCoLC)") !== false ) {
-    	//new check on valid oclc numbers
-    	if (_cals_isvalid_oclc_number($str) === 1) $map['field_oclc_number']['values'][] = $str; //single-value field
+    foreach ($str as $key => $value) {
+      if (strpos($value, "(OCoLC)") !== false ) {
+      	//new check on valid oclc numbers
+      	if ( _cals_isvalid_oclc_number($value) === 1 && !$flag ) {
+         $map['field_oclc_number']['values'][] = $value;
+         $flag = true; //single-value field
+        }
+      }
+      else if ($k == 'field_system_control_number') {
+        $map['field_system_control_number']['values'][] = $value;
+      }
     }
-    else if ($k == 'field_system_control_number') {
-      $map['field_system_control_number']['values'][] = $str;
-    }
-    
   }
 	
 }
