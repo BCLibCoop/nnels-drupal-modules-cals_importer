@@ -298,7 +298,7 @@ function _cals_parse_record_details($node) {
   }
   _cals_delete_duplicate_oclc_numbers($node);
   //save the populated node
-  $node->status = 1;
+  //$node->status = 1;
   node_save($node);
   //populate the field collections
   //_cals_importer_populate_repos_item_fieldcollections($node, $arr_tax, $arr['fc']);
