@@ -442,6 +442,7 @@ function _cals_importer_populate_field_file_resource($node) {
 
   $arr = _cals_importer_parse_marcxml_cors3($node);
 
+
   // Create new field collection item.
   $fc_item = entity_create('field_collection_item', array('field_name' => 'field_file_resource')); 
 
@@ -451,9 +452,14 @@ function _cals_importer_populate_field_file_resource($node) {
   $filepath = str_replace("download.nnels.ca/", "", $filepath);
   $filepath = str_replace("download2.nnels.ca/", "", $filepath);
 
+
+  
+
   //We need to check if the current file exists in the file_managed table
   //drush sqlq "select * from file_managed limit 0, 100"
   $test = db_query('SELECT n.fid FROM {file_managed} n WHERE n.uri = :uri', array(':uri' => $filepath));
+  
+	//printAndDie($filepath, $arr, $test->rowCount());
   if($test->rowCount()>0){
     $test2 = db_query("select distinct fr.entity_id as nid 
         from field_data_field_s3_file_upload fu inner join file_managed fm on fu.field_s3_file_upload_fid = fm.fid 
@@ -469,7 +475,7 @@ function _cals_importer_populate_field_file_resource($node) {
     }  
     $candidates = implode(", ", $candidates);
     if(strlen($candidates)) {
-      drupal_set_message(t("Please check the following node(s): @candidates", array('@candidates' =>$candidates) ));    
+      drupal_set_message(t("Please check the following node(s): @candidates", array('@candidates' => $candidates) ));    
     }
     else {
     	drupal_set_message(t("Please update @title manually - uri currently exists in file managed table.", 
@@ -478,7 +484,6 @@ function _cals_importer_populate_field_file_resource($node) {
 
     return '';
   }
-  //$filepath = "s3://foo";
   // Create managed File object and associate with zip. Not currently in use, but leave intact for now
   if(!empty($filepath)) {
     $file = (object) array(
@@ -515,21 +520,22 @@ function _cals_importer_populate_field_file_resource($node) {
   }
   
   //hard-coded values (for now):
+	$fc_item->field_availability_status[LANGUAGE_NONE][0]['value'] = 1;
   
-  $fc_item->field_availability_status[LANGUAGE_NONE][0]['value'] = 1;
+  global $user;
+  $acct = user_load($user->uid);
+	$fc_item->field_user[LANGUAGE_NONE][0]['uid'] = $acct->uid;
   
-  $fc_item->field_organization[LANGUAGE_NONE][0]['nid'] = 15450;
-  $fc_item->field_user[LANGUAGE_NONE][0]['uid'] = 1;
+  $fc_item->field_organization[LANGUAGE_NONE][0]['nid'] = ( isset($acct->field_organization[LANGUAGE_NONE]) ) ?
+    $acct->field_organization[LANGUAGE_NONE][0]['nid'] : 15450;
+
   $fc_item->field_file_upload_details[LANGUAGE_NONE][0]['value'] = "Original collection reparsed";
   
   if(!empty($filepath)) $fc_item->field_s3_path[LANGUAGE_NONE][0]['value'] = $filepath;
   $fc_item->save(); // Save field-collection item.
 
   node_save($node);
-  drupal_set_message(t("updated s3 path: @title", array('@title' => l($node->title, "node/" . $node->nid) )));
-
-
-
+  drupal_set_message(t("updated s3 path: ") . l($node->title, "node/" . $node->nid) );
 }
 
 /**
@@ -607,9 +613,11 @@ function _cals_importer_populate_fieldcollection_file_resource( $node, $arr_tax,
 function _cals_importer_parse_marcxml_cors3($node) {
 
   //create an array of taxonomies to be used in parsing field collections, etc.
+/*
   foreach (taxonomy_get_vocabularies() as $k => $v) {
     $arr_tax[$v->name] = $k;
   } 
+*/
   
   //if (!strlen($xml)) return "no xml!";
   $arr = array();
@@ -619,9 +627,10 @@ function _cals_importer_parse_marcxml_cors3($node) {
 	  //get running time
 	  _cals_importer_get_runningtime_from_marcxml($arr, $xml);
 	  //get performer
-	  _cals_importer_get_performer_from_marcxml($arr, $xml);
+	 	_cals_importer_get_performer_from_marcxml($arr, $xml);
+	  //_cals_importer_get_performer_from_marcxml($xml, $k, $map); 
+	  
 	}
-
  
   return $arr;
     
