@@ -491,6 +491,28 @@ function _cals_importer_get_isbn_sysnums_from_marc($xml, $k, &$map) {
 }
 
 
+function _cals_importer_get_performer_from_marcxml(&$arr, $xml) {
+  //"field_isbn" => array("key" => "repos", "datafield" => 534, "subfield" => "z"),
+  $path = "//marc:datafield[@tag='511']/marc:subfield[@code='a']";
+  $tmp = $xml->xpath($path);
+  foreach ($tmp as $me) {
+  
+    $val = (string) trim($me[0]);
+    //replace ";" to ","  
+    $val = str_replace("Narrated by ", "", $val);
+    $val = str_replace(".", "", $val);
+    
+    $val = _cals_importer_get_normalized_performer($val);
+    //valid??
+    $tmp2 = explode(",", $val);
+    foreach ($tmp2 as $val2) {
+      $arr['fc_files']['field_performer']['values'][] = trim($val2);
+      //$arr['field_performer']['values'][] = trim($val2);
+    }
+  }
+
+}
+
 
 /**
  *
@@ -505,12 +527,12 @@ function _cals_importer_get_isbn_sysnums_from_marc($xml, $k, &$map) {
  */
 //function _cals_importer_get_performer_from_marcxml(&$arr, $xml) {
 
-function _cals_importer_get_performer_from_marcxml($xml, $k, &$map) {
-
-  //if(!isset($arr['fc_files'])) $arr['fc_files'] = array();
-
+function _cals_importer_get_performer_from_marcxmlx($xml, $k, &$map) {
   //look for 511 tags
-  $tmp = $xml->xpath("//marc:datafield[@tag='511']/marc:subfield[@code='a']");
+  printAndDie($xml);
+  $path = "//marc:datafield[@tag='511']/marc:subfield[@code='a']";
+  if($xml->xpath($path) === NULL) return;
+  $tmp = $xml->xpath($path);
   
   foreach ($tmp as $me) {
   

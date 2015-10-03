@@ -622,15 +622,18 @@ function _cals_importer_get_block_items() {
     'title' => 'Add 856 tag',
     'description' => '856 tag added',
   );
-  
+
+/*       
   $items['_cals_importer_generate_marcxml_file'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_importer_generate_marcxml_file',
     'file' => "cals_importer.marcxmlfilebuilder.inc",
     'title' => 'Create MARC Output File',
-    'description' => 'An XML file generated for this item',
+    'description' => 'An XML file generated for this node',
   
   );
+ */  
+  
   /**
    * Parses S3 sets via node page
    */
@@ -648,8 +651,8 @@ function _cals_importer_get_block_items() {
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_importer_update_cors_file_table',
     'file' => "cals_importer.corsS3.inc",
-    'title' => 'Create attachment path from S3 path',
-    'description' => 'S3 path parsed and attempted to create new file',
+    'title' => 'Create attachment from S3 path',
+    /* 'description' => 'S3 path parsed and attempted to create new file', */
   );
 
   
@@ -700,14 +703,8 @@ function _cals_importer_block_process_repo_item($form_state) {
 }
 
 function _cals_importer_block_process_repo_item_submit($form, &$form_state) {
-
-  
-
   $op = $form_state['values']['op'];
-
   $callback = array_search($op, $form_state['values']);
-
-
   $nid = $form_state['values']['nid'];
   $node =  node_load($nid);
 	$items = _cals_importer_get_block_items();
@@ -721,10 +718,6 @@ function _cals_importer_block_process_repo_item_submit($form, &$form_state) {
 	  if(isset($i['description'])) drupal_set_message($i['description']);
 	  $callback($node);
 	}
-	
-	
-
-
 }
 
 /**

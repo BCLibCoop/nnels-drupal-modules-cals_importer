@@ -174,12 +174,17 @@ function _cals_importer_build_marcxml($node) {
     !empty($node->field_xml_string) &&
     !empty($node->field_nnels_856_tag) &&
     $node->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] == 1 ) {
-    
     return $node->field_xml_string[LANGUAGE_NONE][0]['value'];
- 
+  }
+  else {
+    if(empty($parent_nid) ) drupal_set_message("No parent record-set to associate file with.");
+    if(empty($node->field_xml_string) ) drupal_set_message("No Xml string to parse");
+    if(empty($node->field_nnels_856_tag) || $node->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] != 1) 
+    drupal_set_message("No 856 Tag");
+    return;
+
   }
   
-  return;
 
 }
 
@@ -187,10 +192,8 @@ function _cals_importer_build_marcxml($node) {
 class MarcXmlFileBuilder {
 
   public function __construct($node, $xml) {
-  
     $this->node = $node;
     $this->xml = $xml;
-  
   }
   
   public function createFile() {
@@ -218,6 +221,10 @@ class MarcXmlFileBuilder {
     $file = file_save_data($xml->asXml(), 'public://' . $filename);
     $file->display = 1;
     $file->description = '';
+    
+    //output system message
+    drupal_set_message(l("file", 'public://' . $filename));
+    
 
     //$xml->asXml($filename);
     $parent->field_marc_xml_output_file[LANGUAGE_NONE][0] = (array)$file;
@@ -230,10 +237,7 @@ class MarcXmlFileBuilder {
       drupal_set_message($e->getMessage());
       watchdog('my_error', $e->getMessage());
     }
-    // We save the file to the root of the files directory.
-  
-    
-    //save node
+
   
   }
 
