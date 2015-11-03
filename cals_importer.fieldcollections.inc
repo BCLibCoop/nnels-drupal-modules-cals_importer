@@ -5,18 +5,63 @@
  * populates various field collections associated with MARC XML parsing operations
  */
  
+
+
 /**
- * Helper function to return the nid for a given system number (MARC)
- * 
- * @param $num
- *   the system number
- */
+ * Populates Field Collection values
+ *
+ * @param $node
+ *   the node passed to the parser
+ * @param $fields
+ *   array of field collection values
+ *
+ */ 
+function _cals_importer_populate_repos_item_fieldcollections(&$node, $fields){
+  foreach($fields as $field) {
+    if(is_array($field['values']) && count($field['values']) > 0) {
+      $values = $field['values'];
+
+      foreach($values as $value) {
+	      $e = entity_create('field_collection_item', $value);
+	      // Attach the field_collection entity to the application node.
+	      $e->setHostEntity('node', $node);
+	      // Save the entity. 
+	      $e->save();     
+      }
+    }
+  }
+
+}
+
+/**
+ * Deletes Field Collection values
+ *
+ * @param $node
+ *   the node passed to the function
+ * @param $field
+ *   string value corresponding to the drupal field collection field
+ *
+ */ 
+
+function _cals_importer_delete_field_collection(&$node, $field) {
+
+	if (isset($node->{$field}[LANGUAGE_NONE]) ) {
+		//collection field values for multiple deletion!
+		foreach( $node->{$field}[LANGUAGE_NONE] as $v) {
+		  //$ids[] = $v['value']; 
+		  $fci = field_collection_item_load($v['value']);
+		  if($fci) $fci->delete();
+		}
+		unset($node->{$field}[LANGUAGE_NONE]);    
+	}
+
+}
 
 
 /**
  *
  * @todo
- *   Document this function. Important... 
+ *   Document this function. Or, does this still play a role??? 
  *
  */ 
  
@@ -68,7 +113,7 @@ function _cals_get_entity_value($key, $arr, $arr_tax) {
         $vid = $arr_tax['Subject'];
         $name = $v['value'];
         //$name = $name . " A.z.";
-      // Get the term's ID.
+        // Get the term's ID.
         $tid = _cals_get_tid_by_name($vid, $name);
       
         $me = array(
@@ -169,20 +214,6 @@ function _cals_get_entity_value($key, $arr, $arr_tax) {
 */
 
 
-function _cals_importer_delete_field_collection(&$node, $field) {
-
-	if (isset($node->{$field}[LANGUAGE_NONE]) ) {
-		//collection field values for multiple deletion!
-		foreach( $node->{$field}[LANGUAGE_NONE] as $v) {
-		  //$ids[] = $v['value']; 
-		  $fci = field_collection_item_load($v['value']);
-		  if($fci) $fci->delete();
-		}
-		unset($node->{$field}[LANGUAGE_NONE]);    
-	}
-
-}
-
 /**
  * delete existing field collection items before resaving the node!
  * @ see also: http://drupal.stackexchange.com/questions/68765/how-to-properly-delete-a-field-collection
@@ -207,33 +238,5 @@ function _cals_delete_existing_field_collection_items_TO_DEPRECATE($node, $keys)
  //entity_delete_multiple('field_collection_item', $ids);
  return $node;
 
-
-}
-
-/**
- * Populates Field Collection values
- *
- * @param $node
- *   the node passed to the parser
- * @param $fields
- *   array of field collection values
- *
- */ 
-function _cals_importer_populate_repos_item_fieldcollections(&$node, $fields){
-//  printAndDie($fields);
-  foreach($fields as $field) {
-    if(is_array($field['values']) && count($field['values']) > 0) {
-      $values = $field['values'];
-
-      foreach($values as $value) {
-        printPre($value);
-	      $e = entity_create('field_collection_item', $value);
-	      // Attach the field_collection entity to the application node.
-	      $e->setHostEntity('node', $node);
-	      // Save the entity. 
-	      $e->save();     
-      }
-    }
-  }
 
 }

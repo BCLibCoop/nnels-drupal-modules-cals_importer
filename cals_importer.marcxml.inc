@@ -33,7 +33,8 @@ function _cals_importer_update_repository_items(&$entity, $context = array()) {
     $content_types = array('repository_item');
     if (in_array($node->type, $content_types)  ) {
       _cals_parse_record_details($node);
-      //dpm(t("%t MARC XML file parsed and saved."), array('%t' => $node->title));
+      //dpm($node->title);
+      //drupal_set_message(t("%t MARC XML file parsed and saved."), array('%t' => $node->title));
     }
     else {
       //dpm(t("Invalid selection: not a repos item"));
@@ -300,12 +301,12 @@ function _cals_parse_record_details($node) {
     }
   }
   _cals_delete_duplicate_oclc_numbers($node);
+  
   //save the populated node
   //$node->status = 1;
   node_save($node);
+  
   //populate the field collections
-  //_cals_importer_populate_repos_item_fieldcollections($node, $arr_tax, $arr['fc']);
-  //printAndDie($fc_fields);
   _cals_importer_populate_repos_item_fieldcollections($node, $fc_fields);
 
   //populate audit trail
