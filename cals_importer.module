@@ -6,7 +6,7 @@
 /**
  * set memory limit and max execution times to higher than normal!
  */
-  ini_set('memory_limit', '1024M');
+  //ini_set('memory_limit', '1024M');
   ini_set('max_execution_time', '600');
   //the MARC namespace
   define("NAME_SPACE", "http://www.loc.gov/MARC21/slim");
@@ -1102,7 +1102,7 @@ function cals_importer_node_view($node, $view_mode, $langcode) {
  */
 function _cals_prepare_new_item_repos() {
 
-  new StdClass();
+  $node = new StdClass();
   $node->type = 'repository_item';
   $node->language = LANGUAGE_NONE;
   node_object_prepare($node);

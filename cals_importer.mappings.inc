@@ -167,12 +167,14 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
 
   $five_thirty3 = $xml->xpath("//marc:datafield[@tag='533']/marc:subfield[@code='d']");
   if (count($five_thirty3) >= 1) {
+    if(!isset($dates['533'])) $dates['533'] = '';
     $str = (string) $five_thirty3[0];
     $dates['533'] .= $str;
   }
 
   $five_thirty4 = $xml->xpath("//marc:datafield[@tag='534']/marc:subfield[@code='c']");
   if (count($five_thirty4) >= 1) {
+    if(!isset($dates['534'])) $dates['534'] = '';
     $str = (string) $five_thirty4[0];
     $dates['534'] .= $str;
   }
@@ -419,8 +421,15 @@ function _cals_get_descriptors_from_marc($xml, $k, &$map) {
 
 }
 
+/**
+ * @param $xml
+ * @param $k
+ * @param $map
+ * @param $flag
+ */
+//function _cals_importer_get_system_numbers_from_marc($xml, $k, &$map, $flag) {
+//check w/ Jonathan as to the $flag parameter
 function _cals_importer_get_system_numbers_from_marc($xml, $k, &$map) {
-	
   $str = array();
   $path = "//marc:datafield[@tag='035']/marc:subfield[@code='a']";
 	$tmp = $xml->xpath($path);
@@ -430,7 +439,7 @@ function _cals_importer_get_system_numbers_from_marc($xml, $k, &$map) {
 	//if ( empty($str) ) { //fallback to 037 when 035 isn't present
   $path = "//marc:datafield[@tag='037']/marc:subfield[@code='a']";
   $tmp = $xml->xpath($path);
-  $str[] = (string) trim($tmp[0]);
+  if(count($tmp)) $str[] = (string) trim($tmp[0]);
   //}
 
   if ( !empty($str) ) { //proceed if we got something
@@ -438,7 +447,7 @@ function _cals_importer_get_system_numbers_from_marc($xml, $k, &$map) {
     foreach ($str as $key => $value) {
       if (strpos($value, "(OCoLC)") !== false ) {
       	//new check on valid oclc numbers
-      	if ( _cals_isvalid_oclc_number($value) === 1 && !$flag ) {
+      	if ( _cals_isvalid_oclc_number($value) === 1 && !isset($flag) ) {
          $map['field_oclc_number']['values'][] = $value;
          $flag = true; //single-value field
         }

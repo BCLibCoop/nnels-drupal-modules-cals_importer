@@ -51,6 +51,7 @@ function _cals_importer_create_repo_items($node) {
  
 function _cals_importer_create_repo_items_batch($node, &$context) {
   //$limit = 400; //10;
+  $limit = 10;
   if (empty($context['sandbox']['progress']) ) {
   	
     $context['sandbox']['progress'] = 0;
@@ -84,23 +85,11 @@ function _cals_importer_create_repo_items_batch($node, &$context) {
     $context['message'] = t('Now processing %node', array('%node' => $n->title));
 		dpm($context['sandbox']['progress'] . " of " . $context['sandbox']['max'] . ": " . $n->title );
 
-
     if($context['sandbox']['progress'] === $context['sandbox']['max']) {
   		$pnode->field_status[LANGUAGE_NONE][0]['value'] = 2;
 		  //save one last time.
 		  node_save($pnode);
-		  $num_records = count($context['sandbox']['parsed']);
- 			dpm($context['sandbox']);
-		  
-		  /*
-		  $vars = array("items" => $context['sandbox']['max'] , "title" => "parsed list: $num_records records", "type" => "ol", "attributes" => array());
-		  $vars = theme_item_list($vars); 
-		  dpm(filter_xss($vars, $allowed_tags = array('a', 'em', 'strong', 'cite', 'blockquote', 'code', 'ul', 'ol', 'li', 'dl', 'dt', 'dd')));
-     */
     }
-   
-
-    
   }
 	if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
 	  $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
@@ -131,7 +120,6 @@ function _cals_importer_create_repo_items_finished($success, $results, $operatio
  *   the newly created / saved node
  */
 function _cals_build_skeleton_node($record, $pnode) {
-  //$arr = _cals_get_title_from_xml($record);
   $title = _cals_get_simple_title($record);
   $new_record = TRUE;
 
@@ -278,9 +266,10 @@ function _cals_get_simple_title($xml) {
   $tmp = $xml->xpath("marc:datafield[@tag='245']/marc:subfield[@code='a']");
  	$title = (string) $tmp[0];
   $tmp = $xml->xpath("marc:datafield[@tag='245']/marc:subfield[@code='b']");
-  $tmp = (string) $tmp[0];
-  if( strlen($tmp) ) $title .=  " " . $tmp;
-  
+  if(count($tmp)) {
+    $tmp = (string) $tmp[0];
+    if( strlen($tmp) ) $title .=  " " . $tmp;
+  }
   return _cals_get_truncated_value( rtrim($title, ", /"), 250);
 }
 
