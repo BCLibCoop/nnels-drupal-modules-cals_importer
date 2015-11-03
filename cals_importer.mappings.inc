@@ -51,8 +51,9 @@ function _cals_importer_get_coverage_marc($xml, $k, &$map){
 	foreach ($vals as $val) {
 	 	$str = substr($val, 15, 3); 	
     //field collection
-		$map['values'][] = array(
-			'field_name' => 'field_dc_description',
+		$map[$k]['values'][] = array(
+			//'field_name' => 'field_dc_description',
+      'field_name' => 'field_dc_coverage',
 			'field_dc_coverage_type' => array(
 				LANGUAGE_NONE => array(array('value' => 'Spatial')),
 			),
@@ -77,12 +78,26 @@ function _cals_importer_get_coverage_marc($xml, $k, &$map){
 	  $vals = $xml->xpath($path);
 	  foreach ($vals as $val) {
 	  	$str = (string) trim($val[0]); 
-	  	if(strlen($str)) $map[$k]['values'][] = array(
-	      "field_value" => $str, 
-        "field_dc_coverage_type" => "Spatial",
-        "field_dc_coverage_scheme" => "ISO 3166",
-	      "field_marc_tag" => $tag,
-	    );
+
+      if(strlen($str)) {
+
+        $map[$k]['values'][]= array(
+          'field_name' => 'field_dc_coverage',
+          'field_dc_coverage_type' => array(
+            LANGUAGE_NONE => array(array('value' => 'Spatial')),
+          ),
+          'field_marc_tag' => array(
+            LANGUAGE_NONE => array(array('value' => $tag)),
+          ),
+          'field_dc_coverage_scheme' => array(
+            LANGUAGE_NONE => array(array('value' => "ISO 3166")),
+          ),
+          'field_value' => array(
+            LANGUAGE_NONE => array(array('value' => $str)),
+          ),
+        );
+      }
+
 	  
 	  } 
 	}
@@ -91,13 +106,31 @@ function _cals_importer_get_coverage_marc($xml, $k, &$map){
   $vals = $xml->xpath($path);
   foreach ($vals as $val) {
   	$str = (string) trim($val[0]); 
-  	if(strlen($str)) $map[$k]['values'][] = array(
-      "field_value" => $str, 
-      "field_dc_coverage_type" => "Spatial",
-      "field_dc_coverage_scheme" => "lcsh",
-      "field_marc_tag" => 651,
-    );
-  
+//  	if(strlen($str)) $map[$k]['values'][] = array(
+//      "field_value" => $str,
+//      "field_dc_coverage_type" => "Spatial",
+//      "field_dc_coverage_scheme" => "lcsh",
+//      "field_marc_tag" => 651,
+//    );
+    if(strlen($str)) {
+
+      $map[$k]['values'][]= array(
+        'field_name' => 'field_dc_coverage',
+        'field_dc_coverage_type' => array(
+          LANGUAGE_NONE => array(array('value' => 'Spatial')),
+        ),
+        'field_marc_tag' => array(
+          LANGUAGE_NONE => array(array('value' => $tag)),
+        ),
+        'field_dc_coverage_scheme' => array(
+          LANGUAGE_NONE => array(array('value' => "lcsh")),
+        ),
+        'field_value' => array(
+          LANGUAGE_NONE => array(array('value' => $str)),
+        ),
+      );
+    }
+
   } 
 }
 
@@ -272,7 +305,7 @@ function _cals_parse_date_issue_copyright ($raw_date_value) {
 
   preg_match($copyright, $raw_date_value, $matches);
 
-  if ($matches[0]) {
+  if (count($matches)) {
     //$date_value_c =  explode('c', $matches[0] ); //remove the 'c'
     //dpm($date_value_c, "Copyright returning: ");
     return true;
@@ -391,6 +424,7 @@ function _cals_importer_get_system_numbers_from_marc($xml, $k, &$map) {
   $str = array();
   $path = "//marc:datafield[@tag='035']/marc:subfield[@code='a']";
 	$tmp = $xml->xpath($path);
+  if(!count($tmp)) return;
   $str[] = (string) trim($tmp[0]);
 
 	//if ( empty($str) ) { //fallback to 037 when 035 isn't present

@@ -63,7 +63,6 @@ function _cals_get_node_by_sysnum($num) {
   
   foreach($rs as $row) {
     $nid = $row->entity_id;
-    //drupal_set_message("nid = $nid / num = $num");
   }
   return $nid;
 }
@@ -208,8 +207,11 @@ function _cals_get_iso_year($value) {
     $date_pattern = "/\s\d{4}$/";
     preg_match($date_pattern, $value, $matches);
 
-    if ($matches[0]) $newvalue = $matches[0];
-    return trim( (int) $newvalue );
+    if (count($matches)) {
+      $newvalue = (int) $matches[0];
+      return trim($newvalue);
+
+    }
   }
   
   

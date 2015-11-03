@@ -33,10 +33,10 @@ function _cals_importer_update_repository_items(&$entity, $context = array()) {
     $content_types = array('repository_item');
     if (in_array($node->type, $content_types)  ) {
       _cals_parse_record_details($node);
-      drupal_set_message(t("%t MARC XML file parsed and saved."), array('%t' => $node->title));
+      //dpm(t("%t MARC XML file parsed and saved."), array('%t' => $node->title));
     }
     else {
-      drupal_set_message(t("Invalid selection: not a repos item"));
+      //dpm(t("Invalid selection: not a repos item"));
     }
 
   }//end main if
@@ -281,10 +281,13 @@ function _cals_parse_record_details($node) {
 	      $key = ($type == 'taxonomy') ? "tid" : "value";
 	      
 	      
-	      if(isset($map[$k]['values'])) {
+	      if(is_array($map[$k]['values'])) {
 		      $values = $map[$k]['values'];
-		      foreach($values as $value) $node->{$k}[LANGUAGE_NONE][][$key] = $value;
+          foreach($values as $value) {
+            if(!empty($value)) $node->{$k}[LANGUAGE_NONE][][$key] = $value;
+          }
 	      }
+        //else dpm($map[$k]);
 	    }
 	    if($type != 'field_collection' && $type != 'taxonomy') {
 	      _cals_importer_normalize_node_field($node, $k);
@@ -302,6 +305,7 @@ function _cals_parse_record_details($node) {
   node_save($node);
   //populate the field collections
   //_cals_importer_populate_repos_item_fieldcollections($node, $arr_tax, $arr['fc']);
+  //printAndDie($fc_fields);
   _cals_importer_populate_repos_item_fieldcollections($node, $fc_fields);
 
   //populate audit trail
