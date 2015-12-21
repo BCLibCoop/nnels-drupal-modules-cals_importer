@@ -31,7 +31,7 @@ function _cals_get_title_from_marc($xml, $k, &$map) {
         if ($code == 'b') $arr['repos']['title'] .=  " " . $str;
 				break;
 */
-	$codes = array("a", "b");
+	$codes = array("a", "b", "n", "p");
 	$title = array();
 	foreach($codes as $code) {
 	  $path = "//marc:datafield[@tag='245']/marc:subfield[@code='{$code}']";
@@ -40,8 +40,8 @@ function _cals_get_title_from_marc($xml, $k, &$map) {
 
 	}
 	$title = implode(" ", $title);
-	
-	if(strlen($title)) $map[$k]['values'][] = _cals_get_truncated_value($title, 250);
+  $title = _cals_get_truncated_value($title, 250);
+	if(strlen($title)) $map[$k]['values'][] = $title;
 }
 
 
