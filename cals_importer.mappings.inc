@@ -24,21 +24,26 @@ function _cals_get_marc_mappings() {
 
 function _cals_get_title_from_marc($xml, $k, &$map) {
 
-/*
-      //main title  
-      case 245:
-        if ($code == 'a') $arr['repos']['title'] =  $str;
-        if ($code == 'b') $arr['repos']['title'] .=  " " . $str;
-				break;
-*/
-	$codes = array("a", "b", "n", "p");
 	$title = array();
-	foreach($codes as $code) {
-	  $path = "//marc:datafield[@tag='245']/marc:subfield[@code='{$code}']";
-    $tmp = $xml->xpath($path);
-    foreach ($tmp as $me) $title[] = (string) trim($me[0]); 
+  $path = "//marc:datafield[@tag='245']/marc:subfield";
+  $tag = $xml->xpath($path);
+  foreach($tag as $subfield ) {
+    $code = (string) $subfield->attributes()->code;
+    if($code != 'c') {
+      $path = "//marc:datafield[@tag='245']/marc:subfield[@code='{$code}']";
+      $tmp = $xml->xpath($path);
+      foreach ($tmp as $me) $title[] = (string) trim($me[0]);
+    }
 
-	}
+  }
+  //comment out the following - old method
+//	$codes = array("a", "b", "n", "p");
+//	foreach($codes as $code) {
+//	  $path = "//marc:datafield[@tag='245']/marc:subfield[@code='{$code}']";
+//    $tmp = $xml->xpath($path);
+//    foreach ($tmp as $me) $title[] = (string) trim($me[0]);
+//
+//	}
 	$title = implode(" ", $title);
   $title = _cals_get_truncated_value($title, 250);
 	if(strlen($title)) $map[$k]['values'][] = $title;

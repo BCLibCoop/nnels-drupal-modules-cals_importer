@@ -290,6 +290,9 @@ function _cals_parse_record_details($node) {
 	      }
         //else dpm($map[$k]);
 	    }
+      if($k == 'title') {
+         $node->title = $map[$k]['values'][0];
+      }
 	    if($type != 'field_collection' && $type != 'taxonomy') {
 	      _cals_importer_normalize_node_field($node, $k);
 	    }
