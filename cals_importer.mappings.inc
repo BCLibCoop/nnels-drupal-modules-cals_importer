@@ -49,6 +49,89 @@ function _cals_get_title_from_marc($xml, $k, &$map) {
 	if(strlen($title)) $map[$k]['values'][] = $title;
 }
 
+/*
+ * see:https://github.com/BCLibCoop/nnels/issues/99
+ *
+ * "Similarly, Alternate Title should pull from 246 if the first indicator is 1 or 3, subfields $abnp
+ *
+ */
+
+function _cals_get_alternate_title_from_marc($xml, $k, &$map) {
+  $title = array();
+  $codes = array("a", "b", "n", "p");
+  $parent = $xml->xpath("//marc:datafield[@tag='246']"); //need to grab abbreviated path to find indicator
+  if(count($parent)) {
+    foreach($parent as $i => $child) {
+      $ind = (string) $parent[$i]->attributes()->ind1;
+      if($ind == 1 || $ind == 3) {
+        $title = array(); //holds the title elements for this child
+        foreach ( $child->children('marc', true)->subfield as $subfield ) {
+          $code = (string) $subfield->attributes()->code;
+          if(in_array($code, $codes)) {
+            $title[] = (string) trim($subfield[0]);
+          }
+        }
+        if(count($title)) {
+          $title = implode(" ", $title);
+          $title = _cals_get_truncated_value($title, 250);
+          $map[$k]['values'][] = $title;
+        }
+      }
+
+    }
+  }
+
+
+}
+/*
+ * see:https://github.com/BCLibCoop/nnels/issues/99
+ *
+ * "Uniform title should pull from 130 $anp or if 130 does not exist, 240 where
+ * first indicator is 1, subfields $anp"
+ *
+ */
+function _cals_get_uniform_title_from_marc($xml, $k, &$map) {
+  $title = array();
+  $path = "//marc:datafield[@tag='130']/marc:subfield"; //reset path
+  $tag = $xml->xpath($path);
+  $codes = array("a", "n", "p");
+  foreach($tag as $subfield ) {
+    $code = (string) $subfield->attributes()->code;
+    if(in_array($code, $codes)) {
+      $path = "//marc:datafield[@tag='130']/marc:subfield[@code='{$code}']";
+      $tmp = $xml->xpath($path);
+      foreach ($tmp as $me) $title[] = (string) trim($me[0]);
+    }
+  }
+  if(!count($title)) {
+    $parent = $xml->xpath("//marc:datafield[@tag='240']"); //need to grab parent path to find indicator
+    if(!count($parent)) return;
+    $ind = (string) $parent[0]->attributes()->ind1;
+
+    $path = "//marc:datafield[@tag='240']/marc:subfield"; //reset path
+    $tag = $xml->xpath($path);
+    if($ind == 1) {
+      foreach($tag as $subfield ) {
+        $code = (string) $subfield->attributes()->code;
+        if(in_array($code, $codes)) {
+          $path = "//marc:datafield[@tag='240']/marc:subfield[@code='{$code}']";
+          $tmp = $xml->xpath($path);
+          foreach ($tmp as $me) $title[] = (string) trim($me[0]);
+        }
+
+      }
+    }
+
+  }
+
+  $title = implode(" ", $title);
+  $title =  _cals_get_truncated_value($title, 250) ;
+  $vid = 17;
+  $map[$k]['values'][] = _cals_get_tid_by_name($vid, $title);
+  //_cals_get_taxonomy_terms_from_xpath($vid, $title, $k, $map);
+
+
+}
 
 function _cals_importer_get_coverage_marc($xml, $k, &$map){
   $path = "//marc:controlfield[@tag='008']";
@@ -244,14 +327,14 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
     $map[$k]['values'][] = array(
 	    'field_name' =>  "field_date",
 	    'field_dc_date' => array(
-	      LANGUAGE_NONE => array(array('value' => $date) ),
+	      LANGUAGE_NONE => array(array('value' => _cals_get_truncated_value($date, 20)) ),
 	    ),
 	    'field_qualifier_date' => array(
 	      LANGUAGE_NONE => array(array('value' => $qual) ),
 	    ),
     );
   }
- 
+
 
 }
 
@@ -366,9 +449,13 @@ function _cals_get_taxonomy_terms_from_xpath($vid, $xpathvalue, $fieldname, &$ma
 		  if(!in_array($str, $terms) ) $terms[] = $str;
     }
   }
+
   asort($terms);
+  printPre($terms, $vid);
 	foreach($terms as $term) $map[$fieldname]['values'][] = _cals_get_tid_by_name($vid, $term);
-	
+  if($fieldname == 'field_uniform_title') {
+    printAndDie($terms, $xpathvalue, $term, $map[$fieldname]['values']);
+  }
 
 } 
 //function _cals_get_genre_from_marc(&$arr, $xml) {
@@ -405,6 +492,7 @@ function _cals_get_descriptors_from_marc($xml, $k, &$map) {
     if (count($tmp) >= 1) {
       foreach ($tmp as $me) {
         $val = (string) trim($me[0]);
+        $val = _cals_get_truncated_value($val, 1000);
         $type = _cals_get_description_type($field);
         $map[$k]['values'][] = array(
           'field_name' => 'field_dc_description', 

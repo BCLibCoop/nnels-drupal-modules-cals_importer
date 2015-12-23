@@ -87,7 +87,6 @@ function _cals_get_fields_repository_item() {
     $map[$k]['default'] = (isset($req) && isset($v['default_value'][0]['value'])) ? $v['default_value'][0]['value'] : '';
     $types[$t2][] = $k;
   }
-  
   $arr = array("types" => $types, "map" => $map);
   return $arr;
 
@@ -110,7 +109,9 @@ function _cals_importer_repo_field_callback($fieldname) {
         array('tag' => 520, 'code' => 'a'),
       )
     ),
-  	"field_iso_language" => array('function' => '_cals_importer_get_isolanguage_from_marcxml'),
+    "field_title_alternate" => array('function' => '_cals_get_alternate_title_from_marc'),
+    "field_uniform_title" => array('function' => '_cals_get_uniform_title_from_marc'),
+   	"field_iso_language" => array('function' => '_cals_importer_get_isolanguage_from_marcxml'),
   	"field_date" => array('function' => '_cals_get_date_issued_from_marc'),
 
     "field_dc_coverage" => array('function' => '_cals_importer_get_coverage_marc'),
@@ -222,8 +223,10 @@ function _cals_importer_repo_field_callback($fieldname) {
 function _cals_importer_normalize_node_field(&$node, $field) {
 	switch($field) {
 	  case "title":
-	  case "title_field":
-			_cals_importer_strip_square_brackets($node, $field);
+    case "title_field":
+		case "field_title_alternative":
+    case "field_title_uniform":
+      _cals_importer_strip_square_brackets($node, $field);
 			_cals_importer_normalize_title($node);
 	  	break;
 	  case "field_dc_creator":
@@ -263,6 +266,8 @@ function _cals_parse_record_details($node) {
   $fc_fields = array(); // container for field collection array
 
   //loop thru map to populate node
+
+
   foreach($map as $k => $v) {
     $type = $v['type'];
 
@@ -293,9 +298,9 @@ function _cals_parse_record_details($node) {
       if($k == 'title') {
          $node->title = $map[$k]['values'][0];
       }
-	    if($type != 'field_collection' && $type != 'taxonomy') {
-	      _cals_importer_normalize_node_field($node, $k);
-	    }
+	    if( ($type != 'field_collection' && $type != 'taxonomy') || $k == 'field_title_uniform') {
+        _cals_importer_normalize_node_field($node, $k);
+      }
 	    if($type == 'field_collection') {
 	      _cals_importer_delete_field_collection($node, $k);
 	      $fc_fields[$k] = $map[$k];
@@ -304,7 +309,7 @@ function _cals_parse_record_details($node) {
     }
   }
   _cals_delete_duplicate_oclc_numbers($node);
-  
+
   //save the populated node
   //$node->status = 1;
   node_save($node);
