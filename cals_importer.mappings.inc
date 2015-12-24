@@ -452,9 +452,6 @@ function _cals_get_taxonomy_terms_from_xpath($vid, $xpathvalue, $fieldname, &$ma
 
   asort($terms);
 	foreach($terms as $term) $map[$fieldname]['values'][] = _cals_get_tid_by_name($vid, $term);
-  if($fieldname == 'field_uniform_title') {
-    printAndDie($terms, $xpathvalue, $term, $map[$fieldname]['values']);
-  }
 
 } 
 //function _cals_get_genre_from_marc(&$arr, $xml) {
