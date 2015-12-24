@@ -72,6 +72,12 @@ function _cals_get_fields_repository_item() {
 	  "_autocomplete", "_with_summary", "_hidden", "_buttons", "_select", "_textfield", "_embed", "_textarea",
   );
 
+
+  //create an array of taxonomies to be used in parsing field collections, etc.
+  foreach (taxonomy_get_vocabularies() as $k => $v) {
+    $vocabularies[$v->machine_name] = $k;
+  }
+
   foreach($fields as $k => $v) {
     $type = $v['widget']['type'];
     $t2 = $type;
@@ -83,6 +89,18 @@ function _cals_get_fields_repository_item() {
       'values' => '',
       'parser' => _cals_importer_repo_field_callback($k),
     );
+    if($t2 == 'taxonomy') {
+
+
+      $info = field_info_field($k);
+      $vocab_keys = array();
+      foreach ($info['settings']['allowed_values'] as $item) {
+        if(!empty($item['vocabulary'])) $map[$k]['vid'] = $vocabularies[$item['vocabulary']];
+      }
+
+
+    }
+
     //set a default if defined
     $map[$k]['default'] = (isset($req) && isset($v['default_value'][0]['value'])) ? $v['default_value'][0]['value'] : '';
     $types[$t2][] = $k;
@@ -256,8 +274,7 @@ function _cals_importer_normalize_node_field(&$node, $field) {
 function _cals_parse_record_details($node) {
 	$xml = _cals_get_marc_xml_string($node);
 	if($xml === 0) return;
-  //create an array of taxonomies to be used in parsing field collections, etc.
-  foreach (taxonomy_get_vocabularies() as $k => $v) $arr_tax[$v->name] = $k;
+
   $arr_fields = _cals_get_fields_repository_item();
   $map = $arr_fields['map'];
   //if (!strlen($xml)) return "no xml!";

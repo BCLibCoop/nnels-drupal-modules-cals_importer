@@ -126,7 +126,7 @@ function _cals_get_uniform_title_from_marc($xml, $k, &$map) {
 
   $title = implode(" ", $title);
   $title =  _cals_get_truncated_value($title, 250) ;
-  $vid = 17;
+  $vid = $map[$k]['vid'];
   $map[$k]['values'][] = _cals_get_tid_by_name($vid, $title);
   //_cals_get_taxonomy_terms_from_xpath($vid, $title, $k, $map);
 
@@ -440,7 +440,8 @@ function _cals_get_date_from_008($str) {
 /*
  * Parse taxonomy terms: genre (vid = 2) and subject (vid = 3) 
  */
-function _cals_get_taxonomy_terms_from_xpath($vid, $xpathvalue, $fieldname, &$map) {
+function _cals_get_taxonomy_terms_from_xpath($xpathvalue, $fieldname, &$map) {
+  $vid = $map[$fieldname]['vid'];
   $terms = array();
   if (count($xpathvalue) >= 1) {
     foreach ($xpathvalue as $me) {
@@ -456,14 +457,12 @@ function _cals_get_taxonomy_terms_from_xpath($vid, $xpathvalue, $fieldname, &$ma
 } 
 //function _cals_get_genre_from_marc(&$arr, $xml) {
 function _cals_get_genre_from_marc($xml, $k, &$map) {
-  $vid = 4;
   $xpathvalue = $xml->xpath("//marc:datafield[@tag='655'][@ind1=' ']/marc:subfield[@code='a']|//marc:datafield[@tag='655'][@ind2=' ']/marc:subfield[@code='a']");
-  _cals_get_taxonomy_terms_from_xpath($vid, $xpathvalue, $k, $map);
+  _cals_get_taxonomy_terms_from_xpath($xpathvalue, $k, $map);
 }
 
 //function _cals_get_subject_from_marc(&$arr, &$node, $xml, &$map) {
 function _cals_get_subject_from_marc($xml, $k, &$map){
-  $vid = 3;
   $paths = array();
   $paths[] =  "//marc:datafield[@tag='600']/marc:subfield[@code='a']";
 
@@ -472,7 +471,7 @@ function _cals_get_subject_from_marc($xml, $k, &$map){
   foreach ($codes as $code) $paths[] = "//marc:datafield[@tag='650']/marc:subfield[@code='" . $code . "']";
   $path = implode("|", $paths);
   $xpathvalue = $xml->xpath($path);
-  _cals_get_taxonomy_terms_from_xpath($vid, $xpathvalue, $k, $map);
+  _cals_get_taxonomy_terms_from_xpath($xpathvalue, $k, $map);
 }
 
 
