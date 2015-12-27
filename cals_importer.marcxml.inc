@@ -11,7 +11,7 @@
 function _cals_importer_update_repository_item($node) {
   //can also push this thru the batch api instead. To do so, comment out above and uncomment
   //the following function call.
-  _cals_parse_record_details($node);
+  _cals_parse_record_details($node, $fields=array());
 
   //return user back to main node page
   drupal_goto("node/" . $node->nid);
@@ -32,7 +32,7 @@ function _cals_importer_update_repository_items(&$entity, $context = array()) {
     //safety check to make sure we're parsing repos items!!    
     $content_types = array('repository_item');
     if (in_array($node->type, $content_types)  ) {
-      _cals_parse_record_details($node);
+      _cals_parse_record_details($node, $fields=array());
       //dpm($node->title);
       //drupal_set_message(t("%t MARC XML file parsed and saved."), array('%t' => $node->title));
     }
@@ -46,6 +46,7 @@ function _cals_importer_update_repository_items(&$entity, $context = array()) {
   
 }
 
+
 /**
  * Returns fields for repository item
  *
@@ -56,55 +57,66 @@ function _cals_importer_update_repository_items(&$entity, $context = array()) {
  *   wrap into a static variable?
  *
  */ 
-function _cals_get_fields_repository_item() {
+function _cals_get_fields_repository_item($fieldnames) {
   $fields = field_info_instances("node", "repository_item");
-	//set title as first array element
-  $map = array(
-   "title" => array(
-     'type' => 'text',
-     'required' => 1,
-     'values' => '',
-     'parser' => array("function" => '_cals_get_title_from_marc'),
-   ),
-  );
 
+
+  //printAndDie($fields);
+  //set title as first array element
+//  $map = array(
+//   "title" => array(
+//     'type' => 'text',
+//     'required' => 1,
+//     'values' => '',
+//     'parser' => array("function" => '_cals_get_title_from_marc'),
+//   ),
+//  );
+  $map = array();
 	$tmp = array(
 	  "_autocomplete", "_with_summary", "_hidden", "_buttons", "_select", "_textfield", "_embed", "_textarea",
   );
-
-
   //create an array of taxonomies to be used in parsing field collections, etc.
   foreach (taxonomy_get_vocabularies() as $k => $v) {
     $vocabularies[$v->machine_name] = $k;
   }
+  if (count($fieldnames)) {
+    foreach($fields as $k => $v) {
+      if (!in_array($k, $fieldnames)) {
+        unset($fields[$k]);
+      }
+    }
+  }
 
   foreach($fields as $k => $v) {
-    $type = $v['widget']['type'];
-    $t2 = $type;
-    foreach($tmp as $strip) $t2 = str_replace($strip, '', $t2);
-    $req = $v['required'];
-    $map[$k] = array(
-      'type' => $t2,
-      'required' => $req,
-      'values' => '',
-      'parser' => _cals_importer_repo_field_callback($k),
-    );
-    if($t2 == 'taxonomy') {
+    $parser = _cals_importer_repo_field_callback($k);
+    if(!empty($parser)) {
+      $type = $v['widget']['type'];
+      $label = $v['label'];
+      $t2 = $type;
+      foreach($tmp as $strip) $t2 = str_replace($strip, '', $t2);
+      $req = $v['required'];
 
-
-      $info = field_info_field($k);
-      $vocab_keys = array();
-      foreach ($info['settings']['allowed_values'] as $item) {
-        if(!empty($item['vocabulary'])) $map[$k]['vid'] = $vocabularies[$item['vocabulary']];
+      $map[$k] = array(
+        'label' => $label,
+        'type' => $t2,
+        'required' => $req,
+        'values' => '',
+        'parser' => _cals_importer_repo_field_callback($k),
+      );
+      if($t2 == 'taxonomy') {
+        $info = field_info_field($k);
+        $vocab_keys = array();
+        foreach ($info['settings']['allowed_values'] as $item) {
+          if(!empty($item['vocabulary'])) $map[$k]['vid'] = $vocabularies[$item['vocabulary']];
+        }
       }
 
-
+      //set a default if defined
+      $map[$k]['default'] = (isset($req) && isset($v['default_value'][0]['value'])) ? $v['default_value'][0]['value'] : '';
+      $types[$t2][] = $k;
     }
-
-    //set a default if defined
-    $map[$k]['default'] = (isset($req) && isset($v['default_value'][0]['value'])) ? $v['default_value'][0]['value'] : '';
-    $types[$t2][] = $k;
   }
+
   $arr = array("types" => $types, "map" => $map);
   return $arr;
 
@@ -121,14 +133,18 @@ function _cals_get_fields_repository_item() {
 function _cals_importer_repo_field_callback($fieldname) {
 
   $arr = array(
-		//'title_field' => array('function' => '_cals_get_title_from_marc'),  
-    'body'  => array('function' => '_cals_importer_get_basic_values_from_marc', 
+
+    "title" => array('function' => '_cals_get_title_from_marc'),
+
+    "title_field" => array('function' => '_cals_get_title_from_marc'),
+    "field_title_alternate" => array('function' => '_cals_get_alternate_title_from_marc'),
+    "field_uniform_title" => array('function' => '_cals_get_uniform_title_from_marc'),
+
+    'body'  => array('function' => '_cals_importer_get_basic_values_from_marc',
       "tags" => array(
         array('tag' => 520, 'code' => 'a'),
       )
     ),
-    "field_title_alternate" => array('function' => '_cals_get_alternate_title_from_marc'),
-    "field_uniform_title" => array('function' => '_cals_get_uniform_title_from_marc'),
    	"field_iso_language" => array('function' => '_cals_importer_get_isolanguage_from_marcxml'),
   	"field_date" => array('function' => '_cals_get_date_issued_from_marc'),
 
@@ -185,6 +201,7 @@ function _cals_importer_repo_field_callback($fieldname) {
     
     'field_dc_relation' => array('function' => '_cals_importer_get_dc_relations_from_marc', 
       "tags" => array(
+        array('tag' => 250, 'code' => 'a', 'qualifier' => "type", 'enum' => "isVersionOf"),
         array('tag' => 800, 'code' => 'a', 'qualifier' => "type", 'enum' => "IsPartOf"),
 				array('tag' => 830, 'code' => 'a', 'qualifier' => "type", 'enum' => "IsPartOf"),
 				array('tag' => 760, 'code' => 'a', 'qualifier' => "type", 'enum' => "IsPartOf"),
@@ -239,14 +256,16 @@ function _cals_importer_repo_field_callback($fieldname) {
  *
  */ 
 function _cals_importer_normalize_node_field(&$node, $field) {
+  //drupal_set_message(__FUNCTION__ . ": " . $field);
 	switch($field) {
 	  case "title":
     case "title_field":
-		case "field_title_alternative":
     case "field_title_uniform":
-      _cals_importer_strip_square_brackets($node, $field);
-			_cals_importer_normalize_title($node);
-	  	break;
+    case "field_title_alternate":
+		  _cals_importer_strip_square_brackets($node, $field);
+      _cals_importer_strip_trailing_periods($node, $field);
+			//_cals_importer_normalize_title_fields($node, $field); to deprecate
+      break;
 	  case "field_dc_creator":
 		case "field_dc_contributor":	
 			_cals_importer_strip_square_brackets($node, $field);
@@ -268,24 +287,131 @@ function _cals_importer_normalize_node_field(&$node, $field) {
  *   the node passed to the parser
  *
  * @return
- *   an array. 
+ *   an array.
  *
- */ 
-function _cals_parse_record_details($node) {
-	$xml = _cals_get_marc_xml_string($node);
-	if($xml === 0) return;
+ */
+function _cals_parse_record_details($node, $fields) {
+  $xml = _cals_get_marc_xml_string($node);
+  if($xml === 0) return;
 
-  $arr_fields = _cals_get_fields_repository_item();
+  $arr_fields = _cals_get_fields_repository_item($fields);
   $map = $arr_fields['map'];
-  //if (!strlen($xml)) return "no xml!";
-  $arr = array();
-  
-  $fc_fields = array(); // container for field collection array
-
   //loop thru map to populate node
+  _cals_importer_iterate_field_map($node, $xml, $map, "parse");
+
+  if(count($fields)) {
+    //populate audit trail
+    $action['description'] = "";
+    $action['activity'] = 6;
+    _cals_importer_update_admin_audit($node,  $action);
+
+  }
+  else {
+    //populate audit trail
+    $action['description'] = "";
+    $action['activity'] = 2;
+    _cals_importer_update_admin_audit($node,  $action);
+    $action['description'] = "";
+    $action['activity'] = 3;
+    _cals_importer_update_admin_audit($node,  $action);
 
 
+  }
+
+}
+
+
+
+function _cals_parse_record_details_form($settings, &$form_state) {
+  $form = array();
+  $fields = array();
+  $arr = _cals_get_fields_repository_item();
+  //$fields = field_info_instances("node", "repository_item");
+  $map = $arr['map'];
+  foreach($map as $k => $v) $options[$k] = $v['label'];
+
+  $form['fields_to_parse'] = array(
+    '#type' => 'select',
+    '#title' => t('Select the Field(s) to reparse'),
+    '#options' => $options,
+    '#required' => TRUE,
+    '#multiple' => TRUE,
+    '#size' => count($options),
+    '#description' => t("NB: this action will overwrite any edits added to the selected fields following the original parsing. Please exercise caution."),
+    '#default_value' => isset($settings['settings']['hero']) ? $settings['settings']['hero'] : '',
+  );
+  return $form;
+}
+
+function _cals_parse_record_details_submit($form, $form_state) {
+  $return = array();
+  $return['fields_to_parse'] = $form_state['values']['fields_to_parse'];
+  return $return; //Note, return value here must be an array.
+}
+
+/**
+ * Iterates thru mapped fields to parse full node or selected fields
+ *
+ * @param $node
+ *   the node passed to the parser
+ * @param $xml
+ *   the marcxml to be parsed
+ * @param $map
+ *   the field mappings
+ * @param $op
+ *   the operation, e.g., parse (all fields) or reparse (selected fields)
+ *
+ * @return
+ *   $node
+ *
+ */
+function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
+
+  $fc_fields = array(); // container for field collection array
   foreach($map as $k => $v) {
+    $type = $v['type'];
+
+    if(!empty($v['parser'])) {
+      if(!isset($v['parser']['function'])) printAndDie("???", $v);
+      $function = $v['parser']['function'];
+      if(isset($v['parser']['tags'])) {
+        $tags = $v['parser']['tags'];
+        $function($xml, $k, $map, $tags);
+      }
+      else $function($xml, $k, $map);
+      $node->{$k} = array();
+      $key = ($type == 'taxonomy') ? "tid" : "value";
+      if(is_array($map[$k]['values'])) {
+        $values = $map[$k]['values'];
+        foreach($values as $value) {
+          if(!empty($value)) $node->{$k}[LANGUAGE_NONE][][$key] = $value;
+        }
+      }
+      if( ($type != 'field_collection' && $type != 'taxonomy') || $k == 'field_title_uniform') {
+        _cals_importer_normalize_node_field($node, $k);
+      }
+      if($type == 'field_collection') {
+        _cals_importer_delete_field_collection($node, $k);
+        $fc_fields[$k] = $map[$k];
+      }
+      if($k == 'title_field')  $node->title = $node->{$k}[LANGUAGE_NONE][0]['value'];
+
+      if($k == 'title')  $node->title_field[LANGUAGE_NONE][0]['value'] = $node->title;
+    }
+  }
+  if($op == 'parse') _cals_delete_duplicate_oclc_numbers($node);
+
+  //save the populated node
+  //$node->status = 1;
+  node_save($node);
+  //populate the field collections
+  if(count($fc_fields)) _cals_importer_populate_repos_item_fieldcollections($node, $fc_fields);
+
+
+}
+
+/*
+ *   foreach($map as $k => $v) {
     $type = $v['type'];
 
     if(!empty($v['parser'])) {
@@ -298,48 +424,33 @@ function _cals_parse_record_details($node) {
       }
       else $function($xml, $k, $map);
 
-	    //strip out existing values and repopulate
-	    if($k != 'title' && $type != 'field_collection') {
-	      $node->{$k} = array();
-	      $key = ($type == 'taxonomy') ? "tid" : "value";
-	      
-	      
-	      if(is_array($map[$k]['values'])) {
-		      $values = $map[$k]['values'];
+      //strip out existing values and repopulate
+      if($k != 'title' && $type != 'field_collection') {
+        $node->{$k} = array();
+        $key = ($type == 'taxonomy') ? "tid" : "value";
+
+
+        if(is_array($map[$k]['values'])) {
+          $values = $map[$k]['values'];
           foreach($values as $value) {
             if(!empty($value)) $node->{$k}[LANGUAGE_NONE][][$key] = $value;
           }
-	      }
+        }
         //else dpm($map[$k]);
-	    }
-      if($k == 'title') {
-         $node->title = $map[$k]['values'][0];
       }
-	    if( ($type != 'field_collection' && $type != 'taxonomy') || $k == 'field_title_uniform') {
+      if($k == 'title') {
+        $node->title = $map[$k]['values'][0];
+      }
+      if( ($type != 'field_collection' && $type != 'taxonomy') || $k == 'field_title_uniform') {
         _cals_importer_normalize_node_field($node, $k);
       }
-	    if($type == 'field_collection') {
-	      _cals_importer_delete_field_collection($node, $k);
-	      $fc_fields[$k] = $map[$k];
-	    }
-	    
+      if($type == 'field_collection') {
+        _cals_importer_delete_field_collection($node, $k);
+        $fc_fields[$k] = $map[$k];
+
+      }
+
     }
   }
-  _cals_delete_duplicate_oclc_numbers($node);
 
-  //save the populated node
-  //$node->status = 1;
-  node_save($node);
-  
-  //populate the field collections
-  _cals_importer_populate_repos_item_fieldcollections($node, $fc_fields);
-
-  //populate audit trail
-	$action['description'] = "";
-  $action['activity'] = 2;
-  _cals_importer_update_admin_audit($node,  $action);
-	$action['description'] = "";
-  $action['activity'] = 3;
-  _cals_importer_update_admin_audit($node,  $action);
-
-}
+ */

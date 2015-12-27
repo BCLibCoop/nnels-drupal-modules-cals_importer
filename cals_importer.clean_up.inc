@@ -157,6 +157,8 @@ function _cals_normalize_taxonomy_terms(&$entity, $context = array()) {
   return "";
 }
 
+
+
 /**
  * Simple wrapper to call main batch api parse to standardize author, title and publisher values
  */
@@ -197,7 +199,6 @@ function _cals_normalize_record_values(&$entity, $context = array()) {
  *   _cals_importer_normalize_publisher_entry
  */
 function _cals_normalize_record_entry($node) {
-
   //create a shadow copy to track changes
   $node2 = new stdClass();
   $fields_to_update = array("title", "field_dc_creator", "field_dc_contributor", "field_publisher");
@@ -208,8 +209,8 @@ function _cals_normalize_record_entry($node) {
       switch($field) {
         case "title":
           _cals_importer_strip_square_brackets($node, $field);
-          _cals_importer_normalize_title($node);
-          //if($node2->title != $node->title) $msg[] = t("Updated title: %t", array('%t' => $title) );
+          _cals_importer_strip_trailing_periods($node, "title");
+          //_cals_importer_normalize_title_fields($node, $field); <- deprecate
           break;
         case "field_dc_creator":
         case "field_dc_contributor":  
@@ -218,7 +219,8 @@ function _cals_normalize_record_entry($node) {
           break;
         case "field_publisher":
           //_cals_importer_strip_square_brackets($node, "title");
-          _cals_importer_normalize_publisher($node);
+          //_cals_importer_normalize_publisher($node);
+          _cals_importer_strip_trailing_periods($node, $field);
           break;
       
       
@@ -265,7 +267,8 @@ function _cals_importer_normalize_publisher(&$node) {
 
   if(!empty($node->field_publisher)) {
     foreach($node->field_publisher[LANGUAGE_NONE] as $k => $publisher) {
-      $tmp = _cals_importer_normalize_publisher_entry($publisher['value']);
+      //$tmp = _cals_importer_normalize_publisher_entry($publisher['value']);
+      $tmp = _cals_importer_strip_trailing_periods_value($publisher['value']);
       if($tmp != $publisher['value']) {
         $node->field_publisher[LANGUAGE_NONE][$k]['value'] = $tmp;
       }
@@ -274,22 +277,6 @@ function _cals_importer_normalize_publisher(&$node) {
   }
   
 }
-
-/**
- * trims the title field, stripping off commas, spaces, dashes, parentheses 
- *
- */
-function _cals_importer_normalize_title(&$node) {
-  $title = rtrim($node->title);
-  $msg = array();
-  $title = rtrim($title, ", /"); 
-  $title = _cals_importer_strip_parentheses_from_values($title);
-  if ($title != $node->title) $node->title = $title;
-	//set title field to same value	
-	$node->title_field[LANGUAGE_NONE][0]['value'] = $title;
-
-}
-
 
 /**
  * bulk operation action to covert creator names to title case.
@@ -301,7 +288,6 @@ function _cals_titlecase_creators(&$entity, $context = array()) {
     $node = node_load($entity->nid);
     //safety check to make sure we're parsing repos items!!    
     $content_types = array('repository_item');
-    
     if (in_array($node->type, $content_types)  ) {
       _cals_importer_convert_to_title_case($node, "field_dc_creator");
     }
@@ -344,6 +330,7 @@ function _cals_importer_convert_to_title_case(&$node, $field) {
  * Strips opening and closing parentheses from creators,  
  */
 function _cals_importer_normalize_creators(&$node, $field) {
+  if($field == 'field_publisher') printAndDie(__FUNCTION__, $node->field);
 
   if(!empty($node->{$field})) {
     foreach($node->{$field}[LANGUAGE_NONE] as $k => $v) {
@@ -367,25 +354,64 @@ function _cals_importer_normalize_creators(&$node, $field) {
      
   
     }
-    _cals_importer_strip_trailing_periods($node, $field); 
+    if($field == 'field_publisher') printAndDie($node->field);
+
+    _cals_importer_strip_trailing_periods($node, $field);
+
   } 
 }
 
+function _cals_test_recurse($n) {
+  printPre("n = $n");
 
+  if($n !== 10) {
+    $n++;
+    printPre("WILL RECURSE n = $n ????");
+    $x = _cals_test_recurse($n);
+  }
+  else {
+
+    printPre("RETURN $n");
+    $x = $n;
+    return $x;
+
+  }
+
+
+}
+function factorial($number) {
+  printPre($number);
+  if ($number < 2) {
+    return 1;
+  } else {
+    printPre("number = $number");
+    return ($number * factorial($number-1));
+  }
+}
 /**
  * wrapper function to strip punctuation where applicable  
  */
 function _cals_importer_strip_trailing_periods(&$node, $field) {
-  if(!empty($node->{$field})) {
-    foreach($node->{$field}[LANGUAGE_NONE] as $k => $v) {
-      $tmp = _cals_importer_strip_trailing_periods_value($v['value']); 
-      if ($tmp != $v['value'] && !empty($tmp)) {
-        $node->{$field}[LANGUAGE_NONE][$k]['value'] = $tmp;
+  if($field == 'title') {
+    $tmp = _cals_importer_strip_trailing_periods_value($node->title);
+    if($tmp != $node->title) {
+      $node->title = $tmp;
+      $node->title_field[LANGUAGE_NONE][0]['value'] = $tmp;
+    }
+  }
+  else {
+    if(!empty($node->{$field})) {
+      foreach($node->{$field}[LANGUAGE_NONE] as $k => $v) {
+        $tmp = _cals_importer_strip_trailing_periods_value($v['value']);
+        if ($tmp != $v['value'] && !empty($tmp)) {
+          $node->{$field}[LANGUAGE_NONE][$k]['value'] = $tmp;
+        }
       }
-     }
-  } 
-
+    }
+  }
 }
+
+
 /**
  * Strips trailing punctuation, except abbreviations, etc.  
  * e.g. a.b., A.B., A. B., Dave B.
@@ -393,10 +419,16 @@ function _cals_importer_strip_trailing_periods(&$node, $field) {
 function _cals_importer_strip_trailing_periods_value($str) {
   $tmp = str_replace("  ", " ", rtrim($str)); //trim various ascii chars
   $tmp = (string) trim($tmp, "  ");
+
+  $patterns = array(",", " ", "!", "?", ":", ";", "/"); //leave out "." until end
+  $imploded = implode("", $patterns);
+  $flat = implode("", $patterns);
+  $tmp = rtrim($tmp, $imploded);
   $len = strlen($tmp);
 
   //stopwords
   $stopwords = explode("\r\n", variable_get('cals_importer_stop_words'));
+
   foreach($stopwords as $word) {
     $x = 0;
     $pos = strripos($tmp, $word);
@@ -424,13 +456,28 @@ function _cals_importer_strip_trailing_periods_value($str) {
     if (preg_match("/^[A-Za-z\.]{1,5}(\.|!)$/", $last, $matches2)) {
       return $tmp;
     }
-  } 
-  
-  $tmp = rtrim($tmp, ". ,!;");
-  return trim($tmp); //one last, in case we miss something... may need to recurse this?
+  }
+  $tmp = _cals_importer_recursive($str);
+  return $tmp;
 
 }  
 
+function _cals_importer_recursive($str) {
+  $patterns = array(",", " ", "!", "?", ":", ";", "/", "\\", ".");
+  $implode = implode("", $patterns);
+  $tmp = rtrim($str, $implode);
+  $len = strlen($tmp);
+  $last =  (substr(trim($tmp), -1) );
+  if(!in_array($last, $patterns)) {
+    return trim($tmp); //one last, in case we miss something... may need to recurse this?
+  }
+  else {
+    $str = $tmp;
+    return _cals_importer_recursive($str);
+  }
+
+
+}
 
 /**
  * Strips opening and closing parentheses from title, publisher fields  
@@ -544,22 +591,7 @@ function _cals_importer_normalize_publisher_entry($value) {
 
    $tmp = rtrim($value); //trim various ascii chars
    //logic to determine if there's a ...
-   $len = strlen($tmp);
-   $sub = substr($tmp, 0, ($len - 1));
-   $count = substr_count($sub, ":");  
-
-   if ($count > 0) {
-    return $value;
-   }
-   else {
-     $tmp = rtrim($tmp, "."); //strip trailing periods;
-     $tmp = rtrim($tmp, ","); //strip trailing periods;
-     $tmp = rtrim($tmp, ":"); //strip trailing periods;
-     $tmp = rtrim($tmp, " :"); //strip trailing periods;
-     $tmp = rtrim($tmp, "]"); //strip trailing periods;
-     $tmp = ltrim($tmp, "["); //strip trailing periods;
-     $tmp = rtrim($tmp); //trim various ascii chars
-     
-     return $tmp;
-   }
-} 
+   $tmp = _cals_importer_strip_trailing_periods_value($tmp);
+   printAndDie(__FUNCTION__, $tmp);
+   return $tmp;
+}

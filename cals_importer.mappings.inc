@@ -692,7 +692,10 @@ function _cals_importer_get_dc_relations_from_marc($xml, $k, &$map, $tags) {
     $c = $tag['code'];
     $q = $tag['qualifier'];
     $e = $tag['enum'];
+
     /*
+    array('tag' => 250, 'code' => 'a', 'qualifier' => "type", 'enum' => "isVersionOf"),
+
 		array('tag' => 800, 'code' => 'a', 'qualifier' => "type", 'enum' => "IsPartOf"),
 		array('tag' => 830, 'code' => 'a', 'qualifier' => "type", 'enum' => "IsPartOf"),
 		array('tag' => 760, 'code' => 'a', 'qualifier' => "type", 'enum' => "IsPartOf"),
@@ -702,7 +705,7 @@ function _cals_importer_get_dc_relations_from_marc($xml, $k, &$map, $tags) {
     $path = "//marc:datafield[@tag='{$t}']/marc:subfield[@code='{$c}']";
     $tmp = $xml->xpath($path);
     foreach ($tmp as $me) {
-      $val = (string) trim($me[0]); 
+      $val = (string) trim($me[0]);
 			$map[$k]['values'][] = array(
 	      'field_name' =>  "field_dc_relation",
 	      'field_dc_relation_value' => array(
@@ -713,7 +716,7 @@ function _cals_importer_get_dc_relations_from_marc($xml, $k, &$map, $tags) {
 	      ),
 	    );
     }
-  } 
+  }
 
 
 }
