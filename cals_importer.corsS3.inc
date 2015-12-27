@@ -10,7 +10,7 @@
  
 
 /**
- * Simple class to piggby back off AmazonS3StreamWrapper
+ * Simple class to piggy back off AmazonS3StreamWrapper
  * 
  */
  
@@ -452,14 +452,10 @@ function _cals_importer_populate_field_file_resource($node) {
   $filepath = str_replace("download.nnels.ca/", "", $filepath);
   $filepath = str_replace("download2.nnels.ca/", "", $filepath);
 
-
-  
-
   //We need to check if the current file exists in the file_managed table
   //drush sqlq "select * from file_managed limit 0, 100"
   $test = db_query('SELECT n.fid FROM {file_managed} n WHERE n.uri = :uri', array(':uri' => $filepath));
   
-	//printAndDie($filepath, $arr, $test->rowCount());
   if($test->rowCount()>0){
     $test2 = db_query("select distinct fr.entity_id as nid 
         from field_data_field_s3_file_upload fu inner join file_managed fm on fu.field_s3_file_upload_fid = fm.fid 
