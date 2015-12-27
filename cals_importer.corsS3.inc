@@ -538,66 +538,6 @@ function _cals_importer_populate_field_file_resource($node) {
   drupal_set_message(t("updated s3 path: ") . l($node->title, "node/" . $node->nid) );
 }
 
-/**
- * Populates Field Collection values
- *
- * @param $node
- *   the node passed to the parser
- * @param $arr_tax
- *   taxonomy values
- * @param $arr
- *   array of field collection values
- *
- * @return
- *   an array. 
- *
- */ 
-function _cals_importer_populate_fieldcollection_file_resource( $node, $arr_tax, $arr ) {
-  //field_file_resource
-  foreach($arr as $k => $v) {
-    $values = array();
-    //run thru a switch so we can isolate fields that still
-    //need to be worked on. Later, can remove switch? 
-    switch($k) {
-    
-      case "field_dc_subject":
-      case "field_dc_relation":
-      case "field_cataloguing_agency":
-      case "field_dc_description":
-      case "field_dc_coverage":
-      case "field_date":
-        $values = _cals_get_entity_value($k, $v, $arr_tax);
-        //printPre("ya", $v);
-        break;
-
-    
-      default:
-        printAndDie($k, $v);
-        break;
-    
-      
-    
-    }
-    
-    if (count($values)) {
-      foreach ($values as $value) {
-        if (is_array($value)) {
-          $e = entity_create('field_collection_item', $value);
-          // Attach the field_collection entity to the application node.
-          $e->setHostEntity('node', $node);
-          // Save the entity. 
-          $e->save(); 
-        }
-      }
-    }   
-      
-
-  }
-  
-    
-
-}
-
 
 /**
  * parses the original marcxml string to return array of values related to cors multi-value field collection
@@ -613,12 +553,6 @@ function _cals_importer_populate_fieldcollection_file_resource( $node, $arr_tax,
 function _cals_importer_parse_marcxml_cors3($node) {
 
   //create an array of taxonomies to be used in parsing field collections, etc.
-/*
-  foreach (taxonomy_get_vocabularies() as $k => $v) {
-    $arr_tax[$v->name] = $k;
-  } 
-*/
-  
   //if (!strlen($xml)) return "no xml!";
   $arr = array();
 	$xml = _cals_get_marc_xml_string($node);
@@ -631,7 +565,5 @@ function _cals_importer_parse_marcxml_cors3($node) {
 	  //_cals_importer_get_performer_from_marcxml($xml, $k, $map); 
 	  
 	}
- 
   return $arr;
-    
 }
