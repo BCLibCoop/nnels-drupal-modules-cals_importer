@@ -279,6 +279,12 @@ function _cals_importer_normalize_node_field(&$node, $field) {
 	}
 }
 
+function _cals_reparse_title_edition($node) {
+  $fields = array("title", "title_field", "field_uniform_title", "field_title_alternate", "field_dc_relation");
+  _cals_parse_record_details($node, $fields);
+    //return user back to main node page
+  drupal_goto("node/" . $node->nid);
+}
 
 /**
  * The main MARC parser
@@ -296,9 +302,10 @@ function _cals_parse_record_details($node, $fields) {
 
   $arr_fields = _cals_get_fields_repository_item($fields);
   $map = $arr_fields['map'];
+
   //loop thru map to populate node
   _cals_importer_iterate_field_map($node, $xml, $map, "parse");
-
+  drupal_set_message("Updated: " . $node->title);
   if(count($fields)) {
     //populate audit trail
     $action['description'] = "";
@@ -345,7 +352,11 @@ function _cals_parse_record_details_form($settings, &$form_state) {
 
 function _cals_parse_record_details_submit($form, $form_state) {
   $return = array();
-  $return['fields_to_parse'] = $form_state['values']['fields_to_parse'];
+  $fields = $form_state['values']['fields_to_parse'];
+  $fieldnames = implode(", ", $fields);
+  $msg = "updated " . $node->title .": " . $fieldnames;
+  drupal_set_message($msg);
+  $return['fields_to_parse'] = $fields;
   return $return; //Note, return value here must be an array.
 }
 

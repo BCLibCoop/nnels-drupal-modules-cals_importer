@@ -582,14 +582,12 @@ function _cals_importer_get_block_items() {
   );
 
 
-  $items['_cals_reparse_titles'] = array(
+  $items['_cals_reparse_titles_edition'] = array(
     'access arguments' => array('administer site configuration'),
-    //'page callback' => '_cals_reparse_repository_item',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('_cals_reparse_repository_item'),
-    //'file' => "cals_importer.marcxml.inc",
-    'title' => 'Reparse Titles',
-    'description' => 'Title - main, alternate, uniform',
+    'page callback' => '_cals_reparse_title_edition',
+    'file' => "cals_importer.marcxml.inc",
+    'title' => 'Reparse Titles / Edition',
+    'description' => 'Reparses title fields + dc relation field',
 
   );
 
