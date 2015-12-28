@@ -386,7 +386,7 @@ function cals_importer_action_info() {
     ),
 
     //Reparse selected fields: hooks into main parser
-    '_cals_parse_record_details' => array(
+    '_cals_reparse_record_details' => array(
     'label' => t('CALS: Re-parse Selected Fields'),
     'type' => 'node',
     'configurable' => TRUE,

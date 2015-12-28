@@ -243,9 +243,6 @@ function _cals_importer_repo_field_callback($fieldname) {
 
 }
 
-
-
-
 /**
  * Normalizes title, creator, contributor and other fields
  *
@@ -322,14 +319,13 @@ function _cals_parse_record_details($node, $fields) {
     $action['activity'] = 3;
     _cals_importer_update_admin_audit($node,  $action);
 
-
   }
 
 }
 
 
 
-function _cals_parse_record_details_form($settings, &$form_state) {
+function _cals_reparse_record_details_form($settings, &$form_state) {
   $form = array();
   $fields = array();
   $arr = _cals_get_fields_repository_item();
@@ -350,7 +346,7 @@ function _cals_parse_record_details_form($settings, &$form_state) {
   return $form;
 }
 
-function _cals_parse_record_details_submit($form, $form_state) {
+function _cals_reparse_record_details_submit($form, $form_state) {
   $return = array();
   $fields = $form_state['values']['fields_to_parse'];
   $fieldnames = implode(", ", $fields);
@@ -358,6 +354,15 @@ function _cals_parse_record_details_submit($form, $form_state) {
   drupal_set_message($msg);
   $return['fields_to_parse'] = $fields;
   return $return; //Note, return value here must be an array.
+}
+function _cals_reparse_record_details(&$node, $context) {
+  $fields = $context['fields_to_parse'];
+  _cals_parse_record_details($node, $fields);
+
+  $message = t('Reparsing: %title %fields',
+    array('%title' => $node->title, '%fields' => implode(", ", $fields),)
+  );
+  drupal_set_message($message);
 }
 
 /**
