@@ -500,6 +500,12 @@ function _cals_importer_strip_square_brackets(&$node, $field) {
     
   }
 }
+/**
+ * Strips opening and closing parentheses from title, publisher fields
+ */
+function _cals_importer_strip_square_brackets_value($value) {
+  return str_replace(array("[", "]"), "", $value);
+}
 
 /**
  * Strips opening and closing parentheses from title, publisher fields  
@@ -531,8 +537,6 @@ function _cals_importer_strip_years_from_creator_values($str) {
   $tmp = preg_replace( "{\s+}", ' ', $tmp );
   return rtrim($tmp); 
 }
-
-
 
 /**
  * Simple wrapper to preview the normalization process

@@ -23,7 +23,6 @@ function _cals_get_marc_mappings() {
 
 
 function _cals_get_title_from_marc($xml, $k, &$map) {
-
 	$title = array();
   $path = "//marc:datafield[@tag='245']/marc:subfield";
   $tag = $xml->xpath($path);
@@ -36,14 +35,6 @@ function _cals_get_title_from_marc($xml, $k, &$map) {
     }
 
   }
-  //comment out the following - old method
-//	$codes = array("a", "b", "n", "p");
-//	foreach($codes as $code) {
-//	  $path = "//marc:datafield[@tag='245']/marc:subfield[@code='{$code}']";
-//    $tmp = $xml->xpath($path);
-//    foreach ($tmp as $me) $title[] = (string) trim($me[0]);
-//
-//	}
 	$title = implode(" ", $title);
   $title = _cals_get_truncated_value($title, 250);
 	if(strlen($title)) $map[$k]['values'][] = $title;
@@ -52,7 +43,7 @@ function _cals_get_title_from_marc($xml, $k, &$map) {
 /*
  * see:https://github.com/BCLibCoop/nnels/issues/99
  *
- * "Similarly, Alternate Title should pull from 246 if the first indicator is 1 or 3, subfields $abnp
+ * "Similarly, Alternate Title should pull from 246 if the first indicator is 0, 1 or 3, subfields $abnp
  *
  */
 
@@ -60,10 +51,11 @@ function _cals_get_alternate_title_from_marc($xml, $k, &$map) {
   $title = array();
   $codes = array("a", "b", "n", "p");
   $parent = $xml->xpath("//marc:datafield[@tag='246']"); //need to grab abbreviated path to find indicator
+  $inds = array(0, 1, 3);
   if(count($parent)) {
     foreach($parent as $i => $child) {
       $ind = (string) $parent[$i]->attributes()->ind1;
-      if($ind == 1 || $ind == 3) {
+      if(in_array($ind, $inds)) {
         $title = array(); //holds the title elements for this child
         foreach ( $child->children('marc', true)->subfield as $subfield ) {
           $code = (string) $subfield->attributes()->code;
@@ -84,7 +76,7 @@ function _cals_get_alternate_title_from_marc($xml, $k, &$map) {
 
 }
 /*
- * see:https://github.com/BCLibCoop/nnels/issues/99
+ * @see https://github.com/BCLibCoop/nnels/issues/99
  *
  * "Uniform title should pull from 130 $anp or if 130 does not exist, 240 where
  * first indicator is 1, subfields $anp"
@@ -121,7 +113,6 @@ function _cals_get_uniform_title_from_marc($xml, $k, &$map) {
 
       }
     }
-
   }
 
   $title = implode(" ", $title);
@@ -695,7 +686,6 @@ function _cals_importer_get_dc_relations_from_marc($xml, $k, &$map, $tags) {
 
     /*
     array('tag' => 250, 'code' => 'a', 'qualifier' => "type", 'enum' => "isVersionOf"),
-
 		array('tag' => 800, 'code' => 'a', 'qualifier' => "type", 'enum' => "IsPartOf"),
 		array('tag' => 830, 'code' => 'a', 'qualifier' => "type", 'enum' => "IsPartOf"),
 		array('tag' => 760, 'code' => 'a', 'qualifier' => "type", 'enum' => "IsPartOf"),
@@ -706,6 +696,8 @@ function _cals_importer_get_dc_relations_from_marc($xml, $k, &$map, $tags) {
     $tmp = $xml->xpath($path);
     foreach ($tmp as $me) {
       $val = (string) trim($me[0]);
+      $val = _cals_importer_strip_square_brackets_value($val);
+      $val = _cals_importer_strip_trailing_periods_value($val);
 			$map[$k]['values'][] = array(
 	      'field_name' =>  "field_dc_relation",
 	      'field_dc_relation_value' => array(

@@ -273,6 +273,9 @@ function _cals_importer_normalize_node_field(&$node, $field) {
 			//_cals_importer_strip_square_brackets($node, "title");
 	  	_cals_importer_normalize_publisher($node);
 	  	break;
+    case "field_dc_relation":
+      printAndDie($node->field_dc_relation);
+      break;
 	}
 }
 
@@ -362,7 +365,7 @@ function _cals_reparse_record_details(&$node, $context) {
   $message = t('Reparsing: %title %fields',
     array('%title' => $node->title, '%fields' => implode(", ", $fields),)
   );
-  drupal_set_message($message);
+  //drupal_set_message($message);
 }
 
 /**
