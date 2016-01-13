@@ -175,55 +175,46 @@ function _cals_get_tid_by_name($vid, $name) {
 
 function _cals_get_iso_year($value) {
   $value = (string) $value;
-  
-  $value = str_replace(array(".", "c"), "", $value);
-  
-  if (strlen($value) == 4 && is_numeric($value)) return $value;
+  dpm($value);
 
-
-  //parse dates like 2013/01/01 and 01/01/2013
+  //get years from dates like 2013/01/01 and 01/01/2013
   if (strlen($value) == 10) {
     
     $tmp = explode("/", $value);
     if (count($tmp) == 3){
       foreach($tmp as $newvalue) {
-        if (strlen($newvalue) == 4 && is_numeric($newvalue)) return $newvalue;
+        if (strlen($newvalue) == 4) return _cals_assert_numstring($newvalue);
 
       }
     }
-    
+
+    //Must be dashes as in 2013-01-01
     $tmp = explode("-", $value);
     if (count($tmp) == 3){
       foreach($tmp as $newvalue) {
-        if (strlen($newvalue) == 4 && is_numeric($newvalue)) return $newvalue;
+        if (strlen($newvalue) == 4) return _cals_assert_numstring($newvalue);
       }
     }
   }
 
   else {
-    //We probably have a 534$c with a date at the end
-    //Copyright symbol if present, was already filtered, flagged by _cals_parse_date_issue_copyright.
+    //We have something else, "1999", or a 534$c with date prepended, or some bracketed form like [1999]
+    //Copyright symbol was already filtered by _cals_parse_date_issue_copyright
 
-    $date_pattern = "/\s\d{4}$/";
-    preg_match($date_pattern, $value, $matches);
-
-    if (count($matches)) {
-      $newvalue = (int) $matches[0];
-      return trim($newvalue);
-
-    }
+    return _cals_assert_numstring($value);
   }
-  
-  
-  return $value;
 
+}
+
+function _cals_assert_numstring($value = '') {
+  return preg_replace("/[^0-9]+/", "", $value);
 }
 
 
 function _cals_get_iso_date($value) {
   $value = (string) $value;
   
-  $value = str_replace(array(".", "c"), "", $value);
+  $value = str_replace(array(".", "c", "[", "]", "(", ")"), "", $value);
   
   //if the separator is a slash (/), then the American m/d/y is assumed. 
   $value = strtotime($value);
