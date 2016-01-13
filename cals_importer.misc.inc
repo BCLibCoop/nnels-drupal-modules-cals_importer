@@ -175,7 +175,6 @@ function _cals_get_tid_by_name($vid, $name) {
 
 function _cals_get_iso_year($value) {
   $value = (string) $value;
-  dpm($value);
 
   //get years from dates like 2013/01/01 and 01/01/2013
   if (strlen($value) == 10) {
