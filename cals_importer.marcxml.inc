@@ -261,10 +261,8 @@ function _cals_importer_normalize_node_field(&$node, $field) {
     case "field_title_alternate":
 		  _cals_importer_strip_square_brackets($node, $field);
       _cals_importer_strip_trailing_periods($node, $field);
-			//_cals_importer_normalize_title_fields($node, $field); to deprecate
-      break;
 	  case "field_dc_creator":
-		case "field_dc_contributor":	
+		case "field_dc_contributor":
 			_cals_importer_strip_square_brackets($node, $field);
 			_cals_importer_normalize_creators($node, $field);
 			//if($field == 'field_dc_creator') printAndDie($node->field_dc_creator, $map);
@@ -273,9 +271,6 @@ function _cals_importer_normalize_node_field(&$node, $field) {
 			//_cals_importer_strip_square_brackets($node, "title");
 	  	_cals_importer_normalize_publisher($node);
 	  	break;
-    case "field_dc_relation":
-      printAndDie($node->field_dc_relation);
-      break;
 	}
 }
 
@@ -402,6 +397,7 @@ function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
           if(!empty($value)) $node->{$k}[LANGUAGE_NONE][][$key] = $value;
         }
       }
+
       if( ($type != 'field_collection' && $type != 'taxonomy') || $k == 'field_title_uniform') {
         _cals_importer_normalize_node_field($node, $k); //normalizes various field values
       }
