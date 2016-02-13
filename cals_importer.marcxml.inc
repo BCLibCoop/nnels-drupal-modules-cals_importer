@@ -299,10 +299,8 @@ function _cals_reparse_title_edition($node) {
 function _cals_parse_record_details($node, $fields) {
   $xml = _cals_get_marc_xml_string($node);
   if($xml === 0) return;
-
   $arr_fields = _cals_get_fields_repository_item($fields);
   $map = $arr_fields['map'];
-
   //loop thru map to populate node
   _cals_importer_iterate_field_map($node, $xml, $map, "parse");
   drupal_set_message("Updated: " . $node->title);
@@ -311,7 +309,6 @@ function _cals_parse_record_details($node, $fields) {
     $action['description'] = "";
     $action['activity'] = 6;
     _cals_importer_update_admin_audit($node,  $action);
-
   }
   else {
     //populate audit trail
@@ -321,11 +318,10 @@ function _cals_parse_record_details($node, $fields) {
     $action['description'] = "";
     $action['activity'] = 3;
     _cals_importer_update_admin_audit($node,  $action);
-
   }
 
-}
 
+}
 
 
 function _cals_reparse_record_details_form($settings, &$form_state) {
@@ -407,7 +403,7 @@ function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
         }
       }
       if( ($type != 'field_collection' && $type != 'taxonomy') || $k == 'field_title_uniform') {
-        _cals_importer_normalize_node_field($node, $k);
+        _cals_importer_normalize_node_field($node, $k); //normalizes various field values
       }
       if($type == 'field_collection') {
         _cals_importer_delete_field_collection($node, $k);
@@ -419,57 +415,9 @@ function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
     }
   }
   if($op == 'parse') _cals_delete_duplicate_oclc_numbers($node);
-
   //save the populated node
   //$node->status = 1;
   node_save($node);
   //populate the field collections
   if(count($fc_fields)) _cals_importer_populate_repos_item_fieldcollections($node, $fc_fields);
-
-
 }
-
-/*
- *   foreach($map as $k => $v) {
-    $type = $v['type'];
-
-    if(!empty($v['parser'])) {
-      if(!isset($v['parser']['function'])) printAndDie("???", $v);
-      $function = $v['parser']['function'];
-
-      if(isset($v['parser']['tags'])) {
-        $tags = $v['parser']['tags'];
-        $function($xml, $k, $map, $tags);
-      }
-      else $function($xml, $k, $map);
-
-      //strip out existing values and repopulate
-      if($k != 'title' && $type != 'field_collection') {
-        $node->{$k} = array();
-        $key = ($type == 'taxonomy') ? "tid" : "value";
-
-
-        if(is_array($map[$k]['values'])) {
-          $values = $map[$k]['values'];
-          foreach($values as $value) {
-            if(!empty($value)) $node->{$k}[LANGUAGE_NONE][][$key] = $value;
-          }
-        }
-        //else dpm($map[$k]);
-      }
-      if($k == 'title') {
-        $node->title = $map[$k]['values'][0];
-      }
-      if( ($type != 'field_collection' && $type != 'taxonomy') || $k == 'field_title_uniform') {
-        _cals_importer_normalize_node_field($node, $k);
-      }
-      if($type == 'field_collection') {
-        _cals_importer_delete_field_collection($node, $k);
-        $fc_fields[$k] = $map[$k];
-
-      }
-
-    }
-  }
-
- */
