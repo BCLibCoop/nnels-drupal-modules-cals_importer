@@ -738,6 +738,29 @@ function _cals_importer_get_cataloging_agency_from_marc($xml, $k, &$map, $tags) 
   }
 }
 
+/**
+ * Get an array of cataloging agencies
+ *
+ * @return
+ *   an array of cataloging agencies
+ */
+
+function _cals_importer_get_array_cataloging_agency() {
+  /*
+  1|Original Cataloguing agency (NR)
+  2|transcribing_agency
+  3|modifying_agency
+
+  */
+  return array(
+    "a" => 1, //"original_cataloguing_agency",
+    //"b" => "cataloguing_language",
+    "c" => 2, //"transcribing_agency",
+    "d" => 3, // "modifying_agency",
+  );
+
+
+}
 /*
       case "003":
         $arr['fc']['field_cataloguing_agency'][] = array(
