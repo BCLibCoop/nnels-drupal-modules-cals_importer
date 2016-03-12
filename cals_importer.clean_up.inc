@@ -147,7 +147,6 @@ function _cals_normalize_taxonomy_terms(&$entity, $context = array()) {
     $name = _cals_importer_strip_trailing_periods_value($term->name);
     if($name !== $term->name) {
       dpm($term->name . " => " . $name);
- 
       $term->name = $name;
       taxonomy_term_save($term);
     }
@@ -401,7 +400,9 @@ function _cals_importer_strip_trailing_periods(&$node, $field) {
   }
   else {
     if(!empty($node->{$field})) {
+      if($field == 'field_dc_relation') printAndDie($node->{$field});
       foreach($node->{$field}[LANGUAGE_NONE] as $k => $v) {
+
         $tmp = _cals_importer_strip_trailing_periods_value($v['value']);
         if ($tmp != $v['value'] && !empty($tmp)) {
           $node->{$field}[LANGUAGE_NONE][$k]['value'] = $tmp;
@@ -420,50 +421,30 @@ function _cals_importer_strip_trailing_periods_value($str) {
   $tmp = str_replace("  ", " ", rtrim($str)); //trim various ascii chars
   $tmp = (string) trim($tmp, "  ");
 
-  $patterns = array(",", " ", "!", "?", ":", ";", "/"); //leave out "." until end
+  $patterns = array(",", " ", "!", "?", ":", ";", "/", "=", "-"); //leave out "." until end
   $imploded = implode("", $patterns);
   $flat = implode("", $patterns);
   $tmp = rtrim($tmp, $imploded);
   $len = strlen($tmp);
 
-  //stopwords
+  //stopwords: e.g., ed. - we skip those
   $stopwords = explode("\r\n", variable_get('cals_importer_stop_words'));
-
   foreach($stopwords as $word) {
     $x = 0;
     $pos = strripos($tmp, $word);
     if($pos === $len - strlen($word) ) return $tmp; //return if we find a match at the end of the string!
   }
+  if (_cals_importer_str_ends_abbreviation($tmp)) return $tmp;
 
-  $tmp2 = explode(" ", $tmp); // explode to isolate last segment
-  $n = count($tmp2);
-  $last = $tmp2[$n-1];
-  $len = strlen($last);
-  //e.g. patterns like A.D.
-  if($len == 4 || $len == 5) {
-    $num_per = substr_count($last, ".");
-
-    if($num_per > 1) {
-      return $tmp;
-    }
-    else {
-      $tmp = rtrim($tmp, ".");
-    } 
-  }
-  
-  //($len >= 2 && $len <= 4)
-  if( ($len == 2) ) {
-    if (preg_match("/^[A-Za-z\.]{1,5}(\.|!)$/", $last, $matches2)) {
-      return $tmp;
-    }
-  }
-  $tmp = _cals_importer_recursive($str);
+  $tmp = _cals_importer_recurse_trailing_characters($str);
   return $tmp;
 
-}  
-
-function _cals_importer_recursive($str) {
-  $patterns = array(",", " ", "!", "?", ":", ";", "/", "\\", ".");
+}
+/**
+ * Recurse thru string to remove remaining non-aphanumeric strings
+ */
+function _cals_importer_recurse_trailing_characters($str) {
+  $patterns = array(",", " ", "!", "?", ":", ";", "/", "\\", ".", "-");
   $implode = implode("", $patterns);
   $tmp = rtrim($str, $implode);
   $len = strlen($tmp);
@@ -473,10 +454,31 @@ function _cals_importer_recursive($str) {
   }
   else {
     $str = $tmp;
-    return _cals_importer_recursive($str);
+    return _cals_importer_recurse_trailing_characters($str);
   }
 
 
+}
+
+/**
+ * Returns true if string ending is likely an abbreviation, e.g.,
+ * Vancouver, B.C.
+ */
+function _cals_importer_str_ends_abbreviation($val) {
+  $last = substr($val, -1);
+  if ( (substr($val, -1) == '.')  ) {
+    if(substr($val, -2) == '..') return FALSE;
+    $last = substr($val, -6);
+    //$segment = substr($val, -6, 5);
+    $num_periods = substr_count($last, ".");
+    //e.g., E.D. or E. D. - i.e., no spaces or one space
+    if( preg_match('/[a-zA-Z]\.(| )[a-zA-Z]\.$/', $val, $matches)) {
+      drupal_set_message("LAST = $last | num periods = $num_periods | val = $val", $matches);
+      //printAndDie($val, $matches);
+      return TRUE;
+    }
+  }
+  return FALSE;
 }
 
 /**
