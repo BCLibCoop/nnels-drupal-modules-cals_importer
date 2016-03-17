@@ -268,7 +268,7 @@ function _cals_importer_normalize_node_field(&$node, $field) {
 			//if($field == 'field_dc_creator') printAndDie($node->field_dc_creator, $map);
 	  	break;
 	  case "field_publisher":
-			//_cals_importer_strip_square_brackets($node, "title");
+			_cals_importer_strip_square_brackets($node, $field);
 	  	_cals_importer_normalize_publisher($node);
 	  	break;
 	}
