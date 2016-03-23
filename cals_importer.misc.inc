@@ -73,7 +73,7 @@ function _cals_get_node_by_sysnum($num) {
  */
 function _cals_get_message_invalid_xml($node) {
 
-  printAndDie($node);
+  //printAndDie($node);
 
 	drupal_set_message(
 		t('Invalid XML. Please review: <a href="@url">@title</a>.', 
@@ -91,18 +91,10 @@ function _cals_get_message_invalid_xml($node) {
 function _cals_get_marc_xml_string($node) {
   libxml_use_internal_errors(true);
   $value = '<xyz>'; //set to something that will fail by default
-	if (isset($node->field_xml_string[LANGUAGE_NONE]) ) {
+	if (isset($node->field_xml_string[LANGUAGE_NONE]) )
 		$value = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
-		
-	}	
-  /*
-		keeping this handy for testing validty, etc.
-	$value = '<marc:recordsss><marc:leader>01299nam a2200289 a 4500</marc:leader>
-	<marc:controlfield tag="001">lbx00091968 </marc:controlfield>
-	<marc:controlfield tag="005">20120718105332.0</marc:controlfield><marc:controlfield tag="008">120403s2012    abc           000 j eng  </marc:controlfield><marc:datafield tag="035" ind1=" " ind2=" "><marc:subfield code="a">(OCoLC)764312682</marc:subfield></marc:datafield><marc:datafield tag="035" ind1=" " ind2=" "><marc:subfield code="a">020FB</marc:subfield></marc:datafield><marc:datafield tag="040" ind1=" " ind2=" "><marc:subfield code="a">lbi</marc:subfield><marc:subfield code="d">lbi</marc:subfield><marc:subfield code="d">MvI</marc:subfield><marc:subfield code="d">BVILSB</marc:subfield></marc:datafield></marc:record>';
-	*/
   $str = '<?xml version="1.0" encoding="UTF-8"?>
-<marc:collection xmlns:marc="http://www.loc.gov/MARC21/slim" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd">' . 
+<marc:collection xmlns:marc="http://www.loc.gov/MARC21/slim" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd">' .
   $value .
 '</marc:collection>';
 

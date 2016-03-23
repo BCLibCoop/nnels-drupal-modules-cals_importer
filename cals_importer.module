@@ -907,6 +907,85 @@ function _cals_importer_query_duplicate_titles($type) {
 
 }
 
+/**
+ * Implements hook_views_post_execute().
+ */
+function cals_importer_views_post_execute(&$view) {
+  switch ($view->name) {
+    case "repository_items_reparse_dates":
+      //$view->current_display == 'embed_1'
+      foreach ($view->result as $k => $v) {
+        //dpm($view->result[$k]->field_field_xml_string[0]['rendered']['#markup']);
+        $dates = array();
+        $node = node_load($v->nid);
+        $xml = _cals_get_marc_xml_string($node);
+        if(!$xml) {
+          $view->result[$k]->field_field_xml_string[0]['rendered']['#markup'] = "no xml";
+          dpm($xml);
+        }
+        else {
+          //borrowed from _cals_get_date_issued_from_marc() in mappings.inc
+          $tmp = $xml->xpath("//marc:controlfield[@tag='008']");
+          if (count($tmp) >= 1) {
+            $str = (string) $tmp[0];
+            $str = substr($str, 7, 4); // 008/07-10 should be numeric
+            if (is_numeric($str)) $dates['008'] = _cals_get_iso_year($str);
+          }
+          $arr = array(264 => 'c', 260 => 'c', 533 => 'd', 534 => 'c');
+          foreach ($arr as $tag => $code) {
+            $path = "//marc:datafield[@tag='{$tag}']/marc:subfield[@code='{$code}']";
+            $tmp = $xml->xpath($path);
+            if (count($tmp) >= 1) {
+              $str = (string) $tmp[0];
+              $dates[$tag] = $str;
+            }
+          }
+          if(count($dates)) {
+            $dd = array();
+            foreach($dates as $tag => $date)  $dd[] = $tag . ": " . $date;
+            $me = array("items" => $dd, "title" => '', "type" => "ul", "attributes" => array());
+            $value = theme('item_list', $me);
+          }
+          else $value = "no dates";
+          $view->result[$k]->field_field_xml_string[0]['rendered']['#markup'] = $value;
+        }
+      }
+      break;
+
+
+  }
+}
+
+function sssss() {
+
+
+  $tmp = $xml->xpath("//marc:datafield[@tag='264']/marc:subfield[@code='c']");
+  if (count($tmp) >= 1) {
+    $str = (string) $tmp[0];
+    $dates['264'] = $str;
+  }
+  else {
+    $tmp = $xml->xpath("//marc:datafield[@tag='260']/marc:subfield[@code='c']");
+    if (count($tmp) >= 1) {
+      $str = (string) $tmp[0];
+      $dates['260'] = $str;
+    }
+  }
+
+  $tmp = $xml->xpath("//marc:datafield[@tag='533']/marc:subfield[@code='d']");
+  if (count($five_thirty3) >= 1) {
+    if(!isset($dates['533'])) $dates['533'] = '';
+    $str = (string) $five_thirty3[0];
+    $dates['533'] .= $str;
+  }
+
+  $tmp = $xml->xpath("//marc:datafield[@tag='534']/marc:subfield[@code='c']");
+  if (count($tmp) >= 1) {
+    if(!isset($dates['534'])) $dates['534'] = '';
+    $dates['534'] .= (string) $tmp[0];
+  }
+
+}
 
 /**
  * Implements hook_views_query_alter().

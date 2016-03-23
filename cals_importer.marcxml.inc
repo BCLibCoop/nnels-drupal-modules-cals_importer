@@ -298,7 +298,9 @@ function _cals_parse_record_details($node, $fields) {
   $map = $arr_fields['map'];
   //loop thru map to populate node
   _cals_importer_iterate_field_map($node, $xml, $map, "parse");
-  drupal_set_message("Updated: " . $node->title);
+  $atts = array("attributes" => array("target" => "_blank"));
+  $l1 = l("view", "node/" . $node->nid, $atts) . " | " . l("edit", "node/" . $node->nid . "/edit", $atts);
+  drupal_set_message($l1 . " : " . $node->title);
   if(count($fields)) {
     //populate audit trail
     $action['description'] = "";
