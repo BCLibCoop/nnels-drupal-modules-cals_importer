@@ -486,10 +486,9 @@ function _cals_importer_str_ends_abbreviation($val) {
  */
 function _cals_importer_strip_square_brackets(&$node, $field) {
   //$str = str_replace(array("[", "]"), "", $str);
-  if($field == 'title_field' || $field == 'title') {
+  if($field == 'title')
     $node->title = str_replace(array("[", "]"), "", $node->title);
-    $node->title_field[LANGUAGE_NONE][0]['value'] = $node->title;
-  }
+
   else {
     if(isset($node->{$field}[LANGUAGE_NONE])) {
     

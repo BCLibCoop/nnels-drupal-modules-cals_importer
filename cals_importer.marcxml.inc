@@ -60,18 +60,18 @@ function _cals_importer_update_repository_items(&$entity, $context = array()) {
 function _cals_get_fields_repository_item($fieldnames) {
   $fields = field_info_instances("node", "repository_item");
 
-
-  //printAndDie($fields);
   //set title as first array element
-//  $map = array(
-//   "title" => array(
-//     'type' => 'text',
-//     'required' => 1,
-//     'values' => '',
-//     'parser' => array("function" => '_cals_get_title_from_marc'),
-//   ),
-//  );
-  $map = array();
+  /*
+  $map = array(
+    "title" =>
+      array(
+        'type' => 'text',
+        'required' => 1,
+        'values' => '',
+        'parser' => array("function" => '_cals_get_title_from_marc'),
+      ),
+  );
+  */
 	$tmp = array(
 	  "_autocomplete", "_with_summary", "_hidden", "_buttons", "_select", "_textfield", "_embed", "_textarea",
   );
@@ -116,7 +116,6 @@ function _cals_get_fields_repository_item($fieldnames) {
       $types[$t2][] = $k;
     }
   }
-
   $arr = array("types" => $types, "map" => $map);
   return $arr;
 
@@ -134,7 +133,7 @@ function _cals_importer_repo_field_callback($fieldname) {
 
   $arr = array(
 
-    "title" => array('function' => '_cals_get_title_from_marc'),
+    //"title" => array('function' => '_cals_get_title_from_marc'),
 
     "title_field" => array('function' => '_cals_get_title_from_marc'),
     "field_title_alternate" => array('function' => '_cals_get_alternate_title_from_marc'),
@@ -410,14 +409,14 @@ function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
         _cals_importer_delete_field_collection($node, $k);
         $fc_fields[$k] = $map[$k];
       }
-      if($k == 'title_field')  $node->title = $node->{$k}[LANGUAGE_NONE][0]['value'];
 
-      if($k == 'title')  $node->title_field[LANGUAGE_NONE][0]['value'] = $node->title;
     }
   }
   if($op == 'parse') _cals_delete_duplicate_oclc_numbers($node);
   //save the populated node
   //$node->status = 1;
+  //printAndDie($node->title_field);
+  $node->title = $node->title_field[LANGUAGE_NONE][0]['value'];
   node_save($node);
   //populate the field collections
   if(count($fc_fields)) _cals_importer_populate_repos_item_fieldcollections($node, $fc_fields);

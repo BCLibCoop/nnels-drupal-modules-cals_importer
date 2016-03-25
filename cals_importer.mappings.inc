@@ -5,24 +5,15 @@
  */
 
 /**
- * Not currently in use, might replace the get_value_from_tag model (see below)
+ * returns the title
  *
  *
  * @return
  *   an array of MARC XML -> Drupal mappings
  *
  */
-
-function _cals_get_marc_mappings() {
-  $arr = array();
-
-  $arr[260] = array(
-    array("c", "date", "issued", "_cals_get_iso_date", ),
-  );
-}
-
-
 function _cals_get_title_from_marc($xml, $k, &$map) {
+
   $title = array();
   $path = "//marc:datafield[@tag='245']/marc:subfield";
   $tag = $xml->xpath($path);
