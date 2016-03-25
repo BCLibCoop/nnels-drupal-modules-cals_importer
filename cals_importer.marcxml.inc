@@ -261,6 +261,7 @@ function _cals_importer_normalize_node_field(&$node, $field) {
     case "field_title_alternate":
 		  _cals_importer_strip_square_brackets($node, $field);
       _cals_importer_strip_trailing_periods($node, $field);
+      break;
 	  case "field_dc_creator":
 		case "field_dc_contributor":
 			_cals_importer_strip_square_brackets($node, $field);
@@ -271,7 +272,9 @@ function _cals_importer_normalize_node_field(&$node, $field) {
 			_cals_importer_strip_square_brackets($node, $field);
 	  	_cals_importer_normalize_publisher($node);
 	  	break;
+
 	}
+
 }
 
 function _cals_reparse_title_edition($node) {
