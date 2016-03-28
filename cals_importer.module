@@ -991,10 +991,42 @@ function sssss() {
  * Implements hook_views_query_alter().
  */
 function cals_importer_views_query_alter(&$view, &$query) {
+  $msg = FALSE;
+
   switch ($view->name . ":" . $view->current_display) {
+    case "repository_items_publisher_listing:page":
+      $msg = TRUE;
+      /*
+      $vals = array();
+      $rs = db_query(
+        "select field_data_field_file_resource.entity_id as nid
+from field_data_field_file_resource
+INNER JOIN field_collection_item fc_file_resource ON field_data_field_file_resource.field_file_resource_value = fc_file_resource.item_id
+INNER JOIN field_data_field_file_format fc_formats ON fc_file_resource.item_id = fc_formats.entity_id AND (fc_formats.field_file_format_value NOT IN (1, 2))");
+      foreach ($rs as $row) {
+        $vals[] = $row->nid;
+      }
+
+      */
+
+      $subq = db_select('field_data_field_file_resource', 'fr');
+      $subq->join('field_collection_item', 'fci', 'fr.field_file_resource_value = fci.item_id');
+      $subq->join('field_data_field_file_format', 'ff', 'fci.item_id = ff.entity_id and ff.field_file_format_value in (:type)', array(":type" => array(1, 2)));
+      $subq->addField('fr', 'entity_id', 'nid');
+
+      $query->where[1]['conditions'][2] = array(
+        "field" => "node.nid",
+        "value" => $subq,
+        "operator" => "NOT IN",
+      );
+
+
+
+      break;
 
     //lets find upper case creators; need to use BINARY operator
     case "cals_creators:page_1":
+      $msg = TRUE;
 
       $query->where[1]['conditions'][0]['value'] = "^[A-Z][A-Z]";
       $query->where[1]['conditions'][0]['operator'] = "rlike BINARY";
@@ -1003,6 +1035,7 @@ function cals_importer_views_query_alter(&$view, &$query) {
 
     //system control number duplicates
     case "repository_items_duplicates:page_1":
+      $msg = TRUE;
       //custom query to find duplicate system control numbers
       $vals = array();
       $rs = db_query("select nid, title
@@ -1026,6 +1059,7 @@ function cals_importer_views_query_alter(&$view, &$query) {
 
     //isbn duplicates
     case "repository_items_duplicates:page_2":
+      $msg = TRUE;
       $vals = _cals_importer_query_duplicate_titles("isbn");
       $query->where[1]['conditions'][1] = array(
         "field" => "node.nid",
@@ -1035,6 +1069,7 @@ function cals_importer_views_query_alter(&$view, &$query) {
       break;
     //isbn duplicates
     case "repository_items_duplicates:page_3":
+      $msg = TRUE;
       $vals = _cals_importer_query_duplicate_titles("oclc");
       $query->where[1]['conditions'][1] = array(
         "field" => "node.nid",
@@ -1046,7 +1081,8 @@ function cals_importer_views_query_alter(&$view, &$query) {
     //custom query to find duplicate system control numbers
     case "repository_items_duplicates:page_8":
     case "repository_item_admin_views:page_8":
-      $vals = _cals_importer_query_duplicate_titles("syscontrolnumber");
+    $msg = TRUE;
+    $vals = _cals_importer_query_duplicate_titles("syscontrolnumber");
       $query->where[1]['conditions'][1] = array(
         "field" => "node.nid",
         "value" => $vals,
@@ -1062,6 +1098,7 @@ function cals_importer_views_query_alter(&$view, &$query) {
     case "repository_items_with_field_collections":
 
       if ($view->current_display == 'page_2' || $view->current_display == 'page_4') {
+        $msg = TRUE;
         $sql =
           "SELECT entity_id as nid, field_s3_path_value as s3, COUNT( field_s3_path_value )
           FROM field_data_field_s3_path
@@ -1070,9 +1107,7 @@ function cals_importer_views_query_alter(&$view, &$query) {
         $rs = db_query($sql);
         foreach ($rs as $row) {
           $arr[] = $row->s3;
-          //printPre($row);
         }
-        //die;
         $query->where[1]['conditions'][2] = array(
           'field' => "field_data_field_s3_path.field_s3_path_value",
           'value' => $arr, //array($subq),
@@ -1084,6 +1119,8 @@ function cals_importer_views_query_alter(&$view, &$query) {
     case "repository_items_deduplicate2":
     case "repo_items_bulk_deduper":
       if ($view->current_display == 'page') {
+        $msg = TRUE;
+
         $sql =
           "SELECT field_data_field_system_control_number.field_system_control_number_value as val " .
           "FROM field_data_field_system_control_number " .
@@ -1131,7 +1168,7 @@ function cals_importer_views_query_alter(&$view, &$query) {
       break;
 
   }//end switch
-
+  if($msg) drupal_set_message("NB: this view is overwritten in " . __FUNCTION__);
 
 }
 
