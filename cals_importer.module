@@ -1002,11 +1002,13 @@ function cals_importer_views_query_alter(&$view, &$query) {
         array(":type" => array(1, 2, 4, 5))); //DAISY, MP3, etext - see: https://github.com/BCLibCoop/nnels/issues/103
       $subq->addField('fr', 'entity_id', 'nid');
 
-      $query->where[1]['conditions'][2] = array(
+      $query->where[1]['conditions'][] = array(
         "field" => "node.nid",
         "value" => $subq,
         "operator" => "NOT IN",
       );
+      dpm($query->where[1]);
+
       break;
 
     //lets find upper case creators; need to use BINARY operator
