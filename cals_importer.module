@@ -996,22 +996,10 @@ function cals_importer_views_query_alter(&$view, &$query) {
   switch ($view->name . ":" . $view->current_display) {
     case "repository_items_publisher_listing:page":
       $msg = TRUE;
-      /*
-      $vals = array();
-      $rs = db_query(
-        "select field_data_field_file_resource.entity_id as nid
-from field_data_field_file_resource
-INNER JOIN field_collection_item fc_file_resource ON field_data_field_file_resource.field_file_resource_value = fc_file_resource.item_id
-INNER JOIN field_data_field_file_format fc_formats ON fc_file_resource.item_id = fc_formats.entity_id AND (fc_formats.field_file_format_value NOT IN (1, 2))");
-      foreach ($rs as $row) {
-        $vals[] = $row->nid;
-      }
-
-      */
-
       $subq = db_select('field_data_field_file_resource', 'fr');
       $subq->join('field_collection_item', 'fci', 'fr.field_file_resource_value = fci.item_id');
-      $subq->join('field_data_field_file_format', 'ff', 'fci.item_id = ff.entity_id and ff.field_file_format_value in (:type)', array(":type" => array(1, 2)));
+      $subq->join('field_data_field_file_format', 'ff', 'fci.item_id = ff.entity_id and ff.field_file_format_value in (:type)',
+        array(":type" => array(1, 2, 4, 5))); //DAISY, MP3, etext - see: https://github.com/BCLibCoop/nnels/issues/103
       $subq->addField('fr', 'entity_id', 'nid');
 
       $query->where[1]['conditions'][2] = array(
@@ -1019,9 +1007,6 @@ INNER JOIN field_data_field_file_format fc_formats ON fc_file_resource.item_id =
         "value" => $subq,
         "operator" => "NOT IN",
       );
-
-
-
       break;
 
     //lets find upper case creators; need to use BINARY operator
