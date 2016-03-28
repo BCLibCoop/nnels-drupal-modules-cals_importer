@@ -1007,8 +1007,6 @@ function cals_importer_views_query_alter(&$view, &$query) {
         "value" => $subq,
         "operator" => "NOT IN",
       );
-      dpm($query->where[1]);
-
       break;
 
     //lets find upper case creators; need to use BINARY operator
