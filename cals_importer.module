@@ -993,13 +993,24 @@ function sssss() {
 function cals_importer_views_query_alter(&$view, &$query) {
   $msg = FALSE;
 
-  switch ($view->name . ":" . $view->current_display) {
-    case "repository_items_publisher_listing:page":
+  switch($view->name) {
+    case "repository_items_publisher_listing":
+      //formats
+      //1|DAISY 202, 2|DAISY 3, 4|MP3, 6|PDF, 5|e-text, 7|EPUB 2, 8|EPUB 3, 9|AZW3, 3|Braille
       $msg = TRUE;
+
+      //see: https://github.com/BCLibCoop/nnels/issues/103
+      $arr = array(
+        "page" => array(1, 2, 4, 5, 3), //no e-text, no braille
+        "page_1" => array(1, 2, 4, 3), //no braille but includes e-text
+        "page_2" => array(1, 2, 4, 5), //no e-text, but includes braille
+
+      );
+      $excludes = $arr[$view->current_display];
       $subq = db_select('field_data_field_file_resource', 'fr');
       $subq->join('field_collection_item', 'fci', 'fr.field_file_resource_value = fci.item_id');
       $subq->join('field_data_field_file_format', 'ff', 'fci.item_id = ff.entity_id and ff.field_file_format_value in (:type)',
-        array(":type" => array(1, 2, 4, 5))); //DAISY, MP3, etext - see: https://github.com/BCLibCoop/nnels/issues/103
+        array(":type" => $excludes));
       $subq->addField('fr', 'entity_id', 'nid');
 
       $query->where[1]['conditions'][] = array(
@@ -1007,7 +1018,14 @@ function cals_importer_views_query_alter(&$view, &$query) {
         "value" => $subq,
         "operator" => "NOT IN",
       );
-      break;
+
+
+    break;
+
+  }
+
+
+  switch ($view->name . ":" . $view->current_display) {
 
     //lets find upper case creators; need to use BINARY operator
     case "cals_creators:page_1":
