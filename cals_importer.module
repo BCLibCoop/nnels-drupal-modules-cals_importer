@@ -799,8 +799,12 @@ function _cals_importer_tab_checker_parse_s3_paths() {
 
 function cals_importer_form_alter(&$form, &$form_state, $form_id) {
   global $user;
-  //dpm($form_id);
   switch ($form_id) {
+    case "editableviews_entity_form_marc_tag_crosswalk":
+
+      dpm($form['#field_handlers']['node']['field_field_name_drupal_editable']);
+
+      break;
 
     case "field_collection_item_formx":
       //$form['#submit'][] =
