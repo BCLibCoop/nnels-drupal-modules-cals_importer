@@ -794,8 +794,17 @@ function _cals_importer_get_isbn_sysnums_from_marc($xml, $k, &$map) {
     $tmp2 = explode(",", $val);
 
     foreach ($tmp2 as $val2) {
-      $val2 =  preg_replace("/[^0-9]+/", "", $val2);
-      if(!empty($val2)) $map[$k]['values'][] = trim($val2);
+      $val2 =  preg_replace("/[^0-9Xx]+/", "", $val2);
+      $val2 =  str_replace(" ", "", $val2);
+      //$val2 =  str_ireplace("xx", "x", $val2); //in case there's 2 x's
+      $val2 = ltrim($val2, "X|x"); //strip on off chance there's a prepended x
+
+      if(stripos($val2, "x") == 12 && is_numeric(substr($val2, 0, 12)))
+        $map[$k]['values'][] = substr($val2, 0, 13);
+      if (stripos($val2, "x") == 10 && is_numeric(substr($val2, 0, 9)))
+        $map[$k]['values'][] = substr($val2, 0, 10);
+      if(!empty($val2) && is_numeric($val2) && (strlen($val2) == 13 || strlen($val2) == 10) )
+        $map[$k]['values'][] = trim($val2);
     }
   }
 }
