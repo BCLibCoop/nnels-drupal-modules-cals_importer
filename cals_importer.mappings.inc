@@ -34,6 +34,8 @@ function _cals_importer_repo_field_callback($fieldname) {
     "field_dc_description" => array('function' => '_cals_get_descriptors_from_marc'),
 
     "field_isbn" => array('function' => '_cals_importer_get_isbn_sysnums_from_marc'),
+    "field_isbn_audio" => array('function' => '_cals_importer_get_isbn_sysnums_from_marc'),
+
     'field_performer' => array('function' => '_cals_importer_get_performer_from_marcxml'),
 
     "field_subject" => array("function" => '_cals_get_subject_from_marc'),
@@ -779,8 +781,10 @@ function _cals_get_description_type($tag) {
 
 //function _cals_importer_get_isbn_sysnums_from_marc(&$arr, $xml) {
 function _cals_importer_get_isbn_sysnums_from_marc($xml, $k, &$map) {
-//"field_isbn" => array("key" => "repos", "datafield" => 534, "subfield" => "z"),
-  $tmp = $xml->xpath("//marc:datafield[@tag='534']/marc:subfield[@code='z']");
+
+  $path = ($k == 'field_isbn_audio') ? "//marc:datafield[@tag='020']/marc:subfield[@code='a']" :
+    "//marc:datafield[@tag='534']/marc:subfield[@code='z']" ;
+  $tmp = $xml->xpath($path);
   foreach ($tmp as $me) {
 
     $val = (string) trim($me[0]);
@@ -807,6 +811,10 @@ function _cals_importer_get_isbn_sysnums_from_marc($xml, $k, &$map) {
         $map[$k]['values'][] = trim($val2);
     }
   }
+
+
+  //$tmp = $xml->xpath("//marc:datafield[@tag='534']/marc:subfield[@code='z']");
+
 }
 
 
