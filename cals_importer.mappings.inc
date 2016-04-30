@@ -854,9 +854,8 @@ function _cals_importer_get_performer_from_marcxml(&$arr, $xml) {
 
   foreach ($tmp as $val) {
     $val = str_replace("Narrated by ", "", $val);
-    $val = str_replace(".", "", $val);
+    $val = rtrim($val, ".");
     $val = _cals_importer_get_normalized_performer($val);
-    //valid??
     $tmp2 = explode(",", $val);
     //$fc_item->field_performer[LANGUAGE_NONE][0]['value'] = "TEST";
     foreach ($tmp2 as $val2) {
@@ -993,7 +992,6 @@ function _cals_importer_get_basic_values_from_marc($xml, $k, &$map, $tags) {
  *
  */
 function _cals_importer_get_normalized_performer($string) {
-
   $prefixes = variable_get('cals_importer_prefix_stopwords_narrators');
   $arr = explode("\r\n", $prefixes );
   return trim(str_replace($arr, "", $string));
