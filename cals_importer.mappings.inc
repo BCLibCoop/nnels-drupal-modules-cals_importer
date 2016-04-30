@@ -1015,8 +1015,11 @@ function _cals_importer_get_runningtime_from_marcxml(&$arr, $xml) {
   if(!isset($arr['fc_files'])) $arr['fc_files'] = array();
   //look for 306 tag code a
   $tmp = _cals_importer_xpath_value($xml, 306, 'a');
-  foreach ($tmp as $val)
-    if(is_integer($val)) $arr['fc_files']['field_running_time'][]['value'] = $val;
+  foreach ($tmp as $val){
+    $val = trim($val);
+    if(is_numeric(trim($val)))
+      $arr['fc_files']['field_running_time'][]['value'] = trim($val);
+  }
 }
 
 
