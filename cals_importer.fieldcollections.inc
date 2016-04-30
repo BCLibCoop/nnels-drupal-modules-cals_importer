@@ -18,7 +18,6 @@ function _cals_importer_populate_repos_item_fieldcollections(&$node, $fields){
   foreach($fields as $field) {
     if(is_array($field['values']) && count($field['values']) > 0) {
       $values = $field['values'];
-
       foreach($values as $value) {
 	      $e = entity_create('field_collection_item', $value);
 	      // Attach the field_collection entity to the application node.

@@ -335,13 +335,9 @@ function _cals_importer_get_file_from_filepath($filepath) {
 		    array('@title' => $node->title, @msg => $e->getMessage()) )) ;
 		  return;
 		}
-    
-    dpm($file);
+    //dpm($file);
    	return $file;  
   }
-
-
-
 }
 
 /**
@@ -507,14 +503,14 @@ function _cals_importer_populate_field_file_resource($node) {
 
   $fc_item->field_user[LANGUAGE_NONE][0]['value'] = 1;
   //$fc_item->field_performer[LANGUAGE_NONE][0]['value'] = "TEST";
-  if(isset($arr['fc_files']['field_performer'][0])) {
-    $fc_item->field_performer[LANGUAGE_NONE] = $arr['fc_files']['field_performer'];
-  }
+  //$arr['fc_files']['field_performer']['values'][] = trim($val2);
 
-  if(isset($arr['fc_files']['field_running_time'][0])) {
+  if(isset($arr['fc_files']['field_performer']))
+   $fc_item->field_performer[LANGUAGE_NONE] = $arr['fc_files']['field_performer'];
+
+  if(isset($arr['fc_files']['field_running_time'][0]))
     $fc_item->field_running_time[LANGUAGE_NONE] = $arr['fc_files']['field_running_time'];
-  }
-  
+
   //hard-coded values (for now):
 	$fc_item->field_availability_status[LANGUAGE_NONE][0]['value'] = 1;
   
@@ -528,6 +524,9 @@ function _cals_importer_populate_field_file_resource($node) {
   $fc_item->field_file_upload_details[LANGUAGE_NONE][0]['value'] = "Original collection reparsed";
   
   if(!empty($filepath)) $fc_item->field_s3_path[LANGUAGE_NONE][0]['value'] = $filepath;
+
+  //printAndDie($fc_item->field_performer[LANGUAGE_NONE], $arr['fc_files']);
+
   $fc_item->save(); // Save field-collection item.
 
   node_save($node);

@@ -858,8 +858,9 @@ function _cals_importer_get_performer_from_marcxml(&$arr, $xml) {
     $val = _cals_importer_get_normalized_performer($val);
     //valid??
     $tmp2 = explode(",", $val);
+    //$fc_item->field_performer[LANGUAGE_NONE][0]['value'] = "TEST";
     foreach ($tmp2 as $val2) {
-      $arr['fc_files']['field_performer']['values'][] = trim($val2);
+      $arr['fc_files']['field_performer'][]['value'] = trim($val2);
     }
   }
 
@@ -1011,18 +1012,11 @@ function _cals_importer_get_normalized_performer($string) {
  * see: http://www.loc.gov/marc/bibliographic/bd306.html
  */
 function _cals_importer_get_runningtime_from_marcxml(&$arr, $xml) {
-
-  //files field collection
   if(!isset($arr['fc_files'])) $arr['fc_files'] = array();
   //look for 306 tag code a
-  //$tmp = $xml->xpath("//marc:datafield[@tag='306']/marc:subfield[@code='a']");
   $tmp = _cals_importer_xpath_value($xml, 306, 'a');
-
-  foreach ($tmp as $val) {
+  foreach ($tmp as $val)
     if(is_integer($val)) $arr['fc_files']['field_running_time'][]['value'] = $val;
-  }
-  //printAndDie(__FUNCTION__, $k, $map[$k]['values'], $tmp);
-
 }
 
 
