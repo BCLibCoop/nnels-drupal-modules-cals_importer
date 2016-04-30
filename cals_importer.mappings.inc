@@ -854,15 +854,13 @@ function _cals_importer_get_performer_from_marcxml(&$arr, $xml) {
 
   foreach ($tmp as $val) {
     $val = str_replace("Narrated by ", "", $val);
-    $val = rtrim($val, ".");
+    $val = _cals_importer_strip_trailing_periods_value($val);
+    //$val = rtrim($val, ".");
     $val = _cals_importer_get_normalized_performer($val);
     $tmp2 = explode(",", $val);
-    //$fc_item->field_performer[LANGUAGE_NONE][0]['value'] = "TEST";
-    foreach ($tmp2 as $val2) {
+    foreach ($tmp2 as $val2)
       $arr['fc_files']['field_performer'][]['value'] = trim($val2);
-    }
   }
-
 }
 
 
