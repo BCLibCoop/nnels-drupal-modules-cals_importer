@@ -800,7 +800,7 @@ function _cals_importer_tab_checker_parse_s3_paths() {
 function cals_importer_form_alter(&$form, &$form_state, $form_id) {
   global $user;
   switch ($form_id) {
-    case "editableviews_entity_form_marc_tag_crosswalk":
+    case "editableviews_entity_form_marc_tag_crosswalkx":
       $fields = field_info_instances("node", "repository_item");
       $options = array("" => "--none--");
       foreach($fields as $k => $v) {
@@ -811,7 +811,11 @@ function cals_importer_form_alter(&$form, &$form_state, $form_id) {
         $options[$k] = "$k ($label)";
 
       }
-      //printAndDie($fields);
+      asort($options);
+      foreach($options as $k => $v) {
+        print $k . "|" . $v . "<br>";
+      }
+      printAndDie($options);
 
       //dpm($form['#field_handlers']['node']['field_field_name_drupal_editable']);
       foreach($form['node'] as $nid => $arr) {

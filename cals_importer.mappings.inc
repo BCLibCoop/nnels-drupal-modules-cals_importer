@@ -41,6 +41,10 @@ function _cals_importer_repo_field_callback($fieldname) {
     "field_subject" => array("function" => '_cals_get_subject_from_marc'),
     "field_genre" => array("function" => '_cals_get_genre_from_marc'),
 
+    'field_uri' => array('function' => '_cals_importer_get_uri_from_marc'),
+
+    "field_literary_format" => array("function" => '_cals_get_literary_form_from_marc'),
+
 
     'field_access_rights' => array('function' => '_cals_importer_get_basic_values_from_marc',
       "tags" => array(
@@ -80,11 +84,7 @@ function _cals_importer_repo_field_callback($fieldname) {
         array('tag' => 730, 'code' => 'a'),
       )
     ),
-    'field_uri' => array('function' => '_cals_importer_get_basic_values_from_marc',
-      "tags" => array(
-        array('tag' => 856, 'code' => 'u'),
-      )
-    ),
+
 
     //relations
 
@@ -183,7 +183,7 @@ function _cals_get_fields_repository_item($fieldnames) {
         'label' => $label,
         'type' => $t2,
         'required' => $req,
-        'values' => '',
+        'values' => array(),
         'parser' => _cals_importer_repo_field_callback($k),
       );
       if($t2 == 'taxonomy') {
@@ -674,6 +674,42 @@ function _cals_get_taxonomy_terms_from_xpath($xpathvalue, $fieldname, &$map) {
 function _cals_get_genre_from_marc($xml, $k, &$map) {
   $xpathvalue = $xml->xpath("//marc:datafield[@tag='655'][@ind1=' ']/marc:subfield[@code='a']|//marc:datafield[@tag='655'][@ind2=' ']/marc:subfield[@code='a']");
   _cals_get_taxonomy_terms_from_xpath($xpathvalue, $k, $map);
+}
+
+function _cals_importer_get_uri_from_marc($xml, $k, &$map) {
+  $vals = _cals_importer_xpath_value($xml, '856', 'u');
+  $arr = array("nnels.ca", "license", "loc.gov");
+  foreach ($vals as $val) {
+    $add = 1;
+    foreach($arr as $ignore )
+      if(strpos($val, $ignore) !== FALSE) $add = 0;
+    if($add == 1) $map[$k]['values'][] = $val;
+  }
+}
+
+/*
+ * Based on 006/16 or if 006 not present, 008/33;
+ * see: https://github.com/BCLibCoop/nnels/issues/113#event-656015813
+ *
+ */
+function _cals_get_literary_form_from_marc($xml, $k, &$map) {
+  $tmp = _cals_importer_xpath_control_field_value($xml, "006", $code = NULL);
+  if (count($tmp) >= 1) {
+    foreach($tmp as $val) {
+      if(strlen($val) >= 15) {
+        $str = trim(substr($val, 15, 1));
+        if(!empty($str) ) $map[$k]['values'][] = $str;
+      }
+    }
+  }
+  if(count($map[$k]['values']) === 0) {
+    $tmp = _cals_importer_xpath_control_field_value($xml, "008", $code = NULL);
+    foreach($tmp as $val){
+      $str = trim(substr($val, 32, 1));
+      if(!empty($str)) $map[$k]['values'][] = $str;
+    }
+  }
+  //printAndDie($map[$k]);
 }
 
 //function _cals_get_subject_from_marc(&$arr, &$node, $xml, &$map) {
