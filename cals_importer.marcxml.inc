@@ -217,7 +217,9 @@ function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
       if(is_array($map[$k]['values'])) {
         $values = $map[$k]['values'];
         foreach($values as $value) {
-          if(!empty($value)) $node->{$k}[LANGUAGE_NONE][][$key] = $value;
+          $value = trim($value);
+          if(strlen($value)) $node->{$k}[LANGUAGE_NONE][][$key] = $value;
+          //if(!empty($value)) $node->{$k}[LANGUAGE_NONE][][$key] = $value;
         }
       }
 

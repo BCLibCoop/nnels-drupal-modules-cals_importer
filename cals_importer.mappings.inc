@@ -691,25 +691,29 @@ function _cals_importer_get_uri_from_marc($xml, $k, &$map) {
  * Based on 006/16 or if 006 not present, 008/33;
  * see: https://github.com/BCLibCoop/nnels/issues/113#event-656015813
  *
+ * @todo
+ *   decide if we need to loop thru $tmp, or just begin w/ $tmp[0]
+ *
  */
 function _cals_get_literary_form_from_marc($xml, $k, &$map) {
+  $ignore = array("u", "|", " ", '');
+  $litform = ''; //holds the value; blank if none
   $tmp = _cals_importer_xpath_control_field_value($xml, "006", $code = NULL);
   if (count($tmp) >= 1) {
     foreach($tmp as $val) {
-      if(strlen($val) >= 15) {
-        $str = trim(substr($val, 15, 1));
-        if(!empty($str) ) $map[$k]['values'][] = $str;
-      }
+      $str = substr($val, 16, 1);
+      if(!in_array($str, $ignore)) $litform = $str;
     }
   }
-  if(count($map[$k]['values']) === 0) {
+  if($litform == '') {
     $tmp = _cals_importer_xpath_control_field_value($xml, "008", $code = NULL);
     foreach($tmp as $val){
-      $str = trim(substr($val, 32, 1));
-      if(!empty($str)) $map[$k]['values'][] = $str;
+      $str = trim(substr($val, 33, 1));
+      if(!in_array($str, $ignore)) $litform = $str;
     }
   }
-  //printAndDie($map[$k]);
+  if(strlen($litform)) $map[$k]['values'][] = $litform;
+
 }
 
 //function _cals_get_subject_from_marc(&$arr, &$node, $xml, &$map) {
