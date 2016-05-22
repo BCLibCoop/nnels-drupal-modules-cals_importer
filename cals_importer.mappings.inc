@@ -186,6 +186,9 @@ function _cals_get_fields_repository_item($fieldnames) {
         'values' => array(),
         'parser' => _cals_importer_repo_field_callback($k),
       );
+      if($t2 == 'options')
+        $map[$k]['allowed_values'] =
+          list_allowed_values(field_info_field('field_literary_format'));
       if($t2 == 'taxonomy') {
         $info = field_info_field($k);
         $vocab_keys = array();
@@ -696,23 +699,27 @@ function _cals_importer_get_uri_from_marc($xml, $k, &$map) {
  *
  */
 function _cals_get_literary_form_from_marc($xml, $k, &$map) {
-  $ignore = array("u", "|", " ", '');
+  //$ignore = array("u", "|", " ", '', 'n');
+  $allowed_values = $map[$k]['allowed_values'];
   $litform = ''; //holds the value; blank if none
   $tmp = _cals_importer_xpath_control_field_value($xml, "006", $code = NULL);
-  if (count($tmp) >= 1) {
+  $arr = array("006" => 15, "008" => 32);
+  foreach($arr as $tag => $pos) {
+    $tmp = _cals_importer_xpath_control_field_value($xml, $tag, $code = NULL);
     foreach($tmp as $val) {
-      $str = substr($val, 16, 1);
-      if(!in_array($str, $ignore)) $litform = $str;
+      $str = substr($val, $pos, 1);
+      //printPre("TAG = $tag | STRING=$str| length = " . strlen($val), $tmp);
+      if(array_key_exists($str, $allowed_values)) {
+        $litform = $str;
+        break;
+      }
     }
+    if($litform != '') {
+      $map[$k]['values'][] = $litform;
+      break;
+    };
   }
-  if($litform == '') {
-    $tmp = _cals_importer_xpath_control_field_value($xml, "008", $code = NULL);
-    foreach($tmp as $val){
-      $str = trim(substr($val, 33, 1));
-      if(!in_array($str, $ignore)) $litform = $str;
-    }
-  }
-  if(strlen($litform)) $map[$k]['values'][] = $litform;
+  //printAndDie($map[$k]);
 
 }
 
