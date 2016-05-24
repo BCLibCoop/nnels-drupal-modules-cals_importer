@@ -688,6 +688,7 @@ function _cals_importer_get_uri_from_marc($xml, $k, &$map) {
       if(strpos($val, $ignore) !== FALSE) $add = 0;
     if($add == 1) $map[$k]['values'][] = $val;
   }
+  //printAndDie($map[$k]);
 }
 
 /*
@@ -703,7 +704,7 @@ function _cals_get_literary_form_from_marc($xml, $k, &$map) {
   $allowed_values = $map[$k]['allowed_values'];
   $litform = ''; //holds the value; blank if none
   $tmp = _cals_importer_xpath_control_field_value($xml, "006", $code = NULL);
-  $arr = array("006" => 15, "008" => 32);
+  $arr = array("006" => 16, "008" => 33);
   foreach($arr as $tag => $pos) {
     $tmp = _cals_importer_xpath_control_field_value($xml, $tag, $code = NULL);
     foreach($tmp as $val) {
