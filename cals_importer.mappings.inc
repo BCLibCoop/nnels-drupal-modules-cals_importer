@@ -42,6 +42,7 @@ function _cals_importer_repo_field_callback($fieldname) {
     "field_genre" => array("function" => '_cals_get_genre_from_marc'),
 
     'field_uri' => array('function' => '_cals_importer_get_uri_from_marc'),
+    'field_urls_external' => array('function' => '_cals_importer_get_urls_from_marc'),
 
     "field_literary_format" => array("function" => '_cals_get_literary_form_from_marc'),
 
@@ -687,6 +688,28 @@ function _cals_importer_get_uri_from_marc($xml, $k, &$map) {
     foreach($arr as $ignore )
       if(strpos($val, $ignore) !== FALSE) $add = 0;
     if($add == 1) $map[$k]['values'][] = $val;
+  }
+  //printAndDie($map[$k]);
+}
+function _cals_importer_get_urls_from_marc($xml, $k, &$map) {
+  $vals = _cals_importer_xpath_value($xml, '856', 'u');
+  $arr = array("nnels.ca", "license", "loc.gov");
+  foreach ($vals as $val) {
+    $val = strtolower($val);
+    $add = 1;
+    foreach($arr as $ignore )
+      if(strpos($val, $ignore) !== FALSE) $add = 0;
+    if($add == 1) {
+      if(strpos($val, "gutenberg") !== FALSE) {
+        $map[$k]['values'][] = array('url' => $val, "title" => "Project Gutenberg");
+      }
+      elseif(strpos($val, "librivox") !== FALSE) {
+        $map[$k]['values'][] = array('url' => $val, "title" => "LibriVox");
+      }
+      else {
+        $map[$k]['values'][] = array('url' => $val);
+      }
+    }
   }
   //printAndDie($map[$k]);
 }

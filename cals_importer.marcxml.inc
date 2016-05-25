@@ -217,8 +217,14 @@ function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
       if(is_array($map[$k]['values'])) {
         $values = $map[$k]['values'];
         foreach($values as $value) {
-          $value = trim($value);
-          if(strlen($value)) $node->{$k}[LANGUAGE_NONE][][$key] = $value;
+          if($type == 'link_field') {
+            $node->{$k}[LANGUAGE_NONE][] = $value;
+          }
+          else{
+            $value = trim($value);
+            if(strlen($value)) $node->{$k}[LANGUAGE_NONE][][$key] = $value;
+
+          }
           //if(!empty($value)) $node->{$k}[LANGUAGE_NONE][][$key] = $value;
         }
       }
@@ -238,6 +244,7 @@ function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
   //$node->status = 1;
   $node->title = $node->title_field[LANGUAGE_NONE][0]['value'];
   node_save($node);
+  //printAndDie($node);
   //populate the field collections
   if(count($fc_fields)) _cals_importer_populate_repos_item_fieldcollections($node, $fc_fields);
 }
