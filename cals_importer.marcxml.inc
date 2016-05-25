@@ -229,7 +229,7 @@ function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
         }
       }
 
-      if( ($type != 'field_collection' && $type != 'taxonomy') || $k == 'field_title_uniform') {
+      if( ($type != 'field_collection' && $type != 'taxonomy' && $type != 'link_field') || $k == 'field_title_uniform') {
         _cals_importer_normalize_node_field($node, $k); //normalizes various field values
       }
       if($type == 'field_collection') {
