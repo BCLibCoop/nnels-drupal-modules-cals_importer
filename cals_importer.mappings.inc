@@ -42,7 +42,10 @@ function _cals_importer_repo_field_callback($fieldname) {
     "field_genre" => array("function" => '_cals_get_genre_from_marc'),
 
     'field_uri' => array('function' => '_cals_importer_get_uri_from_marc'),
-    'field_urls_external' => array('function' => '_cals_importer_get_urls_from_marc'),
+    'field_urls_external' => array('function' => '_cals_importer_get_urls_from_marc',
+      "patterns" => variable_get('cals_importer_url_patterns'),
+      "exceptions" => variable_get('cals_importer_url_patterns_ignore'),
+      ),
 
     "field_literary_format" => array("function" => '_cals_get_literary_form_from_marc'),
 
@@ -694,21 +697,25 @@ function _cals_importer_get_uri_from_marc($xml, $k, &$map) {
 function _cals_importer_get_urls_from_marc($xml, $k, &$map) {
   $vals = _cals_importer_xpath_value($xml, '856', 'u');
   $arr = array("nnels.ca", "license", "loc.gov");
+  $exceptions = trim($map[$k]['parser']['exceptions']);
+  $exceptions = explode("\r\n", $exceptions);
+
+  $patterns = explode("\r\n", trim($map[$k]['parser']['patterns']));
   foreach ($vals as $val) {
     $val = strtolower($val);
-    $add = 1;
-    foreach($arr as $ignore )
+    $add = 1; //should we add this? default = yes
+    $added = 0; // track if we've added this already.
+    foreach($exceptions as $ignore )
       if(strpos($val, $ignore) !== FALSE) $add = 0;
-    if($add == 1) {
-      if(strpos($val, "gutenberg") !== FALSE) {
-        $map[$k]['values'][] = array('url' => $val, "title" => "Project Gutenberg");
+    if($add == 1 && $added == 0) {
+      foreach($patterns as $pattern) {
+        $tmp = explode("|", $pattern);
+        if(strpos($val, trim($tmp[1]) ) !== FALSE ) {
+          $map[$k]['values'][] = array('url' => $val, "title" => trim($tmp[0]));
+          $added = 1;
+        }
       }
-      elseif(strpos($val, "librivox") !== FALSE) {
-        $map[$k]['values'][] = array('url' => $val, "title" => "LibriVox");
-      }
-      else {
-        $map[$k]['values'][] = array('url' => $val);
-      }
+      if($added == 0) $map[$k]['values'][] = array('url' => $val);
     }
   }
   //printAndDie($map[$k]);
