@@ -95,6 +95,7 @@ function _cals_importer_repo_field_callback($fieldname) {
     'field_dc_relation' => array('function' => '_cals_importer_get_dc_relations_from_marc',
       "tags" => array(
         array('tag' => 250, 'code' => 'a', 'qualifier' => "type", 'enum' => "isVersionOf"),
+        array('tag' => 534, 'code' => 'b', 'qualifier' => "type", 'enum' => "isVersionOf"),
         array('tag' => 800, 'code' => 'a', 'qualifier' => "type", 'enum' => "IsPartOf"),
         array('tag' => 830, 'code' => 'a', 'qualifier' => "type", 'enum' => "IsPartOf"),
         array('tag' => 760, 'code' => 'a', 'qualifier' => "type", 'enum' => "IsPartOf"),
@@ -952,6 +953,7 @@ function _cals_importer_get_dc_relations_from_marc($xml, $k, &$map, $tags) {
 
     /*
     array('tag' => 250, 'code' => 'a', 'qualifier' => "type", 'enum' => "isVersionOf"),
+    array('tag' => 534, 'code' => 'b', 'qualifier' => "type", 'enum' => "isVersionOf"),
 		array('tag' => 800, 'code' => 'a', 'qualifier' => "type", 'enum' => "IsPartOf"),
 		array('tag' => 830, 'code' => 'a', 'qualifier' => "type", 'enum' => "IsPartOf"),
 		array('tag' => 760, 'code' => 'a', 'qualifier' => "type", 'enum' => "IsPartOf"),
@@ -973,7 +975,6 @@ function _cals_importer_get_dc_relations_from_marc($xml, $k, &$map, $tags) {
       );
     }
   }
-
 }
 
 function _cals_importer_get_cataloging_agency_from_marc($xml, $k, &$map, $tags) {
