@@ -649,7 +649,8 @@ function _cals_importer_get_isolanguage_from_marcxml($xml, $k, &$map) {
   //$tmp = $xml->xpath("//marc:datafield[@tag='041']/marc:subfield[@code='a']");
   $vals = _cals_importer_xpath_value($xml, '041', 'a');
   foreach ($vals as $val)
-    if(array_key_exists($str, $map[$k]['allowed_values'])) $map[$k]['values'][] = $val;
+    if(array_key_exists($val, $map[$k]['allowed_values'])) $map[$k]['values'][] = $val;
+  
   if( empty($map[$k]['values']) ) {
     $vals = _cals_importer_xpath_control_field_value($xml, "008", $code = NULL);
     foreach($vals as $val) {
