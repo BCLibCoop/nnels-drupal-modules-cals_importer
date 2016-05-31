@@ -193,7 +193,7 @@ function _cals_get_fields_repository_item($fieldnames) {
       );
       if($t2 == 'options')
         $map[$k]['allowed_values'] =
-          list_allowed_values(field_info_field('field_literary_format'));
+          list_allowed_values(field_info_field($k));
       if($t2 == 'taxonomy') {
         $info = field_info_field($k);
         $vocab_keys = array();
@@ -649,10 +649,15 @@ function _cals_importer_get_isolanguage_from_marcxml($xml, $k, &$map) {
   //$tmp = $xml->xpath("//marc:datafield[@tag='041']/marc:subfield[@code='a']");
   $vals = _cals_importer_xpath_value($xml, '041', 'a');
   foreach ($vals as $val)
-     $map[$k]['values'][] = $val;
-  if( !isset($map[$k]['values']) ) $map[$k]['values'][]  = 'eng';
-
-
+    if(array_key_exists($str, $map[$k]['allowed_values'])) $map[$k]['values'][] = $val;
+  if( empty($map[$k]['values']) ) {
+    $vals = _cals_importer_xpath_control_field_value($xml, "008", $code = NULL);
+    foreach($vals as $val) {
+      $str = substr($val, 35, 3);
+      if(array_key_exists($str, $map[$k]['allowed_values'])) $map[$k]['values'][] = $str;
+    }
+  }
+  if( empty($map[$k]['values']) ) $map[$k]['values'][]  = 'eng';
 }
 
 
