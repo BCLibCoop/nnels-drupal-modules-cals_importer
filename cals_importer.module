@@ -965,6 +965,7 @@ function cals_importer_views_post_execute(&$view) {
               $dates[$tag] = $str;
             }
           }
+          drupal_set_message(t("View modified by: ") . __FUNCTION__);
           if(count($dates)) {
             $dd = array();
             foreach($dates as $tag => $date)  $dd[] = $tag . ": " . $date;

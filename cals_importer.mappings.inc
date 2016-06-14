@@ -501,7 +501,6 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
 
 
 //Set qualifiers for entries in $dates based on origin field and load the array for deduping
-
   if ( ! empty( $dates ) ) {
     foreach ( $dates as $code => $date_value ) {
       switch ($code) {
@@ -512,6 +511,8 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
           );
           break;
 
+        case '260':
+        case '264':
         case '533':
           //Might have copyright symbol, if not set to Created
           $check_copyright = _cals_parse_date_issue_copyright($date_value);
@@ -525,8 +526,6 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
           );
           break;
 
-        case '260':
-        case '264':
         case '534':
           //Might have copyright symbol, if not set to Issued
           $check_copyright = _cals_parse_date_issue_copyright($date_value);
@@ -551,7 +550,6 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
 
   //Dedupe based on our Qualifier Precedence Policy
   $dates = _cals_parse_date_issue_dedupe_qualifiers($dates);
-
   foreach($dates as $qual => $date) {
     $map[$k]['values'][] = array(
       'field_name' =>  "field_date",
