@@ -75,6 +75,10 @@ function _cals_importer_repo_field_callback($fieldname) {
     'field_dc_contributor' => array('function' => '_cals_importer_get_basic_values_from_marc',
       "tags" => array(
         array('tag' => 700, 'code' => 'a'),
+        array('tag' => 710, 'code' => 'a'),
+        array('tag' => 710, 'code' => 'b'),
+        array('tag' => 711, 'code' => 'a'),
+
       )
     ),
     'field_dc_creator' => array('function' => '_cals_importer_get_basic_values_from_marc',
