@@ -423,8 +423,6 @@ function _cals_importer_get_coverage_marc($xml, $k, &$map){
       ),
     );
 
-    $aud = substr($str, 22, 1);
-    if (strlen($aud)) $map['field_audience']['values'][] = $aud;
   }
 
   $tags = array('043', '044');
