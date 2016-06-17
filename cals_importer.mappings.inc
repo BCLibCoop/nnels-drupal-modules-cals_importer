@@ -129,7 +129,8 @@ function _cals_importer_repo_field_callback($fieldname) {
     'field_oclc_number' => array('function' => '_cals_importer_get_oclc_number_from_marc'),
     'field_system_control_number' => array('function' => '_cals_importer_get_system_numbers_from_marc'),
 
-    'field_cataloging_agency' => array('function' => "_cals_importer_get_cataloging_agency_from_marc"),
+    'field_audience' => array('function' => '_cals_importer_get_audience_from_marc'),
+    //'field_cataloging_agency' => array('function' => "_cals_importer_get_cataloging_agency_from_marc"),
 
 
 
@@ -370,6 +371,33 @@ function _cals_get_uniform_title_from_marc($xml, $k, &$map) {
   $vid = $map[$k]['vid'];
   $map[$k]['values'][] = _cals_get_tid_by_name($vid, $title);
   //_cals_get_taxonomy_terms_from_xpath($vid, $title, $k, $map);
+}
+
+/* Parse field_audience via 006/5 or 008/2
+ *
+ * @see https://github.com/BCLibCoop/nnels/issues/117
+ */
+
+function _cals_importer_get_audience_from_marc($xml, $k, &$map) {
+  $allowed_values = $map[$k]['allowed_values'];
+  $audience = '';
+
+  $arr = array("006" => 5, "008" => 22);
+  foreach($arr as $tag => $pos) {
+    $tmp = _cals_importer_xpath_control_field_value($xml, $tag, $code = NULL);
+    foreach($tmp as $val) {
+      $str = substr($val, $pos, 1);
+      if(array_key_exists($str, $allowed_values)) {
+        $audience = $str;
+        break;
+      }
+    }
+    if($audience != '') {
+      $map[$k]['values'][] = $audience;
+      break;
+    };
+  }
+
 }
 
 function _cals_importer_get_coverage_marc($xml, $k, &$map){
@@ -749,7 +777,6 @@ function _cals_get_literary_form_from_marc($xml, $k, &$map) {
     $tmp = _cals_importer_xpath_control_field_value($xml, $tag, $code = NULL);
     foreach($tmp as $val) {
       $str = substr($val, $pos, 1);
-      //printPre("TAG = $tag | STRING=$str| length = " . strlen($val), $tmp);
       if(array_key_exists($str, $allowed_values)) {
         $litform = $str;
         break;
@@ -760,8 +787,6 @@ function _cals_get_literary_form_from_marc($xml, $k, &$map) {
       break;
     };
   }
-  //printAndDie($map[$k]);
-
 }
 
 //function _cals_get_subject_from_marc(&$arr, &$node, $xml, &$map) {
