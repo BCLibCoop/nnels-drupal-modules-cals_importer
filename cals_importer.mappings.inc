@@ -72,6 +72,15 @@ function _cals_importer_repo_field_callback($fieldname) {
         array('tag' => 534, 'code' => 'c'),
       )
     ),
+    'field_dc_contributor' => array('function' => '_cals_importer_get_contributor_from_marc',
+      "tags" => array(
+        array('tag' => 700, 'code' => 'a'),
+        array('tag' => 710, 'code' => 'a'),
+        array('tag' => 710, 'code' => 'b'),
+        array('tag' => 711, 'code' => 'a'),
+
+      )
+    ),
     'field_dc_contributor' => array('function' => '_cals_importer_get_basic_values_from_marc',
       "tags" => array(
         array('tag' => 700, 'code' => 'a'),
@@ -977,6 +986,19 @@ function _cals_importer_get_performer_from_marcxml(&$arr, $xml) {
       $arr['fc_files']['field_performer'][]['value'] = trim($val2);
   }
 }
+
+function _cals_importer_get_contributor_from_marc($xml, $k, &$map, $tags) {
+  $tags = array(
+    array('tag' => 700, 'code' => 'a'),
+    array('tag' => 710, 'code' => 'a'),
+    array('tag' => 710, 'code' => 'b'),
+    array('tag' => 711, 'code' => 'a'),
+  );
+  _cals_importer_get_basic_values_from_marc($xml, $k, $map, $tags);
+  printAndDie($map[$k]);
+
+}
+
 
 
 
