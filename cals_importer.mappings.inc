@@ -825,6 +825,10 @@ function _cals_importer_get_system_numbers_from_marc($xml, $k, &$map) {
   foreach($tmp as $value) {
     $map[$k]['values'][] = $value;
   }
+  $tmp = _cals_importer_xpath_value($xml, '028', 'a');
+  foreach($tmp as $value) {
+    $map[$k]['values'][] = $value;
+  }
   //printAndDie($map[$k]);
 }
 
