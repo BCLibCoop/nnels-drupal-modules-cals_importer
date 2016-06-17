@@ -80,6 +80,9 @@ function _cals_importer_repo_field_callback($fieldname) {
     'field_dc_creator' => array('function' => '_cals_importer_get_basic_values_from_marc',
       "tags" => array(
         array('tag' => 100, 'code' => 'a'),
+        array('tag' => 110, 'code' => 'a'),
+        array('tag' => 110, 'code' => 'b'),
+        array('tag' => 111, 'code' => 'a'),
       )
     ),
     'field_title_alternative' => array('function' => '_cals_importer_get_basic_values_from_marc',
@@ -88,8 +91,6 @@ function _cals_importer_repo_field_callback($fieldname) {
         array('tag' => 730, 'code' => 'a'),
       )
     ),
-
-
     //relations
 
     'field_dc_relation' => array('function' => '_cals_importer_get_dc_relations_from_marc',
