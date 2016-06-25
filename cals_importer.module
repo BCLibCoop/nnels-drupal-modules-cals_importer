@@ -1280,8 +1280,6 @@ function _cals_import_skeletal_records($node) {
   libxml_use_internal_errors(TRUE);
   //load file
   $xml = simplexml_load_file($file);
-
-
   if ($xml === FALSE) {
     drupal_set_message(t("Oops, could not parse the file. Might not be valid xml?"), "error");
     foreach (libxml_get_errors() as $error) {
@@ -1309,7 +1307,6 @@ function _cals_import_skeletal_records($node) {
         //prepare new node
         $n = _cals_prepare_new_item_repos();
         $result .= "Skeletal record added. ";
-
       }
       else {
         $n->changed = time();

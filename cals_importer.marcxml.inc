@@ -71,7 +71,6 @@ function _cals_importer_normalize_node_field(&$node, $field) {
 		case "field_dc_contributor":
 			_cals_importer_strip_square_brackets($node, $field);
 			_cals_importer_normalize_creators($node, $field);
-			//if($field == 'field_dc_creator') printAndDie($node->field_dc_creator, $map);
 	  	break;
 	  case "field_publisher":
 			_cals_importer_strip_square_brackets($node, $field);
@@ -244,7 +243,6 @@ function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
   //$node->status = 1;
   $node->title = $node->title_field[LANGUAGE_NONE][0]['value'];
   node_save($node);
-  //printAndDie($node);
   //populate the field collections
   if(count($fc_fields)) _cals_importer_populate_repos_item_fieldcollections($node, $fc_fields);
 }

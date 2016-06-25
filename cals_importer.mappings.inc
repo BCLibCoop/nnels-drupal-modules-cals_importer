@@ -72,30 +72,24 @@ function _cals_importer_repo_field_callback($fieldname) {
         array('tag' => 534, 'code' => 'c'),
       )
     ),
-    'field_dc_contributor' => array('function' => '_cals_importer_get_contributor_from_marc',
-      "tags" => array(
-        array('tag' => 700, 'code' => 'a'),
-        array('tag' => 710, 'code' => 'a'),
-        array('tag' => 710, 'code' => 'b'),
-        array('tag' => 711, 'code' => 'a'),
-
-      )
-    ),
-    'field_dc_contributor' => array('function' => '_cals_importer_get_basic_values_from_marc',
-      "tags" => array(
-        array('tag' => 700, 'code' => 'a'),
-        array('tag' => 710, 'code' => 'a'),
-        array('tag' => 710, 'code' => 'b'),
-        array('tag' => 711, 'code' => 'a'),
-
-      )
-    ),
     'field_dc_creator' => array('function' => '_cals_importer_get_basic_values_from_marc',
       "tags" => array(
         array('tag' => 100, 'code' => 'a'),
         array('tag' => 110, 'code' => 'a'),
         array('tag' => 110, 'code' => 'b'),
         array('tag' => 111, 'code' => 'a'),
+      )
+    ),
+
+    'field_dc_contributor' => array('function' => '_cals_importer_get_contributor_from_marc',
+      "tags" => array(
+        //array('tag' => 700, 'code' => 'a'),
+        //array('tag' => 700, 'code' => 'e'),
+        //array('tag' => 700, 'code' => '4'),
+        array('tag' => 710, 'code' => 'a'),
+        array('tag' => 710, 'code' => 'b'),
+        array('tag' => 711, 'code' => 'a'),
+
       )
     ),
     'field_title_alternative' => array('function' => '_cals_importer_get_basic_values_from_marc',
@@ -240,21 +234,21 @@ function _cals_get_fields_repository_item($fieldnames) {
  *   an array of values
  *
  */
-function _cals_importer_xpath_value($xml, $tag, $code = NULL) {
+function _cals_importer_xpath_value($xml, $fieldname, $tag, $code = NULL) {
   $arr = array();
-  $path = "//marc:datafield[@tag='" . $tag . "']";
+  $path = "//marc:{$fieldname}[@tag='" . $tag . "']";
   if(!empty($code) ) $path .= "/marc:subfield[@code='" . $code . "']";
-
   $tmp = $xml->xpath($path);
   if (count($tmp) >= 1) {
     foreach ($tmp as $me)
       $arr[] = (string) trim($me[0]);
   }
-  //if(!count($tmp)) return;
-  //printPre(__FUNCTION__, $arr, $path);
   return $arr;
 }
+function _get_tmp($xml) {
 
+
+}
 function _cals_importer_xpath_control_field_value($xml, $tag, $code = NULL) {
   $arr = array();
   $path = "//marc:controlfield[@tag='" . $tag . "']";
@@ -288,9 +282,7 @@ function _cals_get_title_from_marc($xml, $k, &$map) {
   foreach($tag as $subfield ) {
     $code = (string) $subfield->attributes()->code;
     if($code != 'c') {
-      $tmp = _cals_importer_xpath_value($xml, 245, $code);
-      //$path = "//marc:datafield[@tag='245']/marc:subfield[@code='{$code}']";
-      //$tmp = $xml->xpath($path);
+      $tmp = _cals_importer_xpath_value($xml, "datafield", 245, $code);
       foreach ($tmp as $me) $title[] = $me;
     }
 
@@ -393,7 +385,8 @@ function _cals_importer_get_audience_from_marc($xml, $k, &$map) {
 
   $arr = array("006" => 5, "008" => 22);
   foreach($arr as $tag => $pos) {
-    $tmp = _cals_importer_xpath_control_field_value($xml, $tag, $code = NULL);
+    //$tmp = _cals_importer_xpath_control_field_value($xml, $tag, $code = NULL);
+    $tmp = _cals_importer_xpath_value($xml, "controlfield", $tag, $code = NULL);
     foreach($tmp as $val) {
       $str = substr($val, $pos, 1);
       if(array_key_exists($str, $allowed_values)) {
@@ -440,9 +433,7 @@ function _cals_importer_get_coverage_marc($xml, $k, &$map){
     $vals = $xml->xpath($path);
     foreach ($vals as $val) {
       $str = (string) trim($val[0]);
-
       if(strlen($str)) {
-
         $map[$k]['values'][]= array(
           'field_name' => 'field_dc_coverage',
           'field_dc_coverage_type' => array(
@@ -459,14 +450,12 @@ function _cals_importer_get_coverage_marc($xml, $k, &$map){
           ),
         );
       }
-
-
     }
   }
   $tag = 651; //??
   $path = "//marc:datafield[@tag='651']/marc:subfield[@code='a']";
   $vals = $xml->xpath($path);
-  $vals = _cals_importer_xpath_value($xml, 651, "a");
+  $vals = _cals_importer_xpath_value($xml, "datafield", 651, "a");
   foreach ($vals as $str) {
     if(strlen($str)) {
       $map[$k]['values'][]= array(
@@ -485,7 +474,6 @@ function _cals_importer_get_coverage_marc($xml, $k, &$map){
         ),
       );
     }
-
   }
 }
 
@@ -495,8 +483,8 @@ function _cals_importer_get_coverage_marc($xml, $k, &$map){
 function _cals_get_date_issued_from_marc($xml, $k, &$map) {
   //let's grab the date issued
   $dates = array();
-
-  $tmp = _cals_importer_xpath_control_field_value($xml, "008", NULL);
+  //$tmp = _cals_importer_xpath_control_field_value($xml, "008", NULL);
+  $tmp = _cals_importer_xpath_value($xml, "controlfield", "008", $code = NULL);
 
   if (count($tmp) >= 1) {
     foreach($tmp as $val) {
@@ -685,12 +673,13 @@ function _cals_parse_date_issue_copyright ($raw_date_value) {
 function _cals_importer_get_isolanguage_from_marcxml($xml, $k, &$map) {
   //look for 041 tag code a
   //$tmp = $xml->xpath("//marc:datafield[@tag='041']/marc:subfield[@code='a']");
-  $vals = _cals_importer_xpath_value($xml, '041', 'a');
+  $vals = _cals_importer_xpath_value($xml, "datafield", '041', 'a');
   foreach ($vals as $val)
     if(array_key_exists($val, $map[$k]['allowed_values'])) $map[$k]['values'][] = $val;
   
   if( empty($map[$k]['values']) ) {
-    $vals = _cals_importer_xpath_control_field_value($xml, "008", $code = NULL);
+    //$vals = _cals_importer_xpath_control_field_value($xml, "008", $code = NULL);
+    $vals = _cals_importer_xpath_value($xml, "controlfield", "008", $code = NULL);
     foreach($vals as $val) {
       $str = substr($val, 35, 3);
       if(array_key_exists($str, $map[$k]['allowed_values'])) $map[$k]['values'][] = $str;
@@ -729,7 +718,7 @@ function _cals_get_genre_from_marc($xml, $k, &$map) {
 }
 
 function _cals_importer_get_uri_from_marc($xml, $k, &$map) {
-  $vals = _cals_importer_xpath_value($xml, '856', 'u');
+  $vals = _cals_importer_xpath_value($xml, "datafield", '856', 'u');
   $arr = array("nnels.ca", "license", "loc.gov");
   foreach ($vals as $val) {
     $add = 1;
@@ -740,7 +729,7 @@ function _cals_importer_get_uri_from_marc($xml, $k, &$map) {
   //printAndDie($map[$k]);
 }
 function _cals_importer_get_urls_from_marc($xml, $k, &$map) {
-  $vals = _cals_importer_xpath_value($xml, '856', 'u');
+  $vals = _cals_importer_xpath_value($xml, "datafield", '856', 'u');
   $arr = array("nnels.ca", "license", "loc.gov");
   $exceptions = trim($map[$k]['parser']['exceptions']);
   $exceptions = explode("\r\n", $exceptions);
@@ -778,10 +767,12 @@ function _cals_get_literary_form_from_marc($xml, $k, &$map) {
   //$ignore = array("u", "|", " ", '', 'n');
   $allowed_values = $map[$k]['allowed_values'];
   $litform = ''; //holds the value; blank if none
-  $tmp = _cals_importer_xpath_control_field_value($xml, "006", $code = NULL);
+  //$tmp = _cals_importer_xpath_control_field_value($xml, "006", $code = NULL);
+  $tmp = _cals_importer_xpath_value($xml, "controlfield", "006", $code = NULL);
   $arr = array("006" => 16, "008" => 33);
   foreach($arr as $tag => $pos) {
-    $tmp = _cals_importer_xpath_control_field_value($xml, $tag, $code = NULL);
+    //$tmp = _cals_importer_xpath_control_field_value($xml, $tag, $code = NULL);
+    $tmp = _cals_importer_xpath_value($xml, "controlfield", $tag, $code = NULL);
     foreach($tmp as $val) {
       $str = substr($val, $pos, 1);
       if(array_key_exists($str, $allowed_values)) {
@@ -796,7 +787,6 @@ function _cals_get_literary_form_from_marc($xml, $k, &$map) {
   }
 }
 
-//function _cals_get_subject_from_marc(&$arr, &$node, $xml, &$map) {
 function _cals_get_subject_from_marc($xml, $k, &$map){
   $paths = array();
   $paths[] =  "//marc:datafield[@tag='600']/marc:subfield[@code='a']";
@@ -832,15 +822,9 @@ function _cals_get_descriptors_from_marc($xml, $k, &$map) {
             LANGUAGE_NONE => array(array('value' => $val)),
           ),
         );
-
-
       }
-
     }
-
   }
-
-
 }
 
 /**
@@ -853,11 +837,11 @@ function _cals_get_descriptors_from_marc($xml, $k, &$map) {
 //check w/ Jonathan as to the $flag parameter: can't find elsewhere in code
 function _cals_importer_get_system_numbers_from_marc($xml, $k, &$map) {
   $str = array();
-  $tmp = _cals_importer_xpath_value($xml, '037', 'a');
+  $tmp = _cals_importer_xpath_value($xml, "datafield", '037', 'a');
   foreach($tmp as $value) {
     $map[$k]['values'][] = $value;
   }
-  $tmp = _cals_importer_xpath_value($xml, '028', 'a');
+  $tmp = _cals_importer_xpath_value($xml, "datafield", '028', 'a');
   foreach($tmp as $value) {
     $map[$k]['values'][] = $value;
   }
@@ -866,7 +850,7 @@ function _cals_importer_get_system_numbers_from_marc($xml, $k, &$map) {
 
 
 function _cals_importer_get_oclc_number_from_marc($xml, $k, &$map) {
-  $arr = _cals_importer_xpath_value($xml, '035', 'a');
+  $arr = _cals_importer_xpath_value($xml, "datafield", '035', 'a');
   foreach($arr as $value) {
     //new check on valid oclc numbers
     if (strpos($value, "(OCoLC)") !== false  &&
@@ -882,7 +866,7 @@ function _cals_importer_get_access_restrictions($xml, $k, &$map) {
   $title = array();
   $vals = array();
   foreach($codes as $code) {
-    $tmp = _cals_importer_xpath_value($xml, '506', $code);
+    $tmp = _cals_importer_xpath_value($xml, "datafield", '506', $code);
     if (count($tmp) >= 1) {
       $vals[] = (string) trim($tmp[0]);
       if(count($vals)) {
@@ -930,17 +914,13 @@ function _cals_importer_get_isbn_sysnums_from_marc($xml, $k, &$map) {
     "//marc:datafield[@tag='534']/marc:subfield[@code='z']" ;
   $tmp = $xml->xpath($path);
   foreach ($tmp as $me) {
-
     $val = (string) trim($me[0]);
     //replace ";" to ","
     $val = str_replace(";", ",", $val);
-
     if (strpos($val, "[")) $val = trim(substr($val, 0, strpos($val, "[") ));
     if (strpos($val, "(")) $val = trim(substr($val, 0, strpos($val, "(") ));
-
     //in case its multi valued
     $tmp2 = explode(",", $val);
-
     foreach ($tmp2 as $val2) {
       $val2 =  preg_replace("/[^0-9Xx]+/", "", $val2);
       $val2 =  str_replace(" ", "", $val2);
@@ -955,10 +935,6 @@ function _cals_importer_get_isbn_sysnums_from_marc($xml, $k, &$map) {
         $map[$k]['values'][] = trim($val2);
     }
   }
-
-
-  //$tmp = $xml->xpath("//marc:datafield[@tag='534']/marc:subfield[@code='z']");
-
 }
 
 /**
@@ -974,7 +950,7 @@ function _cals_importer_get_isbn_sysnums_from_marc($xml, $k, &$map) {
  */
 function _cals_importer_get_performer_from_marcxml(&$arr, $xml) {
 
-  $tmp = _cals_importer_xpath_value($xml, 511, "a");
+  $tmp = _cals_importer_xpath_value($xml, "datafield", 511, "a");
 
   foreach ($tmp as $val) {
     $val = str_replace("Narrated by ", "", $val);
@@ -986,17 +962,111 @@ function _cals_importer_get_performer_from_marcxml(&$arr, $xml) {
       $arr['fc_files']['field_performer'][]['value'] = trim($val2);
   }
 }
+function xmlToArray($xml, $options = array()) {
+  $defaults = array(
+    'namespaceSeparator' => ':',//you may want this to be something other than a colon
+    'attributePrefix' => '@',   //to distinguish between attributes and nodes with the same name
+    'alwaysArray' => array(),   //array of xml tag names which should always become arrays
+    'autoArray' => true,        //only create arrays for tags which appear more than once
+    'textContent' => '$',       //key used for the text content of elements
+    'autoText' => true,         //skip textContent key if node has no attributes or child nodes
+    'keySearch' => false,       //optional search and replace on tag and attribute names
+    'keyReplace' => false       //replace values for above search values (as passed to str_replace())
+  );
+  $options = array_merge($defaults, $options);
+  $namespaces = $xml->getDocNamespaces();
+  $namespaces[''] = null; //add base (empty) namespace
+
+  //get attributes from all namespaces
+  $attributesArray = array();
+  foreach ($namespaces as $prefix => $namespace) {
+    foreach ($xml->attributes($namespace) as $attributeName => $attribute) {
+      //replace characters in attribute name
+      if ($options['keySearch']) $attributeName =
+        str_replace($options['keySearch'], $options['keyReplace'], $attributeName);
+      $attributeKey = $options['attributePrefix']
+        . ($prefix ? $prefix . $options['namespaceSeparator'] : '')
+        . $attributeName;
+      $attributesArray[$attributeKey] = (string)$attribute;
+    }
+  }
+
+  //get child nodes from all namespaces
+  $tagsArray = array();
+  foreach ($namespaces as $prefix => $namespace) {
+    foreach ($xml->children($namespace) as $childXml) {
+      //recurse into child nodes
+      $childArray = xmlToArray($childXml, $options);
+      list($childTagName, $childProperties) = each($childArray);
+      printPre($childTagName);
+
+      //replace characters in tag name
+      if ($options['keySearch']) $childTagName =
+        str_replace($options['keySearch'], $options['keyReplace'], $childTagName);
+      //add namespace prefix, if any
+      if ($prefix) $childTagName = $prefix . $options['namespaceSeparator'] . $childTagName;
+
+      if (!isset($tagsArray[$childTagName])) {
+        //only entry with this key
+        //test if tags of this type should always be arrays, no matter the element count
+        $tagsArray[$childTagName] =
+          in_array($childTagName, $options['alwaysArray']) || !$options['autoArray']
+            ? array($childProperties) : $childProperties;
+      } elseif (
+        is_array($tagsArray[$childTagName]) && array_keys($tagsArray[$childTagName])
+        === range(0, count($tagsArray[$childTagName]) - 1)
+      ) {
+        //key already exists and is integer indexed array
+        $tagsArray[$childTagName][] = $childProperties;
+      } else {
+        //key exists so convert to integer indexed array with previous value in position 0
+        $tagsArray[$childTagName] = array($tagsArray[$childTagName], $childProperties);
+      }
+    }
+  }
+
+  //get text content of node
+  $textContentArray = array();
+  $plainText = trim((string)$xml);
+  if ($plainText !== '') $textContentArray[$options['textContent']] = $plainText;
+
+  //stick it all together
+  $propertiesArray = !$options['autoText'] || $attributesArray || $tagsArray || ($plainText === '')
+    ? array_merge($attributesArray, $tagsArray, $textContentArray) : $plainText;
+
+  //return node as array
+  return array(
+    $xml->getName() => $propertiesArray
+  );
+}
 
 function _cals_importer_get_contributor_from_marc($xml, $k, &$map, $tags) {
-  $tags = array(
-    array('tag' => 700, 'code' => 'a'),
-    array('tag' => 710, 'code' => 'a'),
-    array('tag' => 710, 'code' => 'b'),
-    array('tag' => 711, 'code' => 'a'),
-  );
   _cals_importer_get_basic_values_from_marc($xml, $k, $map, $tags);
-  printAndDie($map[$k]);
 
+  $tmp = array();
+  if(count(_cals_importer_xpath_value($xml, "datafield", 700, "a"))) {
+    //find parent path
+    $parent = $xml->xpath("//marc:datafield[@tag='700']");
+    foreach ($parent as $i => $child) {
+      //$ind = (string) $parent[$i]->attributes()->ind1;
+      $title = array(); //holds the title elements for this child
+      foreach ($child->children(NAME_SPACE)->subfield as $subfield) {
+        $code = (string) $subfield->attributes()->code;
+        $tmp[$i][$code] = (string) trim($subfield[0]);
+      }
+    }
+    foreach ($tmp as $v) {
+
+      if (array_key_exists("e", $v) && stripos($v['e'], "author") !== FALSE ||
+        array_key_exists("4", $v) && stripos($v['4'], "aut") !== FALSE
+      ) {
+        $map['field_dc_creator']['values'][] = $v['a'];
+      }
+      else {
+        $map[$k]['values'][] = $v['a'];
+      }
+    }
+  }
 }
 
 
@@ -1018,7 +1088,7 @@ function _cals_importer_get_dc_relations_from_marc($xml, $k, &$map, $tags) {
 		array('tag' => 530, 'code' => 'a', 'qualifier' => "type", 'enum' => "IsFormatOf"),
 		*/
 
-    $tmp = _cals_importer_xpath_value($xml, $t, $c);
+    $tmp = _cals_importer_xpath_value($xml, "datafield", $t, $c);
     foreach ($tmp as $val) {
       $val = _cals_importer_strip_square_brackets_value($val);
       $val = _cals_importer_strip_trailing_periods_value($val);
@@ -1038,8 +1108,7 @@ function _cals_importer_get_dc_relations_from_marc($xml, $k, &$map, $tags) {
 function _cals_importer_get_cataloging_agency_from_marc($xml, $k, &$map, $tags) {
   $tags = array("003", "040");
   foreach($tags as $tag) {
-    //$tmp = $xml->xpath("//marc:datafield[@tag='{$tag}']]");
-    $tmp = _cals_importer_xpath_value($xml, $tag, '');
+    $tmp = _cals_importer_xpath_value($xml, "datafield", $tag, '');
     printAndDie(__FUNCTION__, $tmp);
 
     foreach ($tmp as $me) {
@@ -1086,30 +1155,12 @@ function _cals_importer_get_array_cataloging_agency() {
 
 
 }
-/*
-      case "003":
-        $arr['fc']['field_cataloguing_agency'][] = array(
-          "field_agency_type" => "",
-          "value" => $str,
-        );
-        break;
-
-      case "040":
-        $tmp = _cals_importer_get_array_cataloging_agency();
-        if (array_key_exists($code, $tmp)) {
-          $arr['fc']['field_cataloguing_agency'][] = array(
-            "field_agency_type" => $tmp[$code],
-            "value" => $str
-          );
-        }
-        break;
-*/
 
 function _cals_importer_get_basic_values_from_marc($xml, $k, &$map, $tags) {
   foreach($tags as $tag) {
     $t = $tag['tag'];
     $c = $tag['code'];
-    $tmp = _cals_importer_xpath_value($xml, $t, $c);
+    $tmp = _cals_importer_xpath_value($xml, "datafield", $t, $c);
     foreach ($tmp as $val) {
       $map[$k]['values'][] = (isset($tag['qualifier'])) ? array( $tag['qualifier'] => $tag['enum'], "value" => $val ) : $val;
     }
@@ -1147,7 +1198,7 @@ function _cals_importer_get_normalized_performer($string) {
 function _cals_importer_get_runningtime_from_marcxml(&$arr, $xml) {
   if(!isset($arr['fc_files'])) $arr['fc_files'] = array();
   //look for 306 tag code a
-  $tmp = _cals_importer_xpath_value($xml, 306, 'a');
+  $tmp = _cals_importer_xpath_value($xml, "datafield", 306, 'a');
   foreach ($tmp as $val){
     $val = trim($val);
     if(is_numeric(trim($val)))
