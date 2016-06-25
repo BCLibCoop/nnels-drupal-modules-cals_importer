@@ -1341,12 +1341,11 @@ function _cals_import_skeletal_records($node) {
             $n->field_s3_path[LANGUAGE_NONE][0]['value'] = $arr_s3[$tmp];
             $result .= "added s3 path.";
           }
-
         }
-
       }
       //save the new/existing repository item node
       $n->field_record_set[LANGUAGE_NONE][0]['nid'] = $node->nid;
+      //set access restrictions on the node to match the record-set
       $n->field_access_restrictions[LANGUAGE_NONE][0]['value'] = $node->field_access_restrictions[LANGUAGE_NONE][0]['value'];
       node_save($n);
       $result = l(t("edit"), "node/" . $n->nid . "/edit") . " | " . l(t("view"), "node/" . $n->nid) . " - {$n->title}"
