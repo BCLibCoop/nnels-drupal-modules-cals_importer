@@ -238,11 +238,13 @@ function _cals_importer_xpath_value($xml, $fieldname, $tag, $code = NULL) {
   $arr = array();
   $path = "//marc:{$fieldname}[@tag='" . $tag . "']";
   if(!empty($code) ) $path .= "/marc:subfield[@code='" . $code . "']";
+  printPre($path);
   $tmp = $xml->xpath($path);
   if (count($tmp) >= 1) {
     foreach ($tmp as $me)
       $arr[] = (string) trim($me[0]);
   }
+  printPre($arr);
   return $arr;
 }
 function _get_tmp($xml) {
@@ -253,7 +255,6 @@ function _cals_importer_xpath_control_field_value($xml, $tag, $code = NULL) {
   $arr = array();
   $path = "//marc:controlfield[@tag='" . $tag . "']";
   if(!empty($code) ) $path .= "/marc:subfield[@code='" . $code . "']";
-
   $tmp = $xml->xpath($path);
   if (count($tmp) >= 1) {
     foreach ($tmp as $me)
@@ -477,57 +478,91 @@ function _cals_importer_get_coverage_marc($xml, $k, &$map){
   }
 }
 
+function _cals_get_issue_date_from_marc($xml, &$dates) {
+  //let's grab the date issued
+  //$dates = array();
 
+}
 
+function _cals_get_copyright_date_from_marc($xml, $k, &$map) {
+
+}
+
+function _cals_get_create_date_from_marc($xml, $k, &$map) {
+
+}
+
+function _tmp_date($str, $tag, &$dates) {
+  $check_copyright = _cals_parse_date_issue_copyright($str);
+  $date_value = _cals_get_iso_year($str);
+  printPre(__FUNCTION__, $date_value, $check_copyright);
+
+  if($check_copyright) {
+    $qualifier = "Copyright";
+  }
+  else {
+    $qualifier = ($tag == 534) ? "Issued" : "Created";
+  }
+  $tmp[$qualifier] = $date_value;
+  if($tmp[$qualifier] > $dates[$qualifier]) $dates[$qualifier] = $tmp[$qualifier];
+  //$dates[$qualifier][] = array($tag => $date_value);
+
+  //$dates[$qualifier][] = array($tag => $date_value);
+
+}
 //function _cals_get_date_issued($xml) {
 function _cals_get_date_issued_from_marc($xml, $k, &$map) {
-  //let's grab the date issued
-  $dates = array();
-  //$tmp = _cals_importer_xpath_control_field_value($xml, "008", NULL);
-  $tmp = _cals_importer_xpath_value($xml, "controlfield", "008", $code = NULL);
 
+  $dates_dupes = array();
+  $dates = array();
+  //008
+  $tmp = _cals_importer_xpath_value($xml, "controlfield", "008", NULL);
+  //$tmp = _cals_importer_xpath_value($xml, "controlfield", "008", NULL);
   if (count($tmp) >= 1) {
     foreach($tmp as $val) {
       $str = substr($val, 7, 4); // 008/07-10 should be numeric
-      if (is_numeric($str)) $dates['008'] = _cals_get_iso_year($str);
+      if (is_numeric($str))   $dates["Issued"]=_cals_get_iso_year($str); //[] =  array("008" => _cals_get_iso_year($str));
     }
   }
 
-  $two64 = $xml->xpath("//marc:datafield[@tag='264']/marc:subfield[@code='c']");
-  if (count($two64) >= 1) {
-    $str = (string) $two64[0];
-    $dates['264'] = $str;
-  }
-  else $two64fallback = TRUE; //fallback on 260 value
+  //$me = array(264 => 'c', 260 => 'c', )
 
-  if ( isset($two64falback) ) {
-    $two60 = $xml->xpath("//marc:datafield[@tag='260']/marc:subfield[@code='c']");
-    if (count($two60) >= 1) {
-      $str = (string) $two60[0];
+  $tmp = _cals_importer_xpath_value($xml, "datafield", 264, "c");
 
-      $dates['260'] = $str;
-    }
+  if (count($tmp))
+    foreach ($tmp as $str) _tmp_date($str, 264, $dates);
+  else {
+    $tmp = _cals_importer_xpath_value($xml, "datafield", 260, "c");
+    if (count($tmp))
+      foreach ($tmp as $str) _tmp_date($str, 260, $dates);
   }
 
-  $five_thirty3 = $xml->xpath("//marc:datafield[@tag='533']/marc:subfield[@code='d']");
-  if (count($five_thirty3) >= 1) {
-    if(!isset($dates['533'])) $dates['533'] = '';
-    $str = (string) $five_thirty3[0];
-    $dates['533'] .= $str;
+  $tmp = _cals_importer_xpath_value($xml, "datafield", 533, "d");
+  if (count($tmp)) {
+    foreach ($tmp as $str) _tmp_date($str, 533, $dates);
   }
 
-  $five_thirty4 = $xml->xpath("//marc:datafield[@tag='534']/marc:subfield[@code='c']");
-  if (count($five_thirty4) >= 1) {
-    if(!isset($dates['534'])) $dates['534'] = '';
-    $str = (string) $five_thirty4[0];
-    $dates['534'] .= $str;
+  $tmp = _cals_importer_xpath_value($xml, "datafield", 534, "d");
+  if (count($tmp)) {
+    foreach ($tmp as $str) _tmp_date($str, 534, $dates);
   }
+  foreach($dates as $qualifier => $date)
+    $map[$k]['values'][] = array(
+      'field_name' =>  "field_date",
+      'field_dc_date' => array(
+        LANGUAGE_NONE => array(array('value' => $date) ),
+      ),
+      'field_qualifier_date' => array(
+        LANGUAGE_NONE => array(array('value' => $qualifier) ),
+      ),
+    );
+  //printAndDie($dates, $map[$k]);
 
-  $dates_dupes = array( //qualified dates but potentially dupes
-    //array()
-  );
 
+}
 
+/*
+ *
 //Set qualifiers for entries in $dates based on origin field and load the array for deduping
   if ( ! empty( $dates ) ) {
     foreach ( $dates as $code => $date_value ) {
@@ -546,12 +581,10 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
           $check_copyright = _cals_parse_date_issue_copyright($date_value);
           $date_value = _cals_get_iso_year($date_value);
 
-          if ( $check_copyright == TRUE ) $date_dupes[] = array(
-            'qualifier' => 'Copyrighted', 'date' => $date_value
-          );
-          else $date_dupes[] = array(
-            'qualifier' => 'Created', 'date' => $date_value
-          );
+          if ( $check_copyright == TRUE )
+            $date_dupes[] = array('qualifier' => 'Copyrighted', 'date' => $date_value);
+          else
+            $date_dupes[] = array('qualifier' => 'Created', 'date' => $date_value);
           break;
 
         case '534':
@@ -590,8 +623,7 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
     );
   }
 
-}
-
+ */
 //Curiously particular deduper based on qualifier precedence as well as recency.
 
 function _cals_parse_date_issue_dedupe_qualifiers($dx_sorted) {
