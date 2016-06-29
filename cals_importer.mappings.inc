@@ -525,22 +525,18 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
 
   //$me = array(264 => 'c', 260 => 'c', )
 
-  $tmp = _cals_importer_xpath_value($xml, "datafield", 264, "c");
+  $tmp1 = _cals_importer_xpath_value($xml, "datafield", 264, "c");
+  $tmp2 = _cals_importer_xpath_value($xml, "datafield", 260, "c");
+  $tmp3 = _cals_importer_xpath_value($xml, "datafield", 533, "d");
+  if (count($tmp1))
+    foreach ($tmp1 as $str) _tmp_date($str, 264, $dates);
+  else if (count($tmp2))
+    foreach ($tmp2 as $str) _tmp_date($str, 260, $dates);
+  else if (count($tmp3))
+    foreach ($tmp3 as $str) _tmp_date($str, 533, $dates);
+  endif;
 
-  if (count($tmp))
-    foreach ($tmp as $str) _tmp_date($str, 264, $dates);
-  else {
-    $tmp = _cals_importer_xpath_value($xml, "datafield", 260, "c");
-    if (count($tmp))
-      foreach ($tmp as $str) _tmp_date($str, 260, $dates);
-  }
-
-  $tmp = _cals_importer_xpath_value($xml, "datafield", 533, "d");
-  if (count($tmp)) {
-    foreach ($tmp as $str) _tmp_date($str, 533, $dates);
-  }
-
-  $tmp = _cals_importer_xpath_value($xml, "datafield", 534, "d");
+  $tmp = _cals_importer_xpath_value($xml, "datafield", 534, "c");
   if (count($tmp)) {
     foreach ($tmp as $str) _tmp_date($str, 534, $dates);
   }
