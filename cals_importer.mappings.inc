@@ -72,7 +72,7 @@ function _cals_importer_repo_field_callback($fieldname) {
         array('tag' => 534, 'code' => 'c'),
       )
     ),
-    'field_dc_creator' => array('function' => '_cals_importer_get_basic_values_from_marc',
+    'field_dc_creator' => array('function' => '_cals_importer_get_creator_from_marc',
       "tags" => array(
         array('tag' => 100, 'code' => 'a'),
         array('tag' => 110, 'code' => 'a'),
@@ -238,13 +238,11 @@ function _cals_importer_xpath_value($xml, $fieldname, $tag, $code = NULL) {
   $arr = array();
   $path = "//marc:{$fieldname}[@tag='" . $tag . "']";
   if(!empty($code) ) $path .= "/marc:subfield[@code='" . $code . "']";
-  printPre($path);
   $tmp = $xml->xpath($path);
   if (count($tmp) >= 1) {
     foreach ($tmp as $me)
       $arr[] = (string) trim($me[0]);
   }
-  printPre($arr);
   return $arr;
 }
 function _get_tmp($xml) {
@@ -970,7 +968,6 @@ function _cals_importer_get_isbn_sysnums_from_marc($xml, $k, &$map) {
 }
 
 /**
- *
  * @param $arr
  *   the drupal ready array of fields
  * @param $xml
@@ -1072,6 +1069,44 @@ function xmlToArray($xml, $options = array()) {
   );
 }
 
+/**
+ * Parses the creator values
+ * @param $xml
+ *   the original xml string
+ * @param $k
+ *   the fieldname
+ * @param $map
+ *   the array of fields
+ * @param $tags
+ *   the marcxml fields that are parsed
+ *
+ * @return
+ *   $map is returned by reference with values appended
+ */
+function _cals_importer_get_creator_from_marc($xml, $k, &$map, $tags) {
+  if(count($map[$k]['values'])) {
+    $tmp = $map[$k]['values']; //from 700 series, see: https://github.com/BCLibCoop/nnels/issues/116
+    $map[$k]['values'] = array();
+  }
+  _cals_importer_get_basic_values_from_marc($xml, $k, $map, $tags);
+  if(count($tmp)) $map[$k]['values'] = array_merge($map[$k]['values'],  $tmp);
+}
+
+/**
+ * Parses contributor values and also creator values in the 700a
+ * series where subfield $e = aut or subfield $4 = author
+ * @param $xml
+ *   the original xml string
+ * @param $k
+ *   the fieldname
+ * @param $map
+ *   the array of fields
+ * @param $tags
+ *   the marcxml fields that are parsed
+ *
+ * @return
+ *   $map is returned by reference with values appended
+ */
 function _cals_importer_get_contributor_from_marc($xml, $k, &$map, $tags) {
   _cals_importer_get_basic_values_from_marc($xml, $k, $map, $tags);
 
@@ -1100,10 +1135,20 @@ function _cals_importer_get_contributor_from_marc($xml, $k, &$map, $tags) {
     }
   }
 }
-
-
-
-
+/**
+ * Parses DC Contributor values
+ * @param $xml
+ *   the original xml string
+ * @param $k
+ *   the fieldname
+ * @param $map
+ *   the array of fields
+ * @param $tags
+ *   the marcxml fields that are parsed
+ *
+ * @return
+ *   $map is returned by reference with values appended
+ */
 function _cals_importer_get_dc_relations_from_marc($xml, $k, &$map, $tags) {
   foreach($tags as $tag) {
     $t = $tag['tag'];
@@ -1136,6 +1181,20 @@ function _cals_importer_get_dc_relations_from_marc($xml, $k, &$map, $tags) {
     }
   }
 }
+/**
+ * Parses cataloguing agency from 003 and 040
+ * @param $xml
+ *   the original xml string
+ * @param $k
+ *   the fieldname
+ * @param $map
+ *   the array of fields
+ * @param $tags
+ *   the marcxml fields that are parsed
+ *
+ * @return
+ *   $map is returned by reference with values appended
+ */
 
 function _cals_importer_get_cataloging_agency_from_marc($xml, $k, &$map, $tags) {
   $tags = array("003", "040");
