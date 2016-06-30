@@ -477,25 +477,6 @@ function _cals_importer_get_coverage_marc($xml, $k, &$map){
 }
 
 
-function _tmp_date($str, $tag, &$dates) {
-  $check_copyright = _cals_parse_date_issue_copyright($str);
-  $date_value = _cals_get_iso_year($str);
-  printPre(__FUNCTION__  . ": date = $date_value | copyright = $check_copyright | tag = $tag ");
-
-  if($tag == "008") {
-    $qualifier = "Issued";
-  }
-  else {
-    if($check_copyright)
-      $qualifier = "Copyright";
-    else
-      $qualifier = ($tag == 534) ? "Issued" : "Created";
-  }
-  $tmp[$qualifier] = $date_value;
-  if($tmp[$qualifier] > $dates[$qualifier] || !isset($dates[$qualifier]))
-    $dates[$qualifier] = $tmp[$qualifier];
-
-}
 //function _cals_get_date_issued($xml) {
 function _cals_get_date_issued_from_marc($xml, $k, &$map) {
 
@@ -509,7 +490,7 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
       $str = substr($val, 7, 4); // 008/07-10 should be numeric
       if (is_numeric($str))   {
         $str =_cals_get_iso_year($str);
-        _tmp_date($str, "008", $dates);
+        _cals_map_date_qualifiers($str, "008", $dates);
       } //[] =  array("008" => _cals_get_iso_year($str));
     }
   }
@@ -520,16 +501,16 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
   $tmp2 = _cals_importer_xpath_value($xml, "datafield", 260, "c");
   $tmp3 = _cals_importer_xpath_value($xml, "datafield", 533, "d");
   if (count($tmp1))
-    foreach ($tmp1 as $str) _tmp_date($str, 264, $dates);
+    foreach ($tmp1 as $str) _cals_map_date_qualifiers($str, 264, $dates);
   else if (count($tmp2))
-    foreach ($tmp2 as $str) _tmp_date($str, 260, $dates);
+    foreach ($tmp2 as $str) _cals_map_date_qualifiers($str, 260, $dates);
   else if (count($tmp3))
-    foreach ($tmp3 as $str) _tmp_date($str, 533, $dates);
+    foreach ($tmp3 as $str) _cals_map_date_qualifiers($str, 533, $dates);
 
 
   $tmp = _cals_importer_xpath_value($xml, "datafield", 534, "c");
   if (count($tmp))
-    foreach ($tmp as $str) _tmp_date($str, 534, $dates);
+    foreach ($tmp as $str) _cals_map_date_qualifiers($str, 534, $dates);
 
   //printAndDie($tmp1, $tmp2, $tmp3, $dates);
   foreach($dates as $qualifier => $date)
@@ -607,8 +588,41 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
   }
 
  */
-//Curiously particular deduper based on qualifier precedence as well as recency.
 
+/**
+ * @param $str
+ *   the date str to be parsed
+ * @param $tag
+ *   the marc xml tag
+ * @param $dates
+ *   the $dates array passed by reference
+ *
+ */
+function _cals_map_date_qualifiers($str, $tag, &$dates) {
+  $check_copyright = _cals_parse_date_issue_copyright($str);
+  $date_value = _cals_get_iso_year($str);
+  //printPre(__FUNCTION__  . ": date = $date_value | copyright = $check_copyright | tag = $tag ");
+  if($tag == "008") {
+    $qualifier = "Issued";
+  }
+  else {
+    if($check_copyright)
+      $qualifier = "Copyright";
+    else
+      $qualifier = ($tag == 534) ? "Issued" : "Created";
+  }
+  $tmp[$qualifier] = $date_value;
+  if($tmp[$qualifier] > $dates[$qualifier] || !isset($dates[$qualifier]))
+    $dates[$qualifier] = $tmp[$qualifier];
+
+}
+
+
+//Curiously particular deduper based on qualifier precedence as well as recency.
+/**
+ * @param $dx_sorted
+ * @return array
+ */
 function _cals_parse_date_issue_dedupe_qualifiers($dx_sorted) {
 
   $save = array(); //keeping
@@ -659,6 +673,10 @@ function _cals_parse_date_issue_dedupe_qualifiers($dx_sorted) {
 
 }
 
+/**
+ * @param $raw_date_value
+ * @return bool|void
+ */
 function _cals_parse_date_issue_copyright ($raw_date_value) {
   $copyright = "/^c\\d{4}/";
   preg_match($copyright, $raw_date_value, $matches);
@@ -672,26 +690,19 @@ function _cals_parse_date_issue_copyright ($raw_date_value) {
 }
 
 /**
- * @param $arr
- *   the drupal ready array of fields
  * @param $xml
- *   the original xml string
- *
- * @return
- *   an array of Drupal-ready fields
+ * @param $k
+ * @param $map
  *
  * parse 041 to grab language values
  * see: http://www.loc.gov/marc/bibliographic/bd041.html
  */
-//function _cals_importer_get_isolanguage_from_marcxml(&$arr, $xml) {
-
 function _cals_importer_get_isolanguage_from_marcxml($xml, $k, &$map) {
   //look for 041 tag code a
   //$tmp = $xml->xpath("//marc:datafield[@tag='041']/marc:subfield[@code='a']");
   $vals = _cals_importer_xpath_value($xml, "datafield", '041', 'a');
   foreach ($vals as $val)
     if(array_key_exists($val, $map[$k]['allowed_values'])) $map[$k]['values'][] = $val;
-  
   if( empty($map[$k]['values']) ) {
     //$vals = _cals_importer_xpath_control_field_value($xml, "008", $code = NULL);
     $vals = _cals_importer_xpath_value($xml, "controlfield", "008", $code = NULL);
@@ -703,13 +714,21 @@ function _cals_importer_get_isolanguage_from_marcxml($xml, $k, &$map) {
   if( empty($map[$k]['values']) ) $map[$k]['values'][]  = 'eng';
 }
 
-
+/**
+ * Parses 008 field to grap year value
+ * @param $str
+ * @return bool|int|mixed|string
+ *
+ */
 function _cals_get_date_from_008($str) {
   return _cals_get_iso_date(substr($str, 7, 4));
 }
 
-/*
+/**
  * Parse taxonomy terms: genre (vid = 2) and subject (vid = 3)
+ * @param $xpathvalue
+ * @param $fieldname
+ * @param $map
  */
 function _cals_get_taxonomy_terms_from_xpath($xpathvalue, $fieldname, &$map) {
   $vid = $map[$fieldname]['vid'];
