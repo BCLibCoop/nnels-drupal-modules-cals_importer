@@ -430,7 +430,7 @@ function _cals_importer_str_ends_abbreviation($val, $field) {
 
   $val = str_replace("  ", " ", $val);
   //e.g., E.D. or E. D. - i.e., no spaces or one space
-  $pattern = "/([a-zA-Z]+\.|)(|\s)+([a-zA-Z]+\.)+$/";
+  $pattern = "/([a-zA-Z]+\.|)(\s)+([a-zA-Z]{1,3}\.)+$/";
   if (preg_match($pattern, $val, $matches)) return TRUE;
 
   return FALSE;
