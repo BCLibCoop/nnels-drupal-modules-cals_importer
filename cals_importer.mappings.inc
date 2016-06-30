@@ -476,36 +476,24 @@ function _cals_importer_get_coverage_marc($xml, $k, &$map){
   }
 }
 
-function _cals_get_issue_date_from_marc($xml, &$dates) {
-  //let's grab the date issued
-  //$dates = array();
-
-}
-
-function _cals_get_copyright_date_from_marc($xml, $k, &$map) {
-
-}
-
-function _cals_get_create_date_from_marc($xml, $k, &$map) {
-
-}
 
 function _tmp_date($str, $tag, &$dates) {
   $check_copyright = _cals_parse_date_issue_copyright($str);
   $date_value = _cals_get_iso_year($str);
-  printPre(__FUNCTION__, $date_value, $check_copyright);
+  printPre(__FUNCTION__  . ": date = $date_value | copyright = $check_copyright | tag = $tag ");
 
-  if($check_copyright) {
-    $qualifier = "Copyright";
+  if($tag == "008") {
+    $qualifier = "Issued";
   }
   else {
-    $qualifier = ($tag == 534) ? "Issued" : "Created";
+    if($check_copyright)
+      $qualifier = "Copyright";
+    else
+      $qualifier = ($tag == 534) ? "Issued" : "Created";
   }
   $tmp[$qualifier] = $date_value;
-  if($tmp[$qualifier] > $dates[$qualifier]) $dates[$qualifier] = $tmp[$qualifier];
-  //$dates[$qualifier][] = array($tag => $date_value);
-
-  //$dates[$qualifier][] = array($tag => $date_value);
+  if($tmp[$qualifier] > $dates[$qualifier] || !isset($dates[$qualifier]))
+    $dates[$qualifier] = $tmp[$qualifier];
 
 }
 //function _cals_get_date_issued($xml) {
@@ -519,7 +507,10 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
   if (count($tmp) >= 1) {
     foreach($tmp as $val) {
       $str = substr($val, 7, 4); // 008/07-10 should be numeric
-      if (is_numeric($str))   $dates["Issued"]=_cals_get_iso_year($str); //[] =  array("008" => _cals_get_iso_year($str));
+      if (is_numeric($str))   {
+        $str =_cals_get_iso_year($str);
+        _tmp_date($str, "008", $dates);
+      } //[] =  array("008" => _cals_get_iso_year($str));
     }
   }
 
@@ -534,12 +525,13 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
     foreach ($tmp2 as $str) _tmp_date($str, 260, $dates);
   else if (count($tmp3))
     foreach ($tmp3 as $str) _tmp_date($str, 533, $dates);
-  endif;
+
 
   $tmp = _cals_importer_xpath_value($xml, "datafield", 534, "c");
-  if (count($tmp)) {
+  if (count($tmp))
     foreach ($tmp as $str) _tmp_date($str, 534, $dates);
-  }
+
+  //printAndDie($tmp1, $tmp2, $tmp3, $dates);
   foreach($dates as $qualifier => $date)
     $map[$k]['values'][] = array(
       'field_name' =>  "field_date",
@@ -550,9 +542,6 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
         LANGUAGE_NONE => array(array('value' => $qualifier) ),
       ),
     );
-  //printAndDie($dates, $map[$k]);
-
-
 }
 
 /*
@@ -752,7 +741,6 @@ function _cals_importer_get_uri_from_marc($xml, $k, &$map) {
       if(strpos($val, $ignore) !== FALSE) $add = 0;
     if($add == 1) $map[$k]['values'][] = $val;
   }
-  //printAndDie($map[$k]);
 }
 function _cals_importer_get_urls_from_marc($xml, $k, &$map) {
   $vals = _cals_importer_xpath_value($xml, "datafield", '856', 'u');
@@ -871,7 +859,6 @@ function _cals_importer_get_system_numbers_from_marc($xml, $k, &$map) {
   foreach($tmp as $value) {
     $map[$k]['values'][] = $value;
   }
-  //printAndDie($map[$k]);
 }
 
 
@@ -1252,7 +1239,6 @@ function _cals_importer_get_basic_values_from_marc($xml, $k, &$map, $tags) {
       $map[$k]['values'][] = (isset($tag['qualifier'])) ? array( $tag['qualifier'] => $tag['enum'], "value" => $val ) : $val;
     }
   }
-  //if($k == 'field_publisher') printAndDie(__FUNCTION__, $k, $map[$k]['values'], $tmp);
 }
 
 /**

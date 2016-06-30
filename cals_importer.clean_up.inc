@@ -317,11 +317,8 @@ function _cals_importer_convert_to_title_case(&$node, $field) {
     	  	$link = l("view record", "node/" . $node->nid, array('attributes' => array('target' => '_blank')));
 					drupal_set_message($tmp . " => " . $tmp2 . " view record: " . $link);
     	  }
-    		
     	}
-      
     }
-
   } 
 }
 
@@ -329,8 +326,6 @@ function _cals_importer_convert_to_title_case(&$node, $field) {
  * Strips opening and closing parentheses from creators,  
  */
 function _cals_importer_normalize_creators(&$node, $field) {
-  if($field == 'field_publisher') printAndDie(__FUNCTION__, $node->field);
-
   if(!empty($node->{$field})) {
     foreach($node->{$field}[LANGUAGE_NONE] as $k => $v) {
      $tmp = rtrim($v['value']); //trim various ascii chars
@@ -350,49 +345,18 @@ function _cals_importer_normalize_creators(&$node, $field) {
         //$msg[] = t("updated author:") . " " .  $tmp;
       }
      }
-     
-  
     }
-    if($field == 'field_publisher') printAndDie($node->field);
-
     _cals_importer_strip_trailing_periods($node, $field);
 
   } 
 }
 
-function _cals_test_recurse($n) {
-  printPre("n = $n");
-
-  if($n !== 10) {
-    $n++;
-    printPre("WILL RECURSE n = $n ????");
-    $x = _cals_test_recurse($n);
-  }
-  else {
-
-    printPre("RETURN $n");
-    $x = $n;
-    return $x;
-
-  }
-
-
-}
-function factorial($number) {
-  printPre($number);
-  if ($number < 2) {
-    return 1;
-  } else {
-    printPre("number = $number");
-    return ($number * factorial($number-1));
-  }
-}
 /**
  * wrapper function to strip punctuation where applicable  
  */
 function _cals_importer_strip_trailing_periods(&$node, $field) {
   if($field == 'title') {
-    $tmp = _cals_importer_strip_trailing_periods_value($node->title);
+    $tmp = _cals_importer_strip_trailing_periods_value($node->title, $field);
     if($tmp != $node->title) {
       $node->title = $tmp;
       $node->title_field[LANGUAGE_NONE][0]['value'] = $tmp;
@@ -400,10 +364,8 @@ function _cals_importer_strip_trailing_periods(&$node, $field) {
   }
   else {
     if(!empty($node->{$field})) {
-      if($field == 'field_dc_relation') printAndDie($node->{$field});
       foreach($node->{$field}[LANGUAGE_NONE] as $k => $v) {
-
-        $tmp = _cals_importer_strip_trailing_periods_value($v['value']);
+        $tmp = _cals_importer_strip_trailing_periods_value($v['value'], $field);
         if ($tmp != $v['value'] && !empty($tmp)) {
           $node->{$field}[LANGUAGE_NONE][$k]['value'] = $tmp;
         }
@@ -417,7 +379,7 @@ function _cals_importer_strip_trailing_periods(&$node, $field) {
  * Strips trailing punctuation, except abbreviations, etc.  
  * e.g. a.b., A.B., A. B., Dave B.
  */
-function _cals_importer_strip_trailing_periods_value($str) {
+function _cals_importer_strip_trailing_periods_value($str, $field) {
   $tmp = str_replace("  ", " ", rtrim($str)); //trim various ascii chars
   $tmp = (string) trim($tmp, "  ");
 
@@ -434,7 +396,7 @@ function _cals_importer_strip_trailing_periods_value($str) {
     $pos = strripos($tmp, $word);
     if($pos === $len - strlen($word) ) return $tmp; //return if we find a match at the end of the string!
   }
-  if (_cals_importer_str_ends_abbreviation($tmp)) return $tmp;
+  if (_cals_importer_str_ends_abbreviation($tmp, $field)) return $tmp;
 
   $tmp = _cals_importer_recurse_trailing_characters($str);
   return $tmp;
@@ -464,7 +426,16 @@ function _cals_importer_recurse_trailing_characters($str) {
  * Returns true if string ending is likely an abbreviation, e.g.,
  * Vancouver, B.C.
  */
-function _cals_importer_str_ends_abbreviation($val) {
+function _cals_importer_str_ends_abbreviation($val, $field) {
+
+  $val = str_replace("  ", " ", $val);
+  //e.g., E.D. or E. D. - i.e., no spaces or one space
+  $pattern = "/([a-zA-Z]+\.|)(|\s)+([a-zA-Z]+\.)+$/";
+  if (preg_match($pattern, $val, $matches)) return TRUE;
+
+  return FALSE;
+
+  /*
   $last = substr($val, -1);
   if ( (substr($val, -1) == '.')  ) {
     if(substr($val, -2) == '..') return FALSE;
@@ -474,11 +445,11 @@ function _cals_importer_str_ends_abbreviation($val) {
     //e.g., E.D. or E. D. - i.e., no spaces or one space
     if( preg_match('/[a-zA-Z]\.(| )[a-zA-Z]\.$/', $val, $matches)) {
       drupal_set_message("LAST = $last | num periods = $num_periods | val = $val", $matches);
-      //printAndDie($val, $matches);
       return TRUE;
     }
   }
   return FALSE;
+  */
 }
 
 /**

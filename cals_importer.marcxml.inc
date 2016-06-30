@@ -69,10 +69,8 @@ function _cals_importer_normalize_node_field(&$node, $field) {
       break;
 	  case "field_dc_creator":
 		case "field_dc_contributor":
-      if($field == 'field_dc_creator')  printPre("HERE", $node->{$field}, $field);
 			_cals_importer_strip_square_brackets($node, $field);
 			_cals_importer_normalize_creators($node, $field);
-      if($field == 'field_dc_creator')  printAndDie("After", $node->{$field}, $field);
 	  	break;
 	  case "field_publisher":
 			_cals_importer_strip_square_brackets($node, $field);
