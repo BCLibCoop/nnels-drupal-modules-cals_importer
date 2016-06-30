@@ -601,7 +601,6 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
 function _cals_map_date_qualifiers($str, $tag, &$dates) {
   $check_copyright = _cals_parse_date_issue_copyright($str);
   $date_value = _cals_get_iso_year($str);
-  //printPre(__FUNCTION__  . ": date = $date_value | copyright = $check_copyright | tag = $tag ");
   if($tag == "008") {
     $qualifier = "Issued";
   }
@@ -614,7 +613,6 @@ function _cals_map_date_qualifiers($str, $tag, &$dates) {
   $tmp[$qualifier] = $date_value;
   if($tmp[$qualifier] > $dates[$qualifier] || !isset($dates[$qualifier]))
     $dates[$qualifier] = $tmp[$qualifier];
-
 }
 
 
@@ -675,18 +673,16 @@ function _cals_parse_date_issue_dedupe_qualifiers($dx_sorted) {
 
 /**
  * @param $raw_date_value
- * @return bool|void
+ * @return bool
  */
 function _cals_parse_date_issue_copyright ($raw_date_value) {
-  $copyright = "/^c\\d{4}/";
+  //$copyright = "/^c\\d{4}/"; - original pattern
+  $copyright = "/c\d{4}/"; //new pattern, modified 2016-06-30 - see: https://github.com/BCLibCoop/nnels/issues/104#issuecomment-229709076
   preg_match($copyright, $raw_date_value, $matches);
-  if (count($matches)) {
-    //$date_value_c =  explode('c', $matches[0] ); //remove the 'c'
-    //dpm($date_value_c, "Copyright returning: ");
-    return true;
-  }
+  if (count($matches))
+    return TRUE;
 
-  else return;
+  return FALSE;
 }
 
 /**
