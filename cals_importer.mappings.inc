@@ -482,8 +482,6 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
 
   $dates_dupes = array();
   $dates = array();
-  //008
-  $tmp = _cals_importer_xpath_value($xml, "controlfield", "008", NULL);
   //$tmp = _cals_importer_xpath_value($xml, "controlfield", "008", NULL);
   if (count($tmp) >= 1) {
     foreach($tmp as $val) {
@@ -496,22 +494,33 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
   }
 
   //$me = array(264 => 'c', 260 => 'c', )
-
-  $tmp1 = _cals_importer_xpath_value($xml, "datafield", 264, "c");
-  $tmp2 = _cals_importer_xpath_value($xml, "datafield", 260, "c");
-  $tmp3 = _cals_importer_xpath_value($xml, "datafield", 533, "d");
-  if (count($tmp1))
-    foreach ($tmp1 as $str) _cals_map_date_qualifiers($str, 264, $dates);
-  else if (count($tmp2))
-    foreach ($tmp2 as $str) _cals_map_date_qualifiers($str, 260, $dates);
-  else if (count($tmp3))
-    foreach ($tmp3 as $str) _cals_map_date_qualifiers($str, 533, $dates);
-
-
+  //see: https://github.com/BCLibCoop/nnels/issues/104#issuecomment-229739259
   $tmp = _cals_importer_xpath_value($xml, "datafield", 534, "c");
-  if (count($tmp))
-    foreach ($tmp as $str) _cals_map_date_qualifiers($str, 534, $dates);
-
+  if (count($tmp)) {
+    foreach ($tmp as $str) _cals_map_date_qualifiers($str, 534, $dates, TRUE);
+    $tmp1 = _cals_importer_xpath_value($xml, "datafield", 264, "c");
+    $tmp2 = _cals_importer_xpath_value($xml, "datafield", 260, "c");
+    $tmp3 = _cals_importer_xpath_value($xml, "datafield", 533, "d");
+    if (count($tmp1))
+      foreach ($tmp1 as $str) _cals_map_date_qualifiers($str, 264, $dates, TRUE);
+    else if (count($tmp2))
+      foreach ($tmp2 as $str) _cals_map_date_qualifiers($str, 260, $dates, TRUE);
+    else if (count($tmp3))
+      foreach ($tmp3 as $str) _cals_map_date_qualifiers($str, 533, $dates, TRUE);
+  }
+  else {
+    //008
+    $tmp1 = _cals_importer_xpath_value($xml, "datafield", 264, "c");
+    $tmp2 = _cals_importer_xpath_value($xml, "datafield", 260, "c");
+    $tmp3 = _cals_importer_xpath_value($xml, "controlfield", "008", NULL);
+    if (count($tmp1))
+      foreach ($tmp1 as $str) _cals_map_date_qualifiers($str, 264, $dates, FALSE);
+    else if (count($tmp2))
+      foreach ($tmp2 as $str) _cals_map_date_qualifiers($str, 260, $dates, FALSE);
+    else if (count($tmp3))
+      foreach ($tmp3 as $str) _cals_map_date_qualifiers($str, 008, $dates, FALSE);
+  }
+  
   //printAndDie($tmp1, $tmp2, $tmp3, $dates);
   foreach($dates as $qualifier => $date)
     $map[$k]['values'][] = array(
@@ -525,69 +534,14 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
     );
 }
 
-/*
- *
-//Set qualifiers for entries in $dates based on origin field and load the array for deduping
-  if ( ! empty( $dates ) ) {
-    foreach ( $dates as $code => $date_value ) {
-      switch ($code) {
-        case '008':
 
-          $date_dupes[] = array(
-            'qualifier' => 'Issued', 'date' => $date_value
-          );
-          break;
-
-        case '260':
-        case '264':
-        case '533':
-          //Might have copyright symbol, if not set to Created
-          $check_copyright = _cals_parse_date_issue_copyright($date_value);
-          $date_value = _cals_get_iso_year($date_value);
-
-          if ( $check_copyright == TRUE )
-            $date_dupes[] = array('qualifier' => 'Copyrighted', 'date' => $date_value);
-          else
-            $date_dupes[] = array('qualifier' => 'Created', 'date' => $date_value);
-          break;
-
-        case '534':
-          //Might have copyright symbol, if not set to Issued
-          $check_copyright = _cals_parse_date_issue_copyright($date_value);
-          $date_value = _cals_get_iso_year($date_value);
-
-          if ( $check_copyright == TRUE ) $date_dupes[] = array(
-            'qualifier' => 'Copyrighted', 'date' => $date_value
-          );
-
-          else $date_dupes[] = array(
-            'qualifier' => 'Issued', 'date' => $date_value
-          );
-
-          break;
-
-      }
-    }
+function printarr($arr) {
+  if ( is_array($arr) ) {
+    foreach($me as $k => $v) $arr[] = "$k = $v";
+    printPre($arr);
   }
 
-  //Most recent years first
-  $dates = _cals_array_sort($date_dupes, 'date', SORT_DESC);
-
-  //Dedupe based on our Qualifier Precedence Policy
-  $dates = _cals_parse_date_issue_dedupe_qualifiers($dates);
-  foreach($dates as $qual => $date) {
-    $map[$k]['values'][] = array(
-      'field_name' =>  "field_date",
-      'field_dc_date' => array(
-        LANGUAGE_NONE => array(array('value' => _cals_get_truncated_value($date, 20)) ),
-      ),
-      'field_qualifier_date' => array(
-        LANGUAGE_NONE => array(array('value' => $qual) ),
-      ),
-    );
-  }
-
- */
+}
 
 /**
  * @param $str
@@ -596,79 +550,26 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
  *   the marc xml tag
  * @param $dates
  *   the $dates array passed by reference
- *
+ * @param $is_present
+ *   boolean that tells us if there's a 534 tag included
  */
-function _cals_map_date_qualifiers($str, $tag, &$dates) {
+function _cals_map_date_qualifiers($str, $tag, &$dates, $is_present) {
   $check_copyright = _cals_parse_date_issue_copyright($str);
   $date_value = _cals_get_iso_year($str);
-  if($tag == "008") {
-    $qualifier = "Issued";
+  //printarr(array("tag" => $tag, "str" => $str, "date_value" => $date_value, "check_copyright" => $check_copyright, "is present" => $is_present)) ;
+  if($check_copyright) {
+    $qualifier = "Copyright";
   }
   else {
-    if($check_copyright)
-      $qualifier = "Copyright";
-    else
+    if($is_present) //if there's 534 included, it takes "issued" qualifier, otherwise "created"
       $qualifier = ($tag == 534) ? "Issued" : "Created";
+    else
+      $qualifier = "Issued";
   }
   $tmp[$qualifier] = $date_value;
+  //Replace the year w/ the most recent
   if($tmp[$qualifier] > $dates[$qualifier] || !isset($dates[$qualifier]))
     $dates[$qualifier] = $tmp[$qualifier];
-}
-
-
-//Curiously particular deduper based on qualifier precedence as well as recency.
-/**
- * @param $dx_sorted
- * @return array
- */
-function _cals_parse_date_issue_dedupe_qualifiers($dx_sorted) {
-
-  $save = array(); //keeping
-  $years = array(); //duplicates
-
-  $i = -1; //start just before first index
-
-  foreach ( $dx_sorted as $k => $v ) { //Loop through array of arrays
-
-    $i++;
-
-    $years[] .= $v['date'];
-    $qual = $v['qualifier'];
-    $year = $v['date'];
-
-    if ( $i > 0 && in_array( $year, $years ) ) { //After the first run, check if year is in dupe list
-
-      switch ( $qual ) {
-        default:
-          if ( ! array_key_exists( $qual, $save ) && ! in_array( $year, $save ) ) { //if we havent already saved qualifier or the year (no match)
-            $save[$qual] = $year;
-          }
-
-          break;
-
-        case 'Copyrighted':
-        case 'Created':
-          $superceded = array_search($year, $save ); //check for the current year in keeping array
-
-          if ( $superceded && $superceded != 'Copyrighted' && $superceded != 'Created' ) {
-            if ($save[$superceded] <= $year) { //check if the superceded key has value newer or same as one we're on,
-              unset($save[$superceded]);  //unset if so, we have a newer key-value
-            }
-          }
-          if ( ! array_key_exists( $qual, $save ) ) $save[$qual] = $year; //save the Copyrighted or Created value to supercede it
-
-          break; //otherwise keep the newer value
-      } //end switch
-    }
-
-    elseif ( ! array_key_exists( $qual, $save ) ) {
-      $save[$qual] = $year;
-    }
-
-  }//foreach
-
-  return $save;
-
 }
 
 /**
