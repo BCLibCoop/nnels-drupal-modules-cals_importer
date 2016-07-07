@@ -482,17 +482,6 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
 
   $dates_dupes = array();
   $dates = array();
-  //$tmp = _cals_importer_xpath_value($xml, "controlfield", "008", NULL);
-  if (count($tmp) >= 1) {
-    foreach($tmp as $val) {
-      $str = substr($val, 7, 4); // 008/07-10 should be numeric
-      if (is_numeric($str))   {
-        $str =_cals_get_iso_year($str);
-        _cals_map_date_qualifiers($str, "008", $dates);
-      } //[] =  array("008" => _cals_get_iso_year($str));
-    }
-  }
-
   //$me = array(264 => 'c', 260 => 'c', )
   //see: https://github.com/BCLibCoop/nnels/issues/104#issuecomment-229739259
   $tmp = _cals_importer_xpath_value($xml, "datafield", 534, "c");
@@ -518,10 +507,8 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
     else if (count($tmp2))
       foreach ($tmp2 as $str) _cals_map_date_qualifiers($str, 260, $dates, FALSE);
     else if (count($tmp3))
-      foreach ($tmp3 as $str) _cals_map_date_qualifiers($str, 008, $dates, FALSE);
+      foreach ($tmp3 as $str) _cals_map_date_qualifiers($str, '008', $dates, FALSE);
   }
-  
-  //printAndDie($tmp1, $tmp2, $tmp3, $dates);
   foreach($dates as $qualifier => $date)
     $map[$k]['values'][] = array(
       'field_name' =>  "field_date",
@@ -535,14 +522,6 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
 }
 
 
-function printarr($arr) {
-  if ( is_array($arr) ) {
-    foreach($me as $k => $v) $arr[] = "$k = $v";
-    printPre($arr);
-  }
-
-}
-
 /**
  * @param $str
  *   the date str to be parsed
@@ -554,22 +533,29 @@ function printarr($arr) {
  *   boolean that tells us if there's a 534 tag included
  */
 function _cals_map_date_qualifiers($str, $tag, &$dates, $is_present) {
-  $check_copyright = _cals_parse_date_issue_copyright($str);
-  $date_value = _cals_get_iso_year($str);
-  //printarr(array("tag" => $tag, "str" => $str, "date_value" => $date_value, "check_copyright" => $check_copyright, "is present" => $is_present)) ;
-  if($check_copyright) {
-    $qualifier = "Copyright";
+  if($tag == '008') {
+    $str = substr($str, 7, 4); // 008/07-10 should be numeric
   }
   else {
-    if($is_present) //if there's 534 included, it takes "issued" qualifier, otherwise "created"
-      $qualifier = ($tag == 534) ? "Issued" : "Created";
-    else
-      $qualifier = "Issued";
+    $check_copyright = _cals_parse_date_issue_copyright($str);
   }
-  $tmp[$qualifier] = $date_value;
-  //Replace the year w/ the most recent
-  if($tmp[$qualifier] > $dates[$qualifier] || !isset($dates[$qualifier]))
-    $dates[$qualifier] = $tmp[$qualifier];
+  $date_value = _cals_get_iso_year($str);
+  if(!empty($date_value)) {
+    if($check_copyright) {
+      $qualifier = "Copyright";
+    }
+    else {
+      if($is_present) //if there's 534 included, it takes "issued" qualifier, otherwise "created"
+        $qualifier = ($tag == 534) ? "Issued" : "Created";
+      else
+        $qualifier = "Issued";
+    }
+    $tmp[$qualifier] = $date_value;
+    //Replace the year w/ the most recent
+    if($tmp[$qualifier] > $dates[$qualifier] || !isset($dates[$qualifier]))
+      $dates[$qualifier] = $tmp[$qualifier];
+  }
+
 }
 
 /**

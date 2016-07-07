@@ -165,17 +165,18 @@ function _cals_get_tid_by_name($vid, $name) {
 
 }
 
+/**
+ * @param $value
+ * @return mixed
+ */
 function _cals_get_iso_year($value) {
   $value = (string) $value;
-
   //get years from dates like 2013/01/01 and 01/01/2013
   if (strlen($value) == 10) {
-    
     $tmp = explode("/", $value);
     if (count($tmp) == 3){
       foreach($tmp as $newvalue) {
         if (strlen($newvalue) == 4) return _cals_assert_numstring($newvalue);
-
       }
     }
 
