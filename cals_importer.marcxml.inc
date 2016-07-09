@@ -221,10 +221,18 @@ function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
           }
           else{
             $value = trim($value);
-            if(strlen($value)) $node->{$k}[LANGUAGE_NONE][][$key] = $value;
+            if(strlen($value)) {
+              if($k == 'field_contents') {
+                $node->{$k}[LANGUAGE_NONE][] = array(
+                  $key => $value,
+                  "format" => 'filtered_html',
+                );
+              }
+              else //otherwise, just set the value
+                $node->{$k}[LANGUAGE_NONE][][$key] = $value;
+            }
 
           }
-          //if(!empty($value)) $node->{$k}[LANGUAGE_NONE][][$key] = $value;
         }
       }
 

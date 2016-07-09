@@ -936,9 +936,11 @@ function _cals_importer_query_duplicate_titles($type) {
  * Implements hook_views_post_execute().
  */
 function cals_importer_views_post_execute(&$view) {
+  $msg = FALSE;
   switch ($view->name) {
     case "repository_items_reparse_dates":
       //$view->current_display == 'embed_1'
+      $msg = TRUE;
       foreach ($view->result as $k => $v) {
         //dpm($view->result[$k]->field_field_xml_string[0]['rendered']['#markup']);
         $dates = array();
@@ -977,9 +979,46 @@ function cals_importer_views_post_execute(&$view) {
         }
       }
       break;
+    case "repository_items_marcxml_output":
+      $msg = TRUE;
+      //$view->current_display == 'embed_1'
+      //printPre($_REQUEST['field_xml_string_value_1']);
+
+      if(isset($_REQUEST['field_xml_string_value_1'])) {
+        $xmlstring = $_REQUEST['field_xml_string_value_1'];
+        if( strpos($xmlstring, "datafield") !== FALSE )
+          $tagtype = 'datafield';
+        else if(strpos($xmlstring, "controlfield") !== FALSE)
+          $tagtype = 'controlfield';
+
+        $tag = str_replace('"', '', $xmlstring);
+        $tag = str_replace('marc:datafield tag=', '', $tag);
+        $tag = str_replace('marc:controlfield tag=', '', $tag);
+        $tag = '245';
+        foreach ($view->result as $k => $v) {
+          //dpm($view->result[$k]->field_field_xml_string[0]['rendered']['#markup']);
+          $node = node_load($v->nid);
+          $xml = _cals_get_marc_xml_string($node);
+          if(!$xml) {
+            $view->result[$k]->field_field_xml_string[0]['rendered']['#markup'] = "no xml";
+          }
+          else {
+            //dpm($view);
+            //borrowed from _cals_get_date_issued_from_marc() in mappings.inc
+            //$tmp = _cals_importer_xpath_value($xml, $tagtype, $tag, $code = NULL);
+
+            //printAndDie("TAG = $tag | TAGTYPE  = $tagtype", $tmp, $xml);
+            $view->result[$k]->field_field_xml_string[0]['rendered']['#markup'] = "SOMETHING";
+          }
+        }
+      }
+
+      break;
 
 
   }
+  if($msg) drupal_set_message(t("@view modified by: ", array("@view" => $view->name)) . __FUNCTION__);
+
 }
 
 function sssss() {

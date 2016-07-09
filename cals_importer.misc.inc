@@ -86,8 +86,10 @@ function _cals_get_message_invalid_xml($node) {
 
 /**
  * Loads XML string from node.
+ *
+ * @param $node
+ * @return int|\SimpleXMLElement
  */
-
 function _cals_get_marc_xml_string($node) {
   libxml_use_internal_errors(true);
   $value = '<xyz>'; //set to something that will fail by default

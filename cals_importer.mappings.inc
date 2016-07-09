@@ -135,6 +135,7 @@ function _cals_importer_repo_field_callback($fieldname) {
     'field_audience' => array('function' => '_cals_importer_get_audience_from_marc'),
     //'field_cataloging_agency' => array('function' => "_cals_importer_get_cataloging_agency_from_marc"),
 
+    'field_contents' => array('function' => '_cals_importer_get_contents_from_marc'),
 
 
   );
@@ -239,9 +240,12 @@ function _cals_importer_xpath_value($xml, $fieldname, $tag, $code = NULL) {
   $path = "//marc:{$fieldname}[@tag='" . $tag . "']";
   if(!empty($code) ) $path .= "/marc:subfield[@code='" . $code . "']";
   $tmp = $xml->xpath($path);
+  //dpm(__FUNCTION__, $path, $tmp);
   if (count($tmp) >= 1) {
-    foreach ($tmp as $me)
-      $arr[] = (string) trim($me[0]);
+    foreach ($tmp as $me){
+      $str = (string) trim($me[0]);
+      if(!empty($str)) $arr[] = $str;
+    }
   }
   return $arr;
 }
@@ -715,6 +719,47 @@ function _cals_get_subject_from_marc($xml, $k, &$map){
   _cals_get_taxonomy_terms_from_xpath($xpathvalue, $k, $map);
 }
 
+/**
+ * Grabs table of contents per https://github.com/BCLibCoop/nnels/issues/121
+ *
+ * @param $xml
+ * @param $k
+ * @param $map
+ */
+function _cals_importer_get_contents_from_marc($xml, $k, &$map) {
+  //505
+  $tag = 505;
+  $codes = array("a", "g", "r", "t");
+  $yuck = array();
+  $tmp = array();
+  $parent = $xml->xpath("//marc:datafield[@tag='505']");
+  foreach ($parent as $i => $child) {
+    //$ind = (string) $parent[$i]->attributes()->ind1;
+    $title = array(); //holds the title elements for this child
+    foreach ($child->children(NAME_SPACE)->subfield as $subfield) {
+      $code = (string) $subfield->attributes()->code;
+      if(in_array($code, $codes))
+        $tmp[] = (string) trim($subfield[0]);
+    }
+  }
+  if(count($tmp)) {
+    $contents = '';
+    $tmp = implode(" ", $tmp);
+    $pos = strpos($tmp, "--");
+    if($pos !== FALSE) {
+      $first = trim(substr($tmp, 0, $pos));
+      $second = trim(substr($tmp, $pos));
+      $second = explode("--",$second);
+      if(count($second)) {
+        foreach($second as $me) {
+          if(!empty($me)) $contents .= "<li>" . trim($me) . "</li>";
+        }
+      }
+    }
+    $contents = $first .  "<ul>" . $contents  . "</ul>";
+    $map[$k]['values'][] = $contents;
+  }
+}
 /*
  * to deprecate??
  */
