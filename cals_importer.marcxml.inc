@@ -227,6 +227,7 @@ function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
                   $key => $value,
                   "format" => 'filtered_html',
                 );
+
               }
               else //otherwise, just set the value
                 $node->{$k}[LANGUAGE_NONE][][$key] = $value;
@@ -251,6 +252,7 @@ function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
   //$node->status = 1;
   $node->title = $node->title_field[LANGUAGE_NONE][0]['value'];
   node_save($node);
+
   //populate the field collections
   if(count($fc_fields)) _cals_importer_populate_repos_item_fieldcollections($node, $fc_fields);
 }

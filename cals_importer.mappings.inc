@@ -743,25 +743,51 @@ function _cals_importer_get_contents_from_marc($xml, $k, &$map) {
     }
   }
   if(count($tmp)) {
-    $contents = '';
-    $tmp = implode(" ", $tmp);
-    $pos = strpos($tmp, "--");
-    if($pos !== FALSE) {
-      $first = trim(substr($tmp, 0, $pos));
-      $second = trim(substr($tmp, $pos));
-      $second = explode("--",$second);
-      if(count($second)) {
-        foreach($second as $me) {
-          if(!empty($me)) $contents .= "<li>" . trim($me) . "</li>";
-        }
-      }
+    $contents = array();
+    foreach($tmp as $i => $v) {
+      $replacements = array(" -- ", "-- ", " --");
+      $v = str_replace($replacements, "--", $v);
+      $v = trim($v);
+      $v = explode("--", $v);
+      //$contents[] = $v;
+      $contents = array_merge($contents, $v);
+
+
     }
-    $contents = $first .  "<ul>" . $contents  . "</ul>";
-    $map[$k]['values'][] = $contents;
+    if(count($contents)) {
+      $vars = array("title" => '', "type" => "ul", "items" => $contents, "attributes" => array());
+      $map[$k]['values'][] = theme("item_list", $vars);
+    }
+
   }
+  /*
+printAndDie($tmp, $contents, $list);
+ *
+ *     $contents = '';
+$tmp = implode(" ", $tmp);
+$pos = strpos($tmp, "--");
+if($pos !== FALSE) {
+  $first = trim(substr($tmp, 0, $pos));
+  $second = trim(substr($tmp, $pos));
+  $second = explode("--",$second);
+  if(count($second)) {
+    foreach($second as $me) {
+      if(!empty($me)) $contents .= "<li>" . trim($me) . "</li>";
+    }
+  }
+}
+$contents = $first .  "<ul>" . $contents  . "</ul>";
+$map[$k]['values'][] = $contents;
+
+ */
+
 }
 /*
  * to deprecate??
+ *
+ * @param $xml
+ * @param $k
+ * @param $map
  */
 function _cals_get_descriptors_from_marc($xml, $k, &$map) {
   $fields = array(500, 504, 505, 511, 516, 533, 538, 586, 595, 598, 599, 541, );

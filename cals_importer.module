@@ -804,8 +804,8 @@ function cals_importer_form_alter(&$form, &$form_state, $form_id) {
       $fields = field_info_instances("node", "repository_item");
       $options = array("" => "--none--");
       foreach($fields as $k => $v) {
-          $type = $v['widget']['type'];
-          $label = $v['label'];
+        $type = $v['widget']['type'];
+        $label = $v['label'];
 
         //printPre($type, $k, $label);
         $options[$k] = "$k ($label)";
@@ -988,12 +988,12 @@ function cals_importer_views_post_execute(&$view) {
           $xmlstring = $_REQUEST['field_xml_string_value_1'];
           $tag = 0;
           $tagtype = '';
-          if (preg_match('/"([0-9]{2,3})"/', $xmlstring, $m)) {
+          if (preg_match('/"([0-9]{2,3})"/', $xmlstring, $m))
             $tag = $m[1];
-          }
-          if(preg_match('/(datafield|controlfield)/', $xmlstring, $m)) {
+
+          if(preg_match('/(datafield|controlfield)/', $xmlstring, $m))
             $tagtype = $m[1];
-          }
+
           $node = node_load($v->nid);
           $xml = _cals_get_marc_xml_string($node);
           if (!$xml) {
@@ -1102,7 +1102,7 @@ function cals_importer_views_query_alter(&$view, &$query) {
       );
 
 
-    break;
+      break;
 
   }
 
@@ -1166,8 +1166,8 @@ function cals_importer_views_query_alter(&$view, &$query) {
     //custom query to find duplicate system control numbers
     case "repository_items_duplicates:page_8":
     case "repository_item_admin_views:page_8":
-    $msg = TRUE;
-    $vals = _cals_importer_query_duplicate_titles("syscontrolnumber");
+      $msg = TRUE;
+      $vals = _cals_importer_query_duplicate_titles("syscontrolnumber");
       $query->where[1]['conditions'][1] = array(
         "field" => "node.nid",
         "value" => $vals,
@@ -1598,8 +1598,11 @@ function _cals_parse_system_control_number($node) {
 
 /**
  * update Access Restrictions, i.e., 506 field
+ *
+ * @param $entity
+ * @param array $context
+ * @return string
  */
-
 function _cals_importer_update_licensed_access(&$entity, $context = array()) {
   if (isset($entity->nid)) {
     $node = node_load($entity->nid);
@@ -1619,8 +1622,11 @@ function _cals_importer_update_licensed_access(&$entity, $context = array()) {
 /**
  * load node, pull out "restrictions". Separating it this way allows us to also include
  * this as part of the node/%node/parse-rights-access pattern.
+ *
+ * @param $node
+ * @return string|void
+ * @throws \Exception
  */
-
 function _cals_parse_licensed_access($node) {
   $xml = _cals_get_marc_xml_string($node);
   if ($xml === 0) return;
@@ -1646,8 +1652,8 @@ function _cals_parse_licensed_access($node) {
  *
  * @param $record
  *   the record passed to the parser
+ * @return array
  */
-
 function _cals_get_title_from_xml($record) {
   $arr = array();
   //loop thru datafields
@@ -1656,8 +1662,6 @@ function _cals_get_title_from_xml($record) {
     $tag = (string) $datafield->attributes()->tag;
     $ind1 = (string) $datafield->attributes()->ind1;
     $ind2 = (string) $datafield->attributes()->ind2;
-
-
     foreach ($datafield as $subfield) {
       $code = (string) $subfield->attributes()->code;
       $str = trim((string) $subfield);
