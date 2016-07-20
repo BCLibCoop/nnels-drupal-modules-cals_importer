@@ -727,60 +727,28 @@ function _cals_get_subject_from_marc($xml, $k, &$map){
  * @param $map
  */
 function _cals_importer_get_contents_from_marc($xml, $k, &$map) {
-  //505
   $tag = 505;
   $codes = array("a", "g", "r", "t");
-  $yuck = array();
-  $tmp = array();
   $parent = $xml->xpath("//marc:datafield[@tag='505']");
+  $content = '';
   foreach ($parent as $i => $child) {
     //$ind = (string) $parent[$i]->attributes()->ind1;
     $title = array(); //holds the title elements for this child
     foreach ($child->children(NAME_SPACE)->subfield as $subfield) {
       $code = (string) $subfield->attributes()->code;
-      if(in_array($code, $codes))
-        $tmp[] = (string) trim($subfield[0]);
+      if(in_array($code, $codes)) {
+        $str = (string) trim($subfield[0]);
+        if(strlen($str)) $content .= $str;
+      }
     }
   }
-  if(count($tmp)) {
-    $contents = array();
-    foreach($tmp as $i => $v) {
-      $replacements = array(" -- ", "-- ", " --");
-      $v = str_replace($replacements, "--", $v);
-      $v = trim($v);
-      $v = explode("--", $v);
-      //$contents[] = $v;
-      $contents = array_merge($contents, $v);
-
-
-    }
-    if(count($contents)) {
-      $vars = array("title" => '', "type" => "ul", "items" => $contents, "attributes" => array());
-      $map[$k]['values'][] = theme("item_list", $vars);
-    }
-
+  if(strlen($content)) {
+    $replacements = array(" -- ", "-- ", " --");
+    $content = str_replace($replacements, "--", $content);
+    $items = array_values(array_filter(explode("--", $content)));
+    $vars = array("title" => '', "type" => "ul", "items" => $items, "attributes" => array());
+    $map[$k]['values'][] = theme("item_list", $vars);
   }
-  /*
-printAndDie($tmp, $contents, $list);
- *
- *     $contents = '';
-$tmp = implode(" ", $tmp);
-$pos = strpos($tmp, "--");
-if($pos !== FALSE) {
-  $first = trim(substr($tmp, 0, $pos));
-  $second = trim(substr($tmp, $pos));
-  $second = explode("--",$second);
-  if(count($second)) {
-    foreach($second as $me) {
-      if(!empty($me)) $contents .= "<li>" . trim($me) . "</li>";
-    }
-  }
-}
-$contents = $first .  "<ul>" . $contents  . "</ul>";
-$map[$k]['values'][] = $contents;
-
- */
-
 }
 /*
  * to deprecate??
