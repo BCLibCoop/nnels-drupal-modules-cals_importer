@@ -738,11 +738,13 @@ function _cals_importer_get_contents_from_marc($xml, $k, &$map) {
       $code = (string) $subfield->attributes()->code;
       if(in_array($code, $codes)) {
         $str = (string) trim($subfield[0]);
-        if(strlen($str)) $content .= $str;
+        //add blank just in case the subfield doesn't include spaces:
+        if(strlen($str)) $content .= " " . $str;
       }
     }
   }
   if(strlen($content)) {
+    $content = str_replace("  ", " ", $content);
     $replacements = array(" -- ", "-- ", " --");
     $content = str_replace($replacements, "--", $content);
     $items = array_values(array_filter(explode("--", $content)));
