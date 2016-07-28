@@ -97,7 +97,6 @@ function _cals_normalize_performer(&$entity, $context = array()) {
     if($p1 != $p2) {
       $entity->field_performer[LANGUAGE_NONE][0]['value'] = $p2;
       $entity->save();
-      dpm($p1 . " => " . $p2);
     }
   }
 } 
@@ -146,7 +145,6 @@ function _cals_normalize_taxonomy_terms(&$entity, $context = array()) {
     $term = taxonomy_term_load($entity->tid);
     $name = _cals_importer_strip_trailing_periods_value($term->name);
     if($name !== $term->name) {
-      dpm($term->name . " => " . $name);
       $term->name = $name;
       taxonomy_term_save($term);
     }

@@ -831,7 +831,7 @@ function cals_importer_form_alter(&$form, &$form_state, $form_id) {
       //$form['#submit'][] =
       $form['nid'] = array('#type' => 'value', '#default_value' => 9724);
       $form['actions']['submit']['#submit'][] = '_cals_importer_s3_cors_field_submit';
-      dpm($form);
+      //dpm($form);
 
       break;
   }
@@ -948,7 +948,7 @@ function cals_importer_views_post_execute(&$view) {
         $xml = _cals_get_marc_xml_string($node);
         if(!$xml) {
           $view->result[$k]->field_field_xml_string[0]['rendered']['#markup'] = "no xml";
-          dpm($xml);
+          //dpm($xml);
         }
         else {
           //borrowed from _cals_get_date_issued_from_marc() in mappings.inc
@@ -1303,7 +1303,7 @@ WHERE f1.bundle =  :b1 AND  f2.bundle = :b2 ", array(":b1" => 'repository_item',
 //      $query->where[1]['conditions'][2]['value'] = $rs;
 //      $query->where[1]['conditions'][2]['operator'] = "IN";
 
-      dpm($query->where);
+      //dpm($query->where);
 
 
       break;

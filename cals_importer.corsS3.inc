@@ -100,7 +100,6 @@ function _cals_update_filecollection_file_filesize($node, $item_id) {
 		_cals_update_filesize_from_s3_value($file);
 	}
 	else {
-	  dpm($ent);
 	  return "oops nothing to update here!";
 	}
 	drupal_goto("node/" . $node->nid);
@@ -183,7 +182,7 @@ function _cals_importer_filesizes_batch($node, &$context) {
     $context['sandbox']['progress']++;
     $context['results'][] = check_plain($n->title); // Track nodes updated
     $context['message'] = t('Now processing %node', array('%node' => $n->title));
-		dpm($context['sandbox']['progress'] . " of " . $context['sandbox']['max'] . ": " . $n->title );
+		//dpm($context['sandbox']['progress'] . " of " . $context['sandbox']['max'] . ": " . $n->title );
 
 
     if($context['sandbox']['progress'] === $context['sandbox']['max']) {
@@ -191,13 +190,7 @@ function _cals_importer_filesizes_batch($node, &$context) {
 		  //save one last time.
 		  node_save($pnode);
 		  $num_records = count($context['sandbox']['parsed']);
- 			dpm($context['sandbox']);
-		  
-		  /*
-		  $vars = array("items" => $context['sandbox']['max'] , "title" => "parsed list: $num_records records", "type" => "ol", "attributes" => array());
-		  $vars = theme_item_list($vars); 
-		  dpm(filter_xss($vars, $allowed_tags = array('a', 'em', 'strong', 'cite', 'blockquote', 'code', 'ul', 'ol', 'li', 'dl', 'dt', 'dd')));
-     */
+
     }
    
 
@@ -327,7 +320,6 @@ function _cals_importer_get_file_from_filepath($filepath) {
     );
     try {
 			file_save($file);
-			dpm($file);
   	}
 		//catch exception
 		catch(Exception $e) {

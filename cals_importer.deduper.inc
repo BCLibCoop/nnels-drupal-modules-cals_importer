@@ -58,8 +58,7 @@ function _cals_dedupe_orgs_by_illcode(&$entity, $context = array()) {
     $n->field_org_succeeded_by[LANGUAGE_NONE][0]['nid'] = $tmp['nid'];
     $n->status = 0;
     node_save($n);
-    dpm($n);
-    drupal_set_message(t("node %t unpublished."), array('%t' => $n->title)); 
+    drupal_set_message(t("node %t unpublished."), array('%t' => $n->title));
   }
   else {
     //drupal_set_message("NO: sysnum != $sysnum | tmp_sysnum != {$tmp['sysnum']} " );

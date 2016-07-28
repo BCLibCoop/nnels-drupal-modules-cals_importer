@@ -83,7 +83,7 @@ function _cals_importer_create_repo_items_batch($node, &$context) {
     $context['sandbox']['progress']++;
     $context['results'][] = check_plain($n->title); // Track nodes updated
     $context['message'] = t('Now processing %node', array('%node' => $n->title));
-		dpm($context['sandbox']['progress'] . " of " . $context['sandbox']['max'] . ": " . $n->title );
+		//dpm($context['sandbox']['progress'] . " of " . $context['sandbox']['max'] . ": " . $n->title );
 
     if($context['sandbox']['progress'] === $context['sandbox']['max']) {
   		$pnode->field_status[LANGUAGE_NONE][0]['value'] = 2;
@@ -220,18 +220,16 @@ function _cals_importer_preview_repo_items_batch($node, &$context) {
     if($context['sandbox']['progress'] == $context['sandbox']['max']) {
     
 		  $num_records = count($context['sandbox']['parsed']);
- 			dpm($context['sandbox']);
-		  $vars = array("items" => $context['sandbox']['parsed'] , "title" => "parsed list: $num_records records", "type" => "ol", "attributes" => array());
+ 			$vars = array("items" => $context['sandbox']['parsed'] , "title" => "parsed list: $num_records records", "type" => "ol", "attributes" => array());
 		  $vars = theme_item_list($vars); 
-		  dpm(filter_xss($vars, $allowed_tags = array('a', 'em', 'strong', 'cite', 'blockquote', 'code', 'ul', 'ol', 'li', 'dl', 'dt', 'dd')));
-     
+		  //dpm(filter_xss($vars, $allowed_tags = array('a', 'em', 'strong', 'cite', 'blockquote', 'code', 'ul', 'ol', 'li', 'dl', 'dt', 'dd')));
     }		
 		
 		 // Update our progress information.
     $context['sandbox']['progress']++;
     $context['results'][] = check_plain($n->title); // Track nodes updated
     $context['message'] = t('Now processing %node', array('%node' => $n->title));
-		dpm($context['sandbox']['progress'] . " of " . $context['sandbox']['max'] . ": " . $title );
+		drupal_set_message($context['sandbox']['progress'] . " of " . $context['sandbox']['max'] . ": " . $title );
 
     
   }

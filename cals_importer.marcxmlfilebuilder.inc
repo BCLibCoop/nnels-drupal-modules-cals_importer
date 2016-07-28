@@ -25,7 +25,6 @@ function _cals_importer_generate_marcxml_files(&$entity, $context = array() ) {
   $filename = 'public://' . $context['filename'];
   if($context['progress']['current'] == 1) {
     file_put_contents($filename, '');
-    dpm($filename);
   }
         
   // !empty($parent_nid) && -removed this from the if statement to relax requirements for generating export files
@@ -39,16 +38,8 @@ function _cals_importer_generate_marcxml_files(&$entity, $context = array() ) {
   		$str =   $node->field_xml_string[LANGUAGE_NONE][0]['value'];
       file_put_contents($filename, $str, FILE_APPEND | LOCK_EX);
     }
-    else {
-			dpm("NOT VALID " . $node->field_xml_string[LANGUAGE_NONE][0]['value']);
+  }
 
-    } 
-  }
-  else {
-    dpm(l($node->title, "node/" . $nid . "/edit"));
-  }
-  //dpm($context);
-	//dpm($context['progress']['current'] . " of " . $context['progress']['total']);
   if ($context['progress']['current'] == $context['progress']['total']) {
 
     //add closing marc:collection tag
@@ -59,8 +50,7 @@ function _cals_importer_generate_marcxml_files(&$entity, $context = array() ) {
     $file->description = '';
 		$parent_nid = $node->field_record_set[LANGUAGE_NONE][0]['nid'];
     $parent = node_load($parent_nid);
-    //dpm($parent);
-		$parent->field_marc_xml_output_file[LANGUAGE_NONE][0] = (array)$file;
+    $parent->field_marc_xml_output_file[LANGUAGE_NONE][0] = (array)$file;
     node_save($parent);
   }
 
@@ -110,10 +100,8 @@ function _cals_importer_generate_marcxml_files_all_records(&$entity, $context = 
       !empty($node->field_nnels_856_tag) &&
       $node->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] == 1 ) {
       $xml_test = _cals_get_marc_xml_string($node);
-      //dpm($xml_test);
       if($xml_test !== 0) {
         $str =  $node->field_xml_string[LANGUAGE_NONE][0]['value'];
-        //dpm($context);
         file_put_contents($filename, $str, FILE_APPEND | LOCK_EX);
       }
   }
