@@ -978,6 +978,52 @@ function cals_importer_views_post_execute(&$view) {
         }
       }
       break;
+    case "feld_collection_view_repo_files_admin_vbo":
+      $msg = TRUE;
+      foreach ($view->result as $k => $v) {
+
+        $nid = $v->field_file_resource_field_collection_item_nid;
+        $node = node_load($nid);
+        $xml = _cals_get_marc_xml_string($node);
+
+
+        if (!$xml) {
+          $view->result[$k]->field_field_xml_string[0]['rendered']['#markup'] = "no xml";
+        }
+        else {
+
+        }
+        $tag = 306;
+        $path = "//marc:datafield[@tag='{$tag}']";
+        $parent = $xml->xpath($path);
+        $content = '';
+        $tmp = array();
+        $items = array();
+        foreach ($parent as $i => $child) {
+          //$ind = (string) $parent[$i]->attributes()->ind1;
+          $title = array(); //holds the title elements for this child
+          foreach ($child->children(NAME_SPACE)->subfield as $subfield) {
+            $code = (string) $subfield->attributes()->code;
+            $items[] = "$" . $code . " = " . (string) trim($subfield[0]);
+          }
+        }
+        if (count($items)) {
+          $variables = array(
+            "title" => $path,
+            "items" => $items,
+            "type" => "ul",
+            "attributes" => array(),
+          );
+          $html = theme("item_list", $variables);
+        }
+        else {
+          $html = "no values found";
+        }
+        $view->result[$k]->field_field_xml_string[0]['rendered']['#markup'] = $html;
+
+      }
+      break;
+
     case "repository_items_marcxml_output":
       $msg = TRUE;
       foreach ($view->result as $k => $v) {
@@ -1074,38 +1120,6 @@ function sssss() {
  */
 function cals_importer_views_query_alter(&$view, &$query) {
   $msg = FALSE;
-
-  switch($view->name) {
-    case "repository_items_publisher_listing":
-      //formats
-      //1|DAISY 202, 2|DAISY 3, 4|MP3, 6|PDF, 5|e-text, 7|EPUB 2, 8|EPUB 3, 9|AZW3, 3|Braille
-      $msg = TRUE;
-
-      //see: https://github.com/BCLibCoop/nnels/issues/103
-      $arr = array(
-        "page" => array(1, 2, 4, 5, 3), //no e-text, no braille
-        "page_1" => array(1, 2, 4, 3), //no braille but includes e-text
-        "page_2" => array(1, 2, 4, 5), //no e-text, but includes braille
-
-      );
-      $excludes = $arr[$view->current_display];
-      $subq = db_select('field_data_field_file_resource', 'fr');
-      $subq->join('field_collection_item', 'fci', 'fr.field_file_resource_value = fci.item_id');
-      $subq->join('field_data_field_file_format', 'ff', 'fci.item_id = ff.entity_id and ff.field_file_format_value in (:type)',
-        array(":type" => $excludes));
-      $subq->addField('fr', 'entity_id', 'nid');
-
-      $query->where[1]['conditions'][] = array(
-        "field" => "node.nid",
-        "value" => $subq,
-        "operator" => "NOT IN",
-      );
-
-
-      break;
-
-  }
-
 
   switch ($view->name . ":" . $view->current_display) {
 
@@ -1251,7 +1265,75 @@ function cals_importer_views_query_alter(&$view, &$query) {
       }
 
       break;
+    case "feld_collection_view_repo_files_admin_vbo":
+      $msg = TRUE;
+      /*
+       *
+       *
+SELECT f1.entity_id FROM `field_data_field_s3_path` f1
+inner join field_data_field_s3_path f2
+on f1.field_s3_path_value = f2.field_s3_path_value
+where f1.bundle = 'field_file_resource' and f2.bundle = 'repository_item'
 
+      146 seconds
+
+SELECT distinct(entity_id) as id
+FROM `field_data_field_s3_path`
+where field_s3_path_value in (select field_s3_path_value from field_data_field_s3_path where bundle = 'repository_item')
+
+
+      inner joi
+ $rs = db_query(
+        "SELECT entity_id as nid FROM {field_data_field_s3_path} WHERE bundle =  :b ", array(':b' => 'repository_item') )->fetchCol();
+
+*/
+      $rs = db_query(
+        "SELECT f1.entity_id as nid FROM  {field_data_field_s3_path} f1 INNER JOIN {field_data_field_s3_path} f2
+ON f1.field_s3_path_value = f2.field_s3_path_value
+WHERE f1.bundle =  :b1 AND  f2.bundle = :b2 ", array(":b1" => 'repository_item', ":b2" => 'repository_item')
+      )->fetchCol();
+
+     //printAndDie($rs);
+
+//      $sub_query = db_select('foo', 'f')
+//        ->fields('f', array('nid'))
+//        ->condition('f.bar', 'baz');
+      $view->query->add_where(0, 'field_file_resource_field_collection_item.nid', $rs, 'IN');
+//
+//      $query->where[1]['conditions'][2]['value'] = $rs;
+//      $query->where[1]['conditions'][2]['operator'] = "IN";
+
+      dpm($query->where);
+
+
+      break;
+    case "repository_items_publisher_listing":
+      //formats
+      //1|DAISY 202, 2|DAISY 3, 4|MP3, 6|PDF, 5|e-text, 7|EPUB 2, 8|EPUB 3, 9|AZW3, 3|Braille
+      $msg = TRUE;
+
+      //see: https://github.com/BCLibCoop/nnels/issues/103
+      $arr = array(
+        "page" => array(1, 2, 4, 5, 3), //no e-text, no braille
+        "page_1" => array(1, 2, 4, 3), //no braille but includes e-text
+        "page_2" => array(1, 2, 4, 5), //no e-text, but includes braille
+
+      );
+      $excludes = $arr[$view->current_display];
+      $subq = db_select('field_data_field_file_resource', 'fr');
+      $subq->join('field_collection_item', 'fci', 'fr.field_file_resource_value = fci.item_id');
+      $subq->join('field_data_field_file_format', 'ff', 'fci.item_id = ff.entity_id and ff.field_file_format_value in (:type)',
+        array(":type" => $excludes));
+      $subq->addField('fr', 'entity_id', 'nid');
+
+      $query->where[1]['conditions'][] = array(
+        "field" => "node.nid",
+        "value" => $subq,
+        "operator" => "NOT IN",
+      );
+
+
+      break;
   }//end switch
   if($msg) drupal_set_message("NB: this view is overwritten in " . __FUNCTION__);
 

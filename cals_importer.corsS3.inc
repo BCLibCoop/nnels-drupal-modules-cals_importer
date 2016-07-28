@@ -434,10 +434,9 @@ function _cals_importer_file_updater($node, $filepath) {
 function _cals_importer_populate_field_file_resource($node) {
 
   $filepath = '';
-  if(!empty($node->field_s3_path[LANGUAGE_NONE]) ) $filepath = $node->field_s3_path[LANGUAGE_NONE][0]['value'];
+  if(!empty($node->field_s3_path[LANGUAGE_NONE]) ) $filepath = trim($node->field_s3_path[LANGUAGE_NONE][0]['value']);
 
   $arr = _cals_importer_parse_marcxml_cors3($node);
-
 
   // Create new field collection item.
   $fc_item = entity_create('field_collection_item', array('field_name' => 'field_file_resource')); 
@@ -451,7 +450,6 @@ function _cals_importer_populate_field_file_resource($node) {
   //We need to check if the current file exists in the file_managed table
   //drush sqlq "select * from file_managed limit 0, 100"
   $test = db_query('SELECT n.fid FROM {file_managed} n WHERE n.uri = :uri', array(':uri' => $filepath));
-  
   if($test->rowCount()>0){
     $test2 = db_query("select distinct fr.entity_id as nid 
         from field_data_field_s3_file_upload fu inner join file_managed fm on fu.field_s3_file_upload_fid = fm.fid 
@@ -476,6 +474,7 @@ function _cals_importer_populate_field_file_resource($node) {
 
     return '';
   }
+
   // Create managed File object and associate with zip. Not currently in use, but leave intact for now
   if(!empty($filepath)) {
     $file = (object) array(
@@ -488,7 +487,6 @@ function _cals_importer_populate_field_file_resource($node) {
     );
     try {
 			file_save($file);
-			dpm($filesize);
   	}
 		//catch exception
 		catch(Exception $e) {
@@ -498,7 +496,6 @@ function _cals_importer_populate_field_file_resource($node) {
 		}
     //$fc_wrapper = entity_metadata_wrapper('field_collection_item', $fc_item);
     $fc_item->field_s3_file_upload[LANGUAGE_NONE][0]  =  (array)$file;
-  
   }
 
   $fc_item->field_user[LANGUAGE_NONE][0]['value'] = 1;
@@ -510,6 +507,8 @@ function _cals_importer_populate_field_file_resource($node) {
 
   if(isset($arr['fc_files']['field_running_time'][0]))
     $fc_item->field_running_time[LANGUAGE_NONE] = $arr['fc_files']['field_running_time'];
+
+
 
   //hard-coded values (for now):
 	$fc_item->field_availability_status[LANGUAGE_NONE][0]['value'] = 1;
@@ -558,7 +557,7 @@ function _cals_importer_parse_marcxml_cors3($node) {
 	  //get performer
 	 	_cals_importer_get_performer_from_marcxml($arr, $xml);
 	  //_cals_importer_get_performer_from_marcxml($xml, $k, $map); 
-	  
+
 	}
   return $arr;
 }
