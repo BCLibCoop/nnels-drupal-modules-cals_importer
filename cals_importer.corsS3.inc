@@ -428,14 +428,6 @@ function _cals_importer_populate_field_file_resource($node) {
   $filepath = '';
   if(!empty($node->field_s3_path[LANGUAGE_NONE]) ) $filepath = trim($node->field_s3_path[LANGUAGE_NONE][0]['value']);
 
-  $arr = _cals_importer_parse_marcxml_cors3($node);
-
-  // Create new field collection item.
-  $fc_item = entity_create('field_collection_item', array('field_name' => 'field_file_resource')); 
-
-  // Attach it to the node.
-  $fc_item->setHostEntity('node', $node); 
-  
   $filepath = str_replace("download.nnels.ca/", "", $filepath);
   $filepath = str_replace("download2.nnels.ca/", "", $filepath);
 
@@ -466,6 +458,19 @@ function _cals_importer_populate_field_file_resource($node) {
 
     return '';
   }
+
+  $arr = _cals_importer_parse_marcxml_cors3($node);
+  if(!empty($node->field_record_set)) {
+    $rec_nid = $node->field_record_set[LANGUAGE_NONE][0]['nid'];
+    _cals_importer_get_recordset_values_s3($rec_nid, $arr);
+  }
+
+  // Create new field collection item.
+  $fc_item = entity_create('field_collection_item', array('field_name' => 'field_file_resource'));
+
+  // Attach it to the node.
+  $fc_item->setHostEntity('node', $node);
+
 
   // Create managed File object and associate with zip. Not currently in use, but leave intact for now
   if(!empty($filepath)) {
@@ -500,11 +505,16 @@ function _cals_importer_populate_field_file_resource($node) {
   if(isset($arr['fc_files']['field_running_time'][0]))
     $fc_item->field_running_time[LANGUAGE_NONE] = $arr['fc_files']['field_running_time'];
 
-
+  if(isset($arr['fc_files']['field_file_format'][0]))
+    $fc_item->field_file_format[LANGUAGE_NONE] = $arr['fc_files']['field_file_format'];
 
   //hard-coded values (for now):
 	$fc_item->field_availability_status[LANGUAGE_NONE][0]['value'] = 1;
-  
+
+  //printAndDie($arr, $fc_item);
+
+
+
   global $user;
   $acct = user_load($user->uid);
 	$fc_item->field_user[LANGUAGE_NONE][0]['uid'] = $acct->uid;
@@ -524,7 +534,13 @@ function _cals_importer_populate_field_file_resource($node) {
   drupal_set_message(t("updated s3 path: ") . l($node->title, "node/" . $node->nid) );
 }
 
-
+function _cals_importer_get_recordset_values_s3($nid, &$arr) {
+  $node = node_load($nid);
+  if(!empty($node->field_file_format))
+    $arr['fc_files']['field_file_format'] = $node->field_file_format[LANGUAGE_NONE];
+  if(!empty($node->field_access_restrictions))
+    $arr['fc_files']['field_access_restrictions'] = $node->field_access_restrictions[LANGUAGE_NONE];
+}
 /**
  * parses the original marcxml string to return array of values related to cors multi-value field collection
  *
