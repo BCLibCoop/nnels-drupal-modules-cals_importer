@@ -41,7 +41,7 @@ function _cals_importer_repo_field_callback($fieldname) {
     "field_subject" => array("function" => '_cals_get_subject_from_marc'),
     "field_genre" => array("function" => '_cals_get_genre_from_marc'),
 
-    'field_uri' => array('function' => '_cals_importer_get_uri_from_marc'),
+    //'field_uri' => array('function' => '_cals_importer_get_uri_from_marc'),
     'field_urls_external' => array('function' => '_cals_importer_get_urls_from_marc',
       "patterns" => variable_get('cals_importer_url_patterns'),
       "exceptions" => variable_get('cals_importer_url_patterns_ignore'),
@@ -638,6 +638,12 @@ function _cals_get_genre_from_marc($xml, $k, &$map) {
   _cals_get_taxonomy_terms_from_xpath($xpathvalue, $k, $map);
 }
 
+/**
+ * To be deprecated
+ * @param $xml
+ * @param $k
+ * @param $map
+ */
 function _cals_importer_get_uri_from_marc($xml, $k, &$map) {
   $vals = _cals_importer_xpath_value($xml, "datafield", '856', 'u');
   $arr = array("nnels.ca", "license", "loc.gov");
@@ -648,6 +654,12 @@ function _cals_importer_get_uri_from_marc($xml, $k, &$map) {
     if($add == 1) $map[$k]['values'][] = $val;
   }
 }
+
+/**
+ * @param $xml
+ * @param $k
+ * @param $map
+ */
 function _cals_importer_get_urls_from_marc($xml, $k, &$map) {
   $vals = _cals_importer_xpath_value($xml, "datafield", '856', 'u');
   $arr = array("nnels.ca", "license", "loc.gov");
