@@ -129,6 +129,94 @@ function _cals_importer_generate_marcxml_files_all_records(&$entity, $context = 
 
 }
 
+function _cals_importer_generate_marcxml_files_search_interface_form($settings, &$form_state) {
+  $form = array();
+
+  $form['title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Title of new record-set'),
+    '#required' => TRUE,
+    '#size' => 20,
+    '#default_value' => isset($settings['settings']['title']) ? $settings['settings']['title'] : 'my title',
+  );
+  $form['body'] = array(
+    '#type' => 'textarea',
+    '#rows' => 5,
+    '#title' => t('Brief description'),
+    '#required' => TRUE,
+    '#size' => 20,
+    '#default_value' => isset($settings['settings']['body']) ? $settings['settings']['body'] : 'my description',
+  );
+
+
+  return $form;
+}
+
+function _cals_importer_generate_marcxml_files_search_interface_submit($form, $form_state) {
+  $return = array();
+  $title = $form_state['values']['title'];
+  $body = $form_state['values']['body'];
+
+  $node = new StdClass();
+  $node->type = 'marc_export_set';
+  $node->language = LANGUAGE_NONE;
+  node_object_prepare($node);
+
+  $node->title = $title;
+  $node->body[LANGUAGE_NONE][0]['value'] = $form_state['values']['body'];
+  node_save($node);
+
+  //Prepare folder
+  $dir = 'public://marc_exports';
+  file_prepare_directory($dir, FILE_CREATE_DIRECTORY);
+  $filename = "public://marc_exports/marcxml_export_{$node->nid}.xml";
+  file_put_contents($filename, '');
+
+  $return['fields'] = array(
+    "node" => $node,
+    "filename" => $filename
+  );
+  return $return; //Note, return value here must be an array.
+}
+
+
+/**
+ * Invokes Drupal's batch api to generate new marc xml files with 856 tags, etc.
+ * Unlike _cals_importer_generate_marcxml_files, this function generates an
+ * un-managed file called "nnels_marcxml_all_records.xml".
+ *
+ */
+
+function _cals_importer_generate_marcxml_files_search_interface(&$entity, $context = array() ) {
+
+  $host = $entity->hostEntity();
+  $nid = $host->nid;
+
+  $filename = $context['fields']['filename'];
+  $export_node = $context['fields']['node'];
+
+  if (!empty($host->field_xml_string) &&
+    !empty($host->field_nnels_856_tag) &&
+    $host->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] == 1 ) {
+    $xml = _cals_get_marc_xml_string($host);
+    if($xml !== 0) {
+      $str =  $host->field_xml_string[LANGUAGE_NONE][0]['value'];
+      file_put_contents($filename, $str, FILE_APPEND | LOCK_EX);
+    }
+  }
+  if ($context['progress']['current'] == $context['progress']['total']) {
+    $uri = file_create_url($filename);
+    //add closing marc:collection tag
+    $content = MARC_HEADER . file_get_contents($filename) . '</marc:collection>';
+    $xml = simplexml_load_string($content);
+    $file = file_save_data($xml->asXml(), $filename, FILE_EXISTS_REPLACE);
+    $file->display = 1;
+    $export_node->field_marc_xml_output_file[LANGUAGE_NONE][0] = (array)$file;
+    node_save($export_node);
+    drupal_set_message(t("File saved: please download via <a href='@url'>@url</a>",
+      array("@url" => url("node/" . $export_node->nid) ) ) );
+  }
+}
 
 
 /**
