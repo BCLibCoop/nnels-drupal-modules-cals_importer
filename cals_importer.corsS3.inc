@@ -12,7 +12,7 @@
 /**
  * Simple class to piggy back off AmazonS3StreamWrapper
  * 
-
+*/
 class NNELSStreamWrapper extends AmazonS3StreamWrapper {
   public function get_filesize() {
     $size = $this->getS3()->get_object_filesize($this->bucket, $this->getLocalPath($uri));
@@ -29,8 +29,6 @@ class NNELSStreamWrapper extends AmazonS3StreamWrapper {
 	  return $this->s3->list_objects($bucket);
 	}
 }
-
- */
 
 /**
  * bulk operation action to update file-size values
