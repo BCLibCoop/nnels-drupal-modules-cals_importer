@@ -105,25 +105,6 @@ function cals_importer_menu() {
   );
 
 
-  $items['admin/content/cals/parse-org-emails'] = array(
-    'title' => 'Update Organizational Contact Emails from CSV file',
-    'access arguments' => array('administer site configuration'),
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('cals_org_emails_import_form'),
-    'file' => 'cals_importer.orgs.inc',
-  );
-
-  $items['admin/content/cals/test-load-org-emails-csv'] = array(
-    'page callback' => '_cals_get_array_org_emails',
-    'title' => "Test Load CSV file",
-    'type' => MENU_CALLBACK,
-    //'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
-    'page arguments' => array(1),
-    'weight' => 100,
-    'access arguments' => array('parse s3 paths'),
-    'file' => 'cals_importer.orgs.inc',
-  );
-
   $items['node/%node/parse-marcxml-new'] = array(
     'page callback' => '_cals_import_skeletal_records',
     'title' => "Generate / Update Stub Entries",
@@ -499,16 +480,6 @@ function cals_importer_action_info() {
       'configurable' => FALSE,
       'triggers' => array('any'),
     ),
-    //batch update to update org email fields based on J. Schatz's CVS file
-    '_cals_update_org_emails' => array(
-      'label' => t('CALS: Update Organization Emails'),
-      'type' => 'node',
-      'configurable' => FALSE,
-      'triggers' => array('any'),
-      'file' => 'cals_importer.orgs.inc',
-    ),
-
-
     //batch dedupe marc xml records
     '_cals_dedupe_035' => array(
       'label' => t('CALS: Dedupe on 035 matches'),
