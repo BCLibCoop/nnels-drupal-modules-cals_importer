@@ -139,9 +139,8 @@ function _cals_importer_repo_field_callback($fieldname) {
 
 
   );
-
+  if($fieldname == 'all') return $arr;
   if(array_key_exists($fieldname, $arr)) return $arr[$fieldname];
-
   return '';
 }
 
