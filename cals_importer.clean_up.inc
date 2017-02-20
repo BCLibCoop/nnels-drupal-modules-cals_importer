@@ -256,6 +256,28 @@ function _cals_normalize_record_entry($node) {
 }
 
 /**
+ * re-sets the Publisher
+ *
+ */
+
+function _cals_update_publisher_264_tag(&$node) {
+
+  //$node->field_publisher_source
+  if(!empty($node->field_publisher_source)) {
+    foreach($node->field_publisher[LANGUAGE_NONE] as $k => $publisher) {
+      //$tmp = _cals_importer_normalize_publisher_entry($publisher['value']);
+      $tmp = _cals_importer_strip_trailing_periods_value($publisher['value']);
+      if($tmp != $publisher['value']) {
+        $node->field_publisher[LANGUAGE_NONE][$k]['value'] = $tmp;
+      }
+    }
+
+  }
+
+}
+
+
+/**
  * loops thru publisher array, calling _cals_importer_normalize_publisher_entry() 
  *
  */

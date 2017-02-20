@@ -147,6 +147,18 @@ function cals_importer_menu() {
 
   );
 
+  //re-parse Publisher from 264 tag
+  $items['admin/%node/update-publisher-264'] = array(
+    'page callback' => '_cals_update_publisher_264_tag',
+    'title' => "Update Publisher Via 264",
+    'type' => MENU_CALLBACK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'page arguments' => array(1),
+    'weight' => 100,
+    'access arguments' => array('parse s3 paths'),
+    'file' => 'cals_importer.clean_up.inc',
+
+  );
 
   //generate cors s3 filesize values
   $items['admin/%node/update-filesize-field-collection'] = array(
@@ -435,6 +447,14 @@ function cals_importer_action_info() {
       'triggers' => array('any'),
     ),
 
+    //move Publisher into Publisher Source and add new Publisher
+    '_cals_importer_update_publisher_and_source' => array(
+      'label' => t('5. Update Publisher and Publisher Source'),
+      'type' => 'node',
+      'configurable' => TRUE,
+      'triggers' => array('any'),
+    ),
+
 
     //batch generate MARC XML files from all files that include 856 tag
     '_cals_importer_generate_marcxml_files_all_records' => array(
@@ -695,6 +715,80 @@ function _cals_importer_block_process_repo_item_submit($form, &$form_state) {
     //printAndDie($callback);
     $callback($node);
   }
+}
+
+function _cals_importer_update_publisher_and_source_form($options) {
+  if (is_numeric(arg(1)) && arg(0) == 'node') {
+    $vocabulary = taxonomy_vocabulary_machine_name_load('publisher');
+    $terms = entity_load('taxonomy_term', FALSE, array('vid' => $vocabulary->vid));
+    //printAndDie($terms);
+    $options = array();
+    foreach($terms as $tid => $value) {
+      //printAndDie($value);
+      $options[$value->name] = $value->name;
+    }
+    //printAndDie($options);
+    $form = array();
+    $form['publisher'] = array(
+      '#type' => 'select',
+      '#title' => t('Publisher'),
+      '#description' => t("Please select the Publisher Name."),
+      '#required' => TRUE,
+      '#default_value' => '',
+      '#options' => $options,
+    );
+
+
+    return $form;
+
+
+  }
+
+}
+
+function _cals_importer_update_publisher_and_source_submit($form, $form_state) {
+  $return['publisher'] = $form_state['values']['publisher'];
+  return $return;
+}
+
+function _cals_importer_update_publisher_and_source(&$node, $context) {
+
+  $publisher = $context['publisher'];
+  $field_publisher = array();
+  if(!empty($node->field_publisher)) {
+    foreach($node->field_publisher[LANGUAGE_NONE] as $k => $v) {
+      $field_publisher[] = $v['value'];
+    }
+  }
+  $current_publisher = implode(", ", $field_publisher);
+
+  //publisher_source
+  $field_publisher_source = array();
+  if(!empty($node->field_publisher_source)) {
+    foreach($node->field_publisher_source[LANGUAGE_NONE] as $k => $v) {
+      $field_publisher_source[] = $v['value'];
+    }
+  }
+  $current_publisher_source = implode(", ", $field_publisher_source);
+
+  if($publisher != $current_publisher && $publisher != $current_publisher_source) {
+    $node->field_publisher_source[LANGUAGE_NONE] = array();
+    $node->field_publisher_source[LANGUAGE_NONE][0]['value'] = $current_publisher;
+
+    $node->field_publisher[LANGUAGE_NONE] = array();
+    $node->field_publisher[LANGUAGE_NONE][0]['value'] = $publisher;
+    node_save($node);
+    $message = t('Updating Publisher and Publisher Source fields: %title',
+      array('%title' => $node->title)
+    );
+  }
+  else {
+
+  }
+  //_cals_parse_record_details($node, $fields);
+
+
+  //drupal_set_message($message);
 }
 
 /**
@@ -1357,7 +1451,22 @@ function cals_importer_node_view($node, $view_mode, $langcode) {
 
   }
 }
+/**
+ * Implements hook_custom_theme()
+ * Switch theme for a mobile browser
+ * @return string The theme to use
+ */
+function cals_importer_custom_theme()  {
+  $path = current_path();
+  $path_alias = drupal_lookup_path('alias',$path);
+  //printAndDie($path_alias, $path);
+  if(arg(0) == 'node' && is_numeric(arg(1)) && substr($path_alias, 0, 6) == 'admin/' ) {
+    //dpm($_REQUEST);
+    $theme = 'adminimal'; // core theme, used as fallback
+    return $theme;
+  }
 
+}
 /**
  * initializes new item repos node
  *
