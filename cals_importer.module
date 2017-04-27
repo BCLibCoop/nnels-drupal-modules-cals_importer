@@ -125,6 +125,7 @@ function cals_importer_menu() {
     'weight' => 100,
     'access arguments' => array('parse s3 paths'),
   );
+
   $items['node/%node/preview-titles'] = array(
     'page callback' => '_cals_importer_preview_repo_items',
     'file' => "cals_importer.createrecords.inc",
@@ -616,8 +617,14 @@ function _cals_importer_get_block_items() {
     'title' => 'Add 856 tag',
     'description' => '856 tag added',
   );
+  $items['_cals_importer_create_marc_stub_node'] = array(
+    'access arguments' => array('parse s3 paths'),
+    'page callback' => '_cals_importer_create_marc_stub_node',
+    'file' => "cals_importer.marcxmlfilebuilder.inc",
+    'title' => "Create XML stub entry",
+    'description' => 'Added MARC-XML Stub',
 
-  /*
+  );  /*
     $items['_cals_importer_generate_marcxml_file'] = array(
       'access arguments' => array('administer site configuration'),
       'page callback' => '_cals_importer_generate_marcxml_file',
