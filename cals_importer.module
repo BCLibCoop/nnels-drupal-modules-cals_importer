@@ -315,35 +315,6 @@ function cals_importer_menu() {
 
    */
 
-  /*
-
-  $items['admin/content/cals/update-isbn-length'] = array(
-    'access arguments' => array('administer site configuration'),
-    'page callback' => '_cals_increase_field_size',
-    'title' => 'Update ISBN Field Size (admin only'),
-    'type' => MENU_LOCAL_TASK,
-    'file' => 'cals_importer.misc.inc',
-    'weight' => 100,
-
-  );
-
-   */
-
-  //to deprecate next round of development?
-
-  /*
-  $items['node/%node/parse-sys-control-num'] = array(
-    'access arguments' => array('administer site configuration'),
-    'page callback' => '_cals_importer_update_system_control_numbers',
-    'title' => 'Parse System Control Number',
-    'type' => MENU_LOCAL_TASK,
-    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
-    'page arguments' => array(1),
-    'weight' => 100,
-
-  );
-
-  */
 
 }
 
@@ -364,6 +335,9 @@ function cals_importer_permission() {
     'parse marc records' => array(
       'title' => t('Parse MARC records'),
     ),
+    'view marcxml stub' => array(
+      'title' => t('View MARC-XML Stub'),
+    )
     'generate repo records' => array(
       'title' => t('Generate New Repository Items'),
     ),
@@ -859,8 +833,17 @@ function cals_importer_menu_alter(&$items) {
 
   $items['node/%node/parse-s3-path-node']['access callback'] = '_cals_importer_tab_checker_parse_s3_paths';
 
-}
+  $items['node/%node/view-xml-stub']['access callback'] = '_cals_importer_tab_checker_xmlstub';
 
+}
+function _cals_importer_tab_checker_xmlstub() {
+  global $user;
+  if (user_access('view marcxml stub') && arg(0) == 'node') {
+    $n = node_load(arg(1));
+    RETURN ($n->type == 'repository_item') ? TRUE : FALSE;
+  }
+  return FALSE;
+}
 function _cals_importer_tab_checker_parse_record() {
   global $user;
   //todo - change to permission
