@@ -169,7 +169,7 @@ function cals_importer_menu() {
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'page arguments' => array(1),
     'weight' => 100,
-    'access arguments' => array('parse s3 paths'),
+    'access arguments' => array('view marcxml stub'),
     'file' => 'cals_importer.marcxml.inc',
 
   );
