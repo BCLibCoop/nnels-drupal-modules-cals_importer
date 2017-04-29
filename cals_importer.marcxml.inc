@@ -10,7 +10,10 @@
  */
 function _cals_importer_view_marcxml_stub($node) {
 
-  printAndDie($node);
+  if(!empty($node->field_xml_stub[LANGUAGE_NONE])) {
+    return $node->field_xml_stub[LANGUAGE_NONE][0]['safe_value'];
+  }
+  return t('Stub has not been defined. You can click on Create XML Stub entry to generate this');
 }
 
 

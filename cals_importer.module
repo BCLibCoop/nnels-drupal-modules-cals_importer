@@ -162,10 +162,10 @@ function cals_importer_menu() {
   );
 
   //Add tab to view xml stub, etc.
-  $items['admin/%node/view-xml-stub'] = array(
+  $items['node/%node/view-xml-stub'] = array(
     'page callback' => '_cals_importer_view_marcxml_stub',
     'title' => "View XML Stub",
-    'type' => MENU_CALLBACK,
+    'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'page arguments' => array(1),
     'weight' => 100,
@@ -198,6 +198,30 @@ function cals_importer_menu() {
 
 }
 
+/**
+ * Implements  hook_menu_alter().
+ * Remember to clear the menu cache after adding/editing this function.
+ */
+function cals_importer_menu_alter(&$items) {
+  // Removing certain local navigation tabs that are either undesired or need to be custom relocated.
+  // Set these tabs to MENU_CALLBACK, so they still register the path, but just don't show the tab:
+  $items['node/%node/parse-access-rights']['access callback'] = '_cals_importer_tab_checker_parse_record';
+  $items['node/%node/parse-record']['access callback'] = '_cals_importer_tab_checker_parse_record';
+  $items['node/%node/parse-marcxml-new']['access callback'] = '_cals_importer_tab_checker';
+  $items['node/%node/parse-marcxml-new2']['access callback'] = '_cals_importer_tab_checker';
+  $items['node/%node/normalize-publisher']['access callback'] = '_cals_importer_tab_checker_parse_record';
+  $items['node/%node/normalize-title']['access callback'] = '_cals_importer_tab_checker_parse_record';
+  $items['node/%node/clean-author']['access callback'] = '_cals_importer_tab_checker_parse_record';
+  $items['node/%node/generate-marc-856']['access callback'] = '_cals_importer_tab_checker_parse_record';
+  $items['node/%node/generate-marc-output']['access callback'] = '_cals_importer_tab_checker_parse_record';
+  $items['node/%node/convert-s3-paths']['access callback'] = '_cals_importer_tab_checker_parse_record';
+  $items['node/%node/normalize-record']['access callback'] = '_cals_importer_tab_checker_parse_record';
+  $items['node/%node/fix-oclc-entry']['access callback'] = '_cals_importer_tab_checker_parse_record';
+  $items['node/%node/normalize-record-preview']['access callback'] = '_cals_importer_tab_checker_parse_record';
+  $items['node/%node/parse-s3-path-node']['access callback'] = '_cals_importer_tab_checker_parse_s3_paths';
+  $items['node/%node/view-xml-stub']['access callback'] = '_cals_importer_tab_checker_xmlstub';
+
+}
 
 /**
  * Implements hook_permission().
@@ -486,7 +510,7 @@ function _cals_importer_get_block_items() {
   $items['_cals_importer_create_marc_stub_node'] = array(
     'access arguments' => array('parse s3 paths'),
     'page callback' => '_cals_importer_create_marc_stub_node',
-    'file' => "cals_importer.marcxmlfilebuilder.inc",
+    'file' => "cals_importer.exporter.inc",
     'title' => "Create XML stub entry",
     'description' => 'Added MARC-XML Stub',
 
@@ -688,34 +712,6 @@ function _cals_importer_generate_marcxml_files_submit($form, $form_state) {
 }
 
 
-/**
- * Implementation of hook_menu_alter().
- * Remember to clear the menu cache after adding/editing this function.
- */
-function cals_importer_menu_alter(&$items) {
-  // Removing certain local navigation tabs that are either undesired or need to be custom relocated.
-  // Set these tabs to MENU_CALLBACK, so they still register the path, but just don't show the tab:
-  $items['node/%node/parse-access-rights']['access callback'] = '_cals_importer_tab_checker_parse_record';
-  $items['node/%node/parse-record']['access callback'] = '_cals_importer_tab_checker_parse_record';
-  $items['node/%node/parse-marcxml-new']['access callback'] = '_cals_importer_tab_checker';
-  $items['node/%node/parse-marcxml-new2']['access callback'] = '_cals_importer_tab_checker';
-
-  $items['node/%node/normalize-publisher']['access callback'] = '_cals_importer_tab_checker_parse_record';
-  $items['node/%node/normalize-title']['access callback'] = '_cals_importer_tab_checker_parse_record';
-  $items['node/%node/clean-author']['access callback'] = '_cals_importer_tab_checker_parse_record';
-  $items['node/%node/generate-marc-856']['access callback'] = '_cals_importer_tab_checker_parse_record';
-  $items['node/%node/generate-marc-output']['access callback'] = '_cals_importer_tab_checker_parse_record';
-  $items['node/%node/convert-s3-paths']['access callback'] = '_cals_importer_tab_checker_parse_record';
-  $items['node/%node/normalize-record']['access callback'] = '_cals_importer_tab_checker_parse_record';
-  $items['node/%node/fix-oclc-entry']['access callback'] = '_cals_importer_tab_checker_parse_record';
-
-  $items['node/%node/normalize-record-preview']['access callback'] = '_cals_importer_tab_checker_parse_record';
-
-  $items['node/%node/parse-s3-path-node']['access callback'] = '_cals_importer_tab_checker_parse_s3_paths';
-
-  $items['node/%node/view-xml-stub']['access callback'] = '_cals_importer_tab_checker_xmlstub';
-
-}
 function _cals_importer_tab_checker_xmlstub() {
   global $user;
   if (user_access('view marcxml stub') && arg(0) == 'node') {
