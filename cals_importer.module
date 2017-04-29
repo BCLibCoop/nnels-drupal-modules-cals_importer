@@ -335,8 +335,7 @@ function cals_importer_permission() {
     'parse marc records' => array(
       'title' => t('Parse MARC records'),
     ),
-    'view marcxml stub' => array(
-      'title' => t('View MARC-XML Stub'),
+    'view marcxml stub' => array('title' => t('View MARC-XML Stub')),
     )
     'generate repo records' => array(
       'title' => t('Generate New Repository Items'),
