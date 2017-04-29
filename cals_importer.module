@@ -161,7 +161,7 @@ function cals_importer_menu() {
 
   );
 
-  //re-parse Publisher from 264 tag
+  //Add tab to view xml stub, etc.
   $items['admin/%node/view-xml-stub'] = array(
     'page callback' => '_cals_importer_view_marcxml_stub',
     'title' => "View XML Stub",

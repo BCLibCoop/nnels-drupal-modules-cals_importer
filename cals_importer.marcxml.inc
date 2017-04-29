@@ -3,11 +3,21 @@
  * @file
  * Manages marc xml ingests
  */
- 
+
+/**
+ * View marc-xml stub for repository item
+ * @param $node
+ */
+function _cals_importer_view_marcxml_stub($node) {
+
+  printAndDie($node);
+}
+
+
 /**
  * Simple wrapper to call main parser; if preferred, can invoke batch api instead. 
+ * @param $node
  */
-
 function _cals_importer_update_repository_item($node) {
   //can also push this thru the batch api instead. To do so, comment out above and uncomment
   //the following function call.
