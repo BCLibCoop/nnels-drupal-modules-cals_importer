@@ -117,24 +117,6 @@ function _cals_entity_wrapper($arr) {
 }
 
 
-
-
-
-function _cals_get_nid_by_title($title) {
-  $type = "repository_item";
-  
-  $result = db_query(
-    "SELECT n.nid FROM {node} n WHERE n.title = :title AND n.type = :type", 
-    array(":title"=> $title, ":type"=> $type));  
-  
-  $nid = $result->rowCount();
-  if ($nid > 0) $nid = $result->fetchField();
- 
-  return $nid;
-
-}
-
-
 function _cals_get_taxonomy_vid($name) {
   return db_query("SELECT vid FROM {taxonomy_vocabulary} WHERE machine_name = :name", 
     array(":name" => $name))->fetchField();

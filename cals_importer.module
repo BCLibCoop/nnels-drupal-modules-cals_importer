@@ -161,6 +161,18 @@ function cals_importer_menu() {
 
   );
 
+  //re-parse Publisher from 264 tag
+  $items['admin/%node/view-xml-stub'] = array(
+    'page callback' => '_cals_importer_view_marcxml_stub',
+    'title' => "View XML Stub",
+    'type' => MENU_CALLBACK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'page arguments' => array(1),
+    'weight' => 100,
+    'access arguments' => array('parse s3 paths'),
+    'file' => 'cals_importer.marcxml.inc',
+
+  );
   //generate cors s3 filesize values
   $items['admin/%node/update-filesize-field-collection'] = array(
     'page callback' => '_cals_update_filecollection_file_filesize',
