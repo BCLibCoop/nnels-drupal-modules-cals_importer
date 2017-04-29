@@ -8,11 +8,11 @@
  
  
 /**
- * Invokes Drupal's batch api to de-dupe records based on 035 and other field matches. 
- * 
+ * Invokes Drupal's batch api to de-dupe records based on 035 and other field matches.
+ *
+ * @param $entity
+ * @param array $context
  */
- 
-
 function _cals_dedupe_035(&$entity, $context = array()) {
 
   $nid = $context['node']->nid;
@@ -65,6 +65,5 @@ function _cals_dedupe_orgs_by_illcode(&$entity, $context = array()) {
     $tmp['illcode'] = $illcode;
     $tmp['nid'] = $nid;
   }
-
 
 }
