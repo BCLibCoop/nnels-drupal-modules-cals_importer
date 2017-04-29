@@ -116,13 +116,6 @@ function _cals_entity_wrapper($arr) {
   $node->field_text->set('Some Value'); // Note that this is a single value field.
 }
 
-
-function _cals_get_taxonomy_vid($name) {
-  return db_query("SELECT vid FROM {taxonomy_vocabulary} WHERE machine_name = :name", 
-    array(":name" => $name))->fetchField();
-
-}
-
 function _cals_get_tid_by_name($vid, $name) {
   //$name = $v['value'];
   // Get the parent term's ID.
