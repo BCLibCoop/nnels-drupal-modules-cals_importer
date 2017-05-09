@@ -74,7 +74,7 @@ function _cals_importer_create_marc_stub($node) {
     // Retrieve the target field for our insertion point
     //iterate through records
     _cals_importer_exporter_iterate_record($record);
-    die;
+    //die;
     $valid = $lint->checkRecord($record);
     if(count($valid)) {
       $vars = array("items" => $valid , "title" => "XML Stub Created with following errors", "type" => "ol", "attributes" => array());
@@ -176,7 +176,7 @@ function _cals_importer_exporter_iterate_record(&$record) {
     }
   }
   ksort($df);
-  printAndDie($df);
+  //printAndDie($df);
 }
 
 /**
