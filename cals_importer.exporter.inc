@@ -116,13 +116,15 @@ function _cals_importer_exporter_add_taxonomy_terms_marcxml($node, &$record) {
     $ind1 = $marc[2];
     $ind2 = $marc[3];
     $terms = field_view_field('node', $node, $fieldname, array('default'));
-    foreach($terms["#items"] as $term){
-      $subfields = array();
-      $subfields[] = new File_MARC_Subfield($code, $term["taxonomy_term"]->name);
-      $field = new File_MARC_Data_Field($tag, $subfields, 0, null);
-      $field->setIndicator(1, $ind1);
-      $field->setIndicator(2, $ind2);
-      _cals_importer_exporter_insert_field($record, $field, $key);
+    if(is_array($terms)) {
+      foreach($terms["#items"] as $term){
+        $subfields = array();
+        $subfields[] = new File_MARC_Subfield($code, $term["taxonomy_term"]->name);
+        $field = new File_MARC_Data_Field($tag, $subfields, 0, null);
+        $field->setIndicator(1, $ind1);
+        $field->setIndicator(2, $ind2);
+        _cals_importer_exporter_insert_field($record, $field, $key);
+      }
     }
   }
   //return new File_MARC_Data_Field('650', $subfields, 0, null);
