@@ -1,11 +1,4 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: davekisly
- * Date: 17-04-29
- * Time: 2:43 PM
- */
-
 
 
 /**
@@ -47,6 +40,62 @@ function _cals_importer_create_marc_stub_vbo(&$entity, $context = array()) {
 }
 
 /**
+ * Updates the node with stub marc-xml record
+ *
+ * @param $node
+ *   the node passed to the parser
+ *
+ */
+function _cals_importer_create_marc_stub($node) {
+  require 'File/MARCXML.php';
+  require 'File/MARC/Lint.php';
+  $lint = new File_MARC_Lint();
+
+  $xml_string = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
+  $xml_string = MARC_HEADER . $xml_string . '</marc:collection>';
+  //$xml = simplexml_load_string($xml_string);
+  $records = new File_MARCXML($xml_string, File_MARC::SOURCE_STRING, "http://www.loc.gov/MARC21/slim");
+
+  $n = 0;
+  while ($record = $records->next()) {
+    $n++;
+
+    _cals_importer_exporter_marcxml_remove_tags($record);
+    _cals_importer_exporter_add_taxonomy_terms_marcxml($node, $record);
+    // Create the new field
+    //$subfields[] = new File_MARC_Subfield('a', 'Scott, Daniel.');
+    //$new_field = new File_MARC_Data_Field('100', $subfields, 0, null);
+
+    //$subfields[] = new File_MARC_Subfield('a', 'Kisly, Dave.');
+    //$new_field = new File_MARC_Data_Field('100', $subfields, 0, null);
+
+    //printPre($subfields, $new_field);
+
+    // Retrieve the target field for our insertion point
+    //iterate through records
+    _cals_importer_exporter_iterate_record($record);
+    die;
+    $valid = $lint->checkRecord($record);
+    if(count($valid)) {
+      $vars = array("items" => $valid , "title" => "XML Stub Created with following errors", "type" => "ol", "attributes" => array());
+      drupal_set_message(theme_item_list($vars));
+    }
+    else {
+      drupal_set_message(t("XML Stub Created"));
+    }
+
+    $new_xml_stub = $record->toXML("UTF-8", FALSE, FALSE);
+    //$new_xml_stub = $record->toRaw();
+  }
+
+  $node->field_xml_stub[LANGUAGE_NONE][0]['value'] = $new_xml_stub;
+  //_cals_importer_update_admin_audit($node,  $action);
+  node_save($node);
+
+}
+
+
+/**
  * Iterate thru taxonomy terms (field_subject, field_genre) and add values to
  * current record
  *
@@ -84,12 +133,10 @@ function _cals_importer_exporter_add_taxonomy_terms_marcxml($node, &$record) {
  * @param $record
  */
 function _cals_importer_exporter_marcxml_remove_tags(&$record) {
-
   $tags = array(300, 336, 337, 338, 344, 347, 538, 650, 655);
   foreach($tags as $tag) {
     $x = $record->deleteFields($tag);
   }
-
 }
 
 /**
@@ -98,16 +145,38 @@ function _cals_importer_exporter_marcxml_remove_tags(&$record) {
  */
 function _cals_importer_exporter_iterate_record(&$record) {
   foreach ($record->getFields() as $tag=>$value) {
+
     if ($value instanceof File_MARC_Control_Field) {
       printPre("TAG = $tag | CODE = $code | VALUE = " . $value->getData());
     }
     else {
-      // Iterate through the subfields in this data field
+
+      $sub = array();
       foreach ($value->getSubfields() as $code=>$subdata) {
-        printPre("TAG = $tag | CODE = $code | VALUE = " . $subdata->getData());
+        //printPre("TAG = $tag | CODE = $code | VALUE = " . $subdata->getData());
+        $sub[$code] = array(
+          'value' => $subdata->getData(),
+        );
       }
+      if(!empty($tag)) {
+        //$tag2 = str_replace($tag,'', 0, 0);
+        if(substr($tag, 0, 1) == '0') {
+          $tag = ltrim($tag, '0');
+
+        }
+        $df[$tag] = array(
+          'ind1' => $value->getIndicator(1),
+          'ind2' => $value->getIndicator(2),
+          'sub' => $sub,
+
+        );
+
+      }
+
     }
   }
+  ksort($df);
+  printAndDie($df);
 }
 
 /**
@@ -137,58 +206,5 @@ function _cals_importer_exporter_insert_field(&$record, $field, $id) {
   */
   //printAndDie(is_array($tag), $record);
 
-
-}
-/**
- * Updates the node with stub marc-xml record
- *
- * @param $node
- *   the node passed to the parser
- *
- */
-function _cals_importer_create_marc_stub($node) {
-  require 'File/MARCXML.php';
-  require 'File/MARC/Lint.php';
-  $lint = new File_MARC_Lint();
-
-  $xml_string = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
-  $xml_string = MARC_HEADER . $xml_string . '</marc:collection>';
-  //$xml = simplexml_load_string($xml_string);
-  $records = new File_MARCXML($xml_string, File_MARC::SOURCE_STRING, "http://www.loc.gov/MARC21/slim");
-
-  $n = 0;
-  while ($record = $records->next()) {
-    $n++;
-
-    _cals_importer_exporter_marcxml_remove_tags($record);
-    _cals_importer_exporter_add_taxonomy_terms_marcxml($node, $record);
-    // Create the new field
-    //$subfields[] = new File_MARC_Subfield('a', 'Scott, Daniel.');
-    //$new_field = new File_MARC_Data_Field('100', $subfields, 0, null);
-
-    //$subfields[] = new File_MARC_Subfield('a', 'Kisly, Dave.');
-    //$new_field = new File_MARC_Data_Field('100', $subfields, 0, null);
-
-    //printPre($subfields, $new_field);
-
-    // Retrieve the target field for our insertion point
-    //iterate through records
-    _cals_importer_exporter_iterate_record($record);
-    $valid = $lint->checkRecord($record);
-    if(count($valid)) {
-      $vars = array("items" => $valid , "title" => "XML Stub Created with following errors", "type" => "ol", "attributes" => array());
-      drupal_set_message(theme_item_list($vars));
-    }
-    else {
-      drupal_set_message(t("XML Stub Created"));
-    }
-
-    $new_xml_stub = $record->toXML("UTF-8", FALSE, FALSE);
-    //$new_xml_stub = $record->toRaw();
-  }
-
-  $node->field_xml_stub[LANGUAGE_NONE][0]['value'] = $new_xml_stub;
-  //_cals_importer_update_admin_audit($node,  $action);
-  node_save($node);
 
 }
