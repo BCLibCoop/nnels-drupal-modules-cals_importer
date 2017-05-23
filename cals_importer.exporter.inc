@@ -61,7 +61,10 @@ function _cals_importer_create_marc_stub($node) {
     $n++;
 
     _cals_importer_exporter_marcxml_remove_tags($record);
+    _cals_importer_exporter_add_title_marcxml($node, $record);
     _cals_importer_exporter_add_taxonomy_terms_marcxml($node, $record);
+
+
     // Create the new field
     //$subfields[] = new File_MARC_Subfield('a', 'Scott, Daniel.');
     //$new_field = new File_MARC_Data_Field('100', $subfields, 0, null);
@@ -91,6 +94,113 @@ function _cals_importer_create_marc_stub($node) {
   $node->field_xml_stub[LANGUAGE_NONE][0]['value'] = $new_xml_stub;
   //_cals_importer_update_admin_audit($node,  $action);
   node_save($node);
+
+}
+/**
+ * Iterate thru taxonomy terms (field_subject, field_genre) and add values to
+ * current record
+ *
+ * @param $node
+ * @param $record
+ */
+function _cals_importer_exporter_add_nnels_values_marcxml($node, &$record) {
+  //printAndDie($node);
+  //if vocab, $term = 'field_subject';
+  $fieldnames =
+    array(
+      //'field_system_control_number' => array('001', '', '', '', NULL),
+      'field_dc_creator' => array('040', 'a', 1, '', NULL),
+      'title_field' => array(245, 'a', 1, 4, 'normalize_title'),
+
+      //'field_access_restrictions' => array(),
+    );
+
+  foreach($fieldnames as $fieldname => $marc) {
+    $tag = $marc[0];
+    $code = $marc[1];
+    $ind1 = $marc[2];
+    $ind2 = $marc[3];
+    $callback = $marc[4];
+    $values = field_view_field('node', $node, $fieldname, array('default'));
+
+    if(is_array($values)) {
+      foreach($values['#items'] as $value) {
+        $subfields = array();
+        $safe_value = trim($value['value']);
+        if(!empty($callback)) $callback($safe_value);
+        //printAndDie($safe_value);
+        $subfields = array();
+        if($tag != '001') $subfields[] = new File_MARC_Subfield($code, $safe_value);
+        $field = new File_MARC_Data_Field($tag, $subfields, 0, null);
+        $field->setIndicator(1, $ind1);
+        $field->setIndicator(2, $ind2);
+        //if($tag == '001') printAndDie($field);
+        _cals_importer_exporter_insert_field($record, $field, $key);
+      }
+    }
+
+  }
+  //return new File_MARC_Data_Field('650', $subfields, 0, null);
+}
+/**
+ * Iterate thru taxonomy terms (field_subject, field_genre) and add values to
+ * current record
+ *
+ * @param $node
+ * @param $record
+ */
+function _cals_importer_exporter_add_title_marcxml($node, &$record) {
+  //if vocab, $term = 'field_subject';
+  $fieldnames =
+    array(
+      //'field_system_control_number' => array('001', '', '', '', NULL),
+      'field_dc_creator' => array(100, 'a', 1, '', NULL),
+      'title_field' => array(245, 'a', 1, 4, 'normalize_title'),
+      //'field_publisher' => array(264, 'a', '', 1, NULL),
+
+
+      'body' => array(520, 'a', '', '', NULL),
+      'field_publisher_source' => array(534, 'c', '', '', NULL),
+
+
+
+      //'field_access_restrictions' => array(),
+    );
+
+  foreach($fieldnames as $fieldname => $marc) {
+    $tag = $marc[0];
+    $code = $marc[1];
+    $ind1 = $marc[2];
+    $ind2 = $marc[3];
+    $callback = $marc[4];
+    $values = field_view_field('node', $node, $fieldname, array('default'));
+
+    $x = $record->deleteFields($tag);
+
+    if(is_array($values)) {
+      foreach($values['#items'] as $value) {
+        $subfields = array();
+        $safe_value = trim($value['value']);
+        if(!empty($callback)) $callback($safe_value);
+        //printAndDie($safe_value);
+        $subfields = array();
+        if($tag != '001') $subfields[] = new File_MARC_Subfield($code, $safe_value);
+        $field = new File_MARC_Data_Field($tag, $subfields, 0, null);
+        $field->setIndicator(1, $ind1);
+        $field->setIndicator(2, $ind2);
+        //if($tag == '001') printAndDie($field);
+        _cals_importer_exporter_insert_field($record, $field, $key);
+      }
+    }
+
+  }
+  //printAndDie($node, $record);
+  //return new File_MARC_Data_Field('650', $subfields, 0, null);
+}
+function normalize_title(&$value) {
+
+  $last = substr($string, -1);
+  if($last != '.') $value .= '.';
 
 }
 
@@ -135,7 +245,11 @@ function _cals_importer_exporter_add_taxonomy_terms_marcxml($node, &$record) {
  * @param $record
  */
 function _cals_importer_exporter_marcxml_remove_tags(&$record) {
-  $tags = array(300, 336, 337, 338, 344, 347, 538, 650, 655);
+  $tags = array(
+    '020', '040', 100, 245, 246,
+    300, 336, 337, 338, 344,
+    347, 538, 506, 520, 521, 534,
+    650, 655);
   foreach($tags as $tag) {
     $x = $record->deleteFields($tag);
   }
