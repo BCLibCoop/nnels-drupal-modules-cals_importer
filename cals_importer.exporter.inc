@@ -62,6 +62,7 @@ function _cals_importer_create_marc_stub($node) {
 
     _cals_importer_exporter_marcxml_remove_tags($record);
     _cals_importer_exporter_add_taxonomy_terms_marcxml($node, $record);
+    _cals_importer_exporter_add_gmd_per_format($node, $record);
     // Create the new field
     //$subfields[] = new File_MARC_Subfield('a', 'Scott, Daniel.');
     //$new_field = new File_MARC_Data_Field('100', $subfields, 0, null);
@@ -131,6 +132,201 @@ function _cals_importer_exporter_add_taxonomy_terms_marcxml($node, &$record) {
 }
 
 /**
+ * @param $node
+ * @param $record
+ * @return int|void
+ */
+
+function _cals_importer_exporter_add_gmd_per_format($node, &$record) {
+
+  $format_keys = array(
+    'epub 2' => 'etext',
+    'epub 3' => 'etext',
+    'pdf' => 'etext',
+    'e-text' => 'etext',
+    'azw3' => 'etext',
+    'mp3' => 'mp3',
+    'daisy 202' => 'daisy',
+    'daisy 3' => 'daisy',
+  );
+
+  /**
+   * Electronic text (EPUB, PDF, e-text)
+   *  =336 \\$a txt $2 rdacontent
+   *  =337 \\$a computer $2 rdamedia
+   * =338 \\$a online resource $2 rdacarrier
+   **/
+
+  $etext_pattern = array(
+    0 => array(
+      '336' => array (
+        'a' => 'txt',
+        2 => 'rdacontent',
+      )
+    ),
+    1 => array(
+      '337' => array(
+        'a' => 'computer',
+        2 => 'rdamedia',
+      )
+    ),
+    2 => array(
+      '338' => array(
+        'a' => 'online resource',
+        2 => 'rdacarrier',
+      )
+    ),
+  );
+
+  /**
+  MP3 books
+  =336  \\$a spoken word $b spw $2 rdacontent
+  =337  \\$a audio $b s $2 rdamedia
+  =337  \\$a computer $b c $2 rdamedia
+  =338  \\$a other $b sz $2 rdacarrier
+  =338  \\$a online resource $b cr $2 rdacarrier
+   **/
+
+  $mp3_pattern = array(
+    0 => array(
+      '336' => array (
+        'a' => 'spoken word',
+        'b' => 'spw',
+        2 => 'rdacontent',
+      )
+    ),
+    1 => array(
+      '337' => array(
+        'a' => 'audio',
+        'b' => 's',
+        2 => 'rdamedia',
+      )
+    ),
+    2 => array(
+      '337' => array(
+        'a' => 'computer',
+        'b' => 'c',
+        2 => 'rdamedia',
+      )
+    ),
+    3 => array(
+      '338' => array(
+        'a' => 'other',
+        'b' => 'sz',
+        2 => 'rdacarrier',
+      )
+    ),
+    4 => array(
+      '338' => array(
+        'a' => 'online-resource',
+        'b' => 'cr',
+        2 => 'rdacarrier',
+      ),
+    ),
+  );
+
+  /**
+  DAISY books
+  =336  \\$a spoken word $b spw $2 rdacontent
+  =336  \\$a txt $2 rdacontent
+  =337  \\$a audio $b s $2 rdamedia
+  =337  \\$a computer $b c $2 rdamedia
+  =338  \\$a other $b sz $2 rdacarrier
+  =338  \\$a online resource $b cr $2 rdacarrier
+   **/
+
+  $daisy_pattern = array(
+    0 => array(
+      '336' => array (
+        'a' => 'spoken word',
+        'b' => 'spw',
+        2 => 'rdacontent',
+      )
+    ),
+    1 => array(
+      '336' => array(
+        'a' => 'txt',
+        2 => 'rdacontent',
+      )
+    ),
+    2 => array(
+      '337' => array(
+        'a' => 'audio',
+        'b' => 's',
+        2 => 'rdamedia',
+      )
+    ),
+    3 => array(
+      '337' => array(
+        'a' => 'computer',
+        'b' => 'c',
+        2 => 'rdamedia',
+      )
+    ),
+    4 => array(
+      '338' => array(
+        'a' => 'other',
+        'b' => 'sz',
+        2 => 'rdacarrier',
+      ),
+    ),
+    5 => array(
+      '338' => array(
+        'a' => 'online-resource',
+        'b' => 'cr',
+        2 => 'rdacarrier',
+      )
+    ),
+  );
+
+  /**
+   * Load the node's field collection
+   * foreach format, undercased, find the formats corresponding pattern in array
+   * loop through the pattern array and set variables + appropriate File_MARC functions
+   **/
+
+  $node_wrapper = entity_metadata_wrapper('node', $node);
+
+  foreach ($node_wrapper->field_file_resource->value() as $delta =>
+           $field_collection ) {
+    dpm($field_collection, "fc before wrapper");
+    $fc_wrapper = entity_metadata_wrapper('field_collection_item', $field_collection);
+    $format = strtolower($fc_wrapper->field_file_format->label());
+
+    $pattern = (string) $format_keys[$format] . '_pattern';
+    $loaded_pattern = $$pattern;
+    dpm($loaded_pattern, "loaded:");
+
+    if (empty($loaded_pattern)) {
+      dpm($loaded_pattern, "No pattern found: ");
+      return;
+    }
+
+    foreach ($loaded_pattern as $instance => $tags) { //0 => 336
+      foreach ($tags as $tag => $codes) { //array of 336 => a - $code is a key
+        foreach ($codes as $key => $value ) {
+          // for the subfield/indicator value
+          if ( in_array( $key, array('a', 'b') ) ) {
+            //subfields
+            $subfields = array();
+            $subfields[] = new File_MARC_Subfield($key, $value);
+            $field = new File_MARC_Data_Field($tag, $subfields, 0, NULL);
+          }
+          if ( in_array( $key, array(1, 2) ) ) {
+            //indicators
+            $field->setIndicator($code, $value);
+          }
+          else {
+            return;
+          }
+          //_cals_importer_exporter_insert_field($record, $field, $key);
+        }
+      }
+    }
+  }
+}
+
+/**
  * Remove tags from record
  * @param $record
  */
@@ -193,7 +389,6 @@ function _cals_importer_exporter_insert_field(&$record, $field, $id) {
   //_cals_importer_exporter_iterate_record($record);
   $record->appendField($field);
 
-
   /*
   $id = 700;
   $tag = $record->getFields($id);
@@ -207,6 +402,5 @@ function _cals_importer_exporter_insert_field(&$record, $field, $id) {
   }
   */
   //printAndDie(is_array($tag), $record);
-
 
 }
