@@ -124,7 +124,7 @@ function _cals_importer_exporter_add_taxonomy_terms_marcxml($node, &$record) {
         $field = new File_MARC_Data_Field($tag, $subfields, 0, null);
         $field->setIndicator(1, $ind1);
         $field->setIndicator(2, $ind2);
-        _cals_importer_exporter_insert_field($record, $field, $key);
+        _cals_importer_exporter_insert_field($record, $field, $tag);
       }
     }
   }
@@ -132,6 +132,9 @@ function _cals_importer_exporter_add_taxonomy_terms_marcxml($node, &$record) {
 }
 
 /**
+ * Given a collection of formats and corresponding Data Field pattern, create
+ * the Data Fields per format and append to the record.
+ *
  * @param $node
  * @param $record
  * @return int|void
@@ -179,12 +182,12 @@ function _cals_importer_exporter_add_gmd_per_format($node, &$record) {
   );
 
   /**
-  MP3 books
-  =336  \\$a spoken word $b spw $2 rdacontent
-  =337  \\$a audio $b s $2 rdamedia
-  =337  \\$a computer $b c $2 rdamedia
-  =338  \\$a other $b sz $2 rdacarrier
-  =338  \\$a online resource $b cr $2 rdacarrier
+   * MP3 books
+   * =336  \\$a spoken word $b spw $2 rdacontent
+   * =337  \\$a audio $b s $2 rdamedia
+   * =337  \\$a computer $b c $2 rdamedia
+   * =338  \\$a other $b sz $2 rdacarrier
+   * =338  \\$a online resource $b cr $2 rdacarrier
    **/
 
   $mp3_pattern = array(
@@ -226,13 +229,13 @@ function _cals_importer_exporter_add_gmd_per_format($node, &$record) {
   );
 
   /**
-  DAISY books
-  =336  \\$a spoken word $b spw $2 rdacontent
-  =336  \\$a txt $2 rdacontent
-  =337  \\$a audio $b s $2 rdamedia
-  =337  \\$a computer $b c $2 rdamedia
-  =338  \\$a other $b sz $2 rdacarrier
-  =338  \\$a online resource $b cr $2 rdacarrier
+   * DAISY books
+   * =336  \\$a spoken word $b spw $2 rdacontent
+   * =336  \\$a txt $2 rdacontent
+   * =337  \\$a audio $b s $2 rdamedia
+   * =337  \\$a computer $b c $2 rdamedia
+   * =338  \\$a other $b sz $2 rdacarrier
+   * =338  \\$a online resource $b cr $2 rdacarrier
    **/
 
   $daisy_pattern = array(
@@ -279,48 +282,37 @@ function _cals_importer_exporter_add_gmd_per_format($node, &$record) {
     ),
   );
 
-  /**
-   * Load the node's field collection
-   * foreach format, undercased, find the formats corresponding pattern in array
-   * loop through the pattern array and set variables + appropriate File_MARC functions
-   **/
-
   $node_wrapper = entity_metadata_wrapper('node', $node);
 
-  foreach ($node_wrapper->field_file_resource->value() as $delta =>
+  foreach ($node_wrapper->field_file_resource->getIterator() as $delta =>
            $field_collection ) {
-    dpm($field_collection, "fc before wrapper");
-    $fc_wrapper = entity_metadata_wrapper('field_collection_item', $field_collection);
-    $format = strtolower($fc_wrapper->field_file_format->label());
+    $format = strtolower($field_collection->field_file_format->label());
 
     $pattern = (string) $format_keys[$format] . '_pattern';
     $loaded_pattern = $$pattern;
-    dpm($loaded_pattern, "loaded:");
 
     if (empty($loaded_pattern)) {
-      dpm($loaded_pattern, "No pattern found: ");
+      drupal_set_message($loaded_pattern, "No pattern found: ");
       return;
     }
 
-    foreach ($loaded_pattern as $instance => $tags) { //0 => 336
-      foreach ($tags as $tag => $codes) { //array of 336 => a - $code is a key
-        foreach ($codes as $key => $value ) {
-          // for the subfield/indicator value
-          if ( in_array( $key, array('a', 'b') ) ) {
-            //subfields
-            $subfields = array();
+    $subfields = array();
+
+    foreach ($loaded_pattern as $instance => $tags) { //0 => array of tags
+      foreach ($tags as $tag => $codes) { //336 => array of codes
+        foreach ($codes as $key => $value) { //code => entry
+          if (in_array($key, array('a', 'b', 1, 2, 3))) {
             $subfields[] = new File_MARC_Subfield($key, $value);
-            $field = new File_MARC_Data_Field($tag, $subfields, 0, NULL);
+            unset($key);
           }
-          if ( in_array( $key, array(1, 2) ) ) {
-            //indicators
-            $field->setIndicator($code, $value);
-          }
-          else {
-            return;
-          }
-          //_cals_importer_exporter_insert_field($record, $field, $key);
         }
+        //Roll up all subfields into a DataField for each tag
+        $field = new File_MARC_Data_Field($tag, $subfields, 0, NULL);
+        unset($subfields);
+
+        //Insert the current field and re-loop, multiple entries can exist
+        _cals_importer_exporter_insert_field($record, $field, $tag);
+        unset($field);
       }
     }
   }
@@ -385,6 +377,9 @@ function _cals_importer_exporter_iterate_record(&$record) {
  *
  */
 function _cals_importer_exporter_insert_field(&$record, $field, $id) {
+  /* TODO: add the hinted functionality here to take a tag and insert it
+  in-order */
+
   //e.g., id = 650
   //_cals_importer_exporter_iterate_record($record);
   $record->appendField($field);
