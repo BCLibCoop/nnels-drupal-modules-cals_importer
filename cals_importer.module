@@ -515,7 +515,6 @@ function _cals_importer_get_block_items() {
     'file' => "cals_importer.exporter.inc",
     'title' => "Create XML stub entry",
     'description' => 'Added MARC-XML Stub',
-
   );  /*
     $items['_cals_importer_generate_marcxml_file'] = array(
       'access arguments' => array('administer site configuration'),
@@ -524,8 +523,14 @@ function _cals_importer_get_block_items() {
       'title' => 'Create MARC Output File',
       'description' => 'An XML file generated for this node',
 
-    );
-   */
+    ); */
+   $items['_cals_importer_create_marcxml_snippet_file_resource'] = array(
+    'access arguments' => array('parse s3 paths'),
+    'page callback' => '_cals_importer_create_marcxml_snippet_file_resource',
+    'file' => "cals_importer.exporter.inc",
+    'title' => "Create MARC XML snippet entry",
+    'description' => 'Added MARC-XML snippets per file resource',
+  );
 
   /**
    * Parses S3 sets via node page

@@ -14,6 +14,35 @@ function _cals_importer_create_marc_stub_node($node) {
 
 }
 
+function _cals_importer_create_marcxml_snippet_file_resource($node) {
+
+  require 'File/MARCXML.php';
+  require 'File/MARC/Lint.php';
+
+  //need field_collection->field_file_resource entity
+  $node_wrapper = entity_metadata_wrapper('node', $node);
+
+  //Calls for each format in field collections
+  //Gets back a File_MARC_Record, converts to XML snippet for storage
+
+  foreach ($node_wrapper->field_file_resource->getIterator() as $delta =>
+           $field_collection) {
+    //must now use each field_collection found
+    $snippet = _cals_importer_exporter_add_gmd_per_format($field_collection);
+    $new_xml_snippet = $snippet->toXML("UTF-8", FALSE, FALSE);
+    $fc_wrapper = entity_metadata_wrapper('field_collection_item',
+      $field_collection);
+    $fc_wrapper->field_marc_xml_snippet->set( array(
+      $new_xml_snippet) );
+    //_cals_importer_update_admin_audit($node,  $action);
+    $fc_wrapper->save();
+  }
+  $node_wrapper->save();
+
+  //this should show all of them on one display
+  //drupal_goto("node/{$field_collection->id}/view-xml-snippet");
+}
+
 
 /**
  * VBO to add populate the stub marc-xml string
@@ -62,7 +91,8 @@ function _cals_importer_create_marc_stub($node) {
 
     _cals_importer_exporter_marcxml_remove_tags($record);
     _cals_importer_exporter_add_taxonomy_terms_marcxml($node, $record);
-    _cals_importer_exporter_add_gmd_per_format($node, $record);
+    //_cals_importer_exporter_add_gmd_per_format($node, $record);
+
     // Create the new field
     //$subfields[] = new File_MARC_Subfield('a', 'Scott, Daniel.');
     //$new_field = new File_MARC_Data_Field('100', $subfields, 0, null);
@@ -140,7 +170,7 @@ function _cals_importer_exporter_add_taxonomy_terms_marcxml($node, &$record) {
  * @return int|void
  */
 
-function _cals_importer_exporter_add_gmd_per_format($node, &$record) {
+function _cals_importer_exporter_add_gmd_per_format($field_collection) {
 
   $format_keys = array(
     'epub 2' => 'etext',
@@ -282,10 +312,6 @@ function _cals_importer_exporter_add_gmd_per_format($node, &$record) {
     ),
   );
 
-  $node_wrapper = entity_metadata_wrapper('node', $node);
-
-  foreach ($node_wrapper->field_file_resource->getIterator() as $delta =>
-           $field_collection ) {
     $format = strtolower($field_collection->field_file_format->label());
 
     $pattern = (string) $format_keys[$format] . '_pattern';
@@ -297,6 +323,7 @@ function _cals_importer_exporter_add_gmd_per_format($node, &$record) {
     }
 
     $subfields = array();
+    $snippet = new File_MARC_Record();
 
     foreach ($loaded_pattern as $instance => $tags) { //0 => array of tags
       foreach ($tags as $tag => $codes) { //336 => array of codes
@@ -306,16 +333,15 @@ function _cals_importer_exporter_add_gmd_per_format($node, &$record) {
             unset($key);
           }
         }
-        //Roll up all subfields into a DataField for each tag
+        //Roll up all subfields into a DataField array for each tag
         $field = new File_MARC_Data_Field($tag, $subfields, 0, NULL);
+        //_cals_importer_exporter_insert_field($record, $field, $tag);
+        $snippet->appendField($field);
         unset($subfields);
-
-        //Insert the current field and re-loop, multiple entries can exist
-        _cals_importer_exporter_insert_field($record, $field, $tag);
         unset($field);
       }
     }
-  }
+    return $snippet;
 }
 
 /**
