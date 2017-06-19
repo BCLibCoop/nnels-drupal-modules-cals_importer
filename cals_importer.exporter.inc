@@ -396,6 +396,80 @@ function _cals_importer_exporter_iterate_record(&$record) {
 }
 
 /**
+ * @param File_MARC_Record $record
+ */
+function _cals_importer_exporter_sort_record_datafields($stub) {
+
+  $sortlist = new File_MARC_List();
+  $fresh_list = new File_MARC_List();
+  $unsortedlist = $stub->getFields();
+  $leader = $stub->getLeader();
+  $warnings = $stub->getWarnings();
+
+  /*
+   * Note: For unknown reasons, possibly related to the override of key() in
+   * File_MARC_List class, the next()
+   * method inherited from the parent class
+   * sets current() to null. So while we are calling SplDoublyLinkedList
+   * methods, they aren't iterating at all. $index value and checking
+   * the offset before doing any adding or comparing is the hack to implement
+   * Insert Sort algorithm.
+  */
+
+  foreach ($unsortedlist as $item ) {
+
+    $cloned_item = clone $item; //clone field objects or else the
+    // deleteFields on the record will wipe them out by reference.
+
+    //Dealing with an empty list, append item and manually advance index
+    if ($sortlist->isEmpty() ) {
+      $sortlist->appendNode($cloned_item);
+    } else { //Non-empty list
+      $sortlist->rewind();
+      $index = 0;
+
+      $unsorted_tag = $item->getTag();
+      $check_sort_tag = $sortlist->offsetGet($index)->getTag();//latest
+      settype($unsorted_tag, "integer");
+      settype($check_sort_tag, "integer");
+
+      $valid = $sortlist->valid(); //checking valid status
+      while($sortlist->valid() && $check_sort_tag <= $unsorted_tag
+      ) {
+          $sortlist->next();
+          $index++;
+          //If this position exists, set its tag for next sorting
+          if ($sortlist->offsetExists($index) ) {
+            $check_sort_tag = $sortlist->offsetGet($index)
+            ->getTag(); //get the new
+            // item offset tag and re-run the while check.
+            settype($check_sort_tag, "integer");
+        }
+      }
+      $sortlist->add($index, $cloned_item);
+    }
+    //next $item
+  }
+
+  //Need a new object because __destruct() sets data to NULL and we cannot
+  // build a new one with an existing File_MARC_List object
+  $sorted_record = new File_MARC_Record();
+
+  //Append the sorted fields from the linked list
+  foreach ($sortlist as $tag => $field) {
+    $sorted_record->appendField($field);
+  }
+
+  $sorted_record->setLeader($leader);
+
+//  foreach ($warnings as $warning) {
+//    $sorted_record->addWarning($warning);
+//  }
+
+  return $sorted_record;
+}
+
+/**
  * Add field to record structure
  * @param $record
  * @param $field

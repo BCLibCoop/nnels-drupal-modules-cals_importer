@@ -109,6 +109,50 @@ function _cals_get_marc_xml_string($node) {
   return $xml;
 }
 
+function _cals_get_set_xml_snippet($host_wrapper, $str) {
+  //libxml_use_internal_errors(true);
+  //require '/File/MARCBASE.php';
+
+  //This function gets called multiple times in a bulk op!
+  require_once 'File/MARCXML.php';
+  require_once 'File/MARC/Lint.php';
+
+  $records = '';
+  $stub_record = new File_MARCXML($str, File_MARC::SOURCE_STRING,
+  "http://www.loc.gov/MARC21/slim");
+  $record = $stub_record->next();
+
+  foreach  ( $host_wrapper->field_file_resource->value() as $delta =>
+             $fc ) {
+    $fc_wrapper = entity_metadata_wrapper('field_collection_item',
+      $fc);
+
+    $snippet = $fc_wrapper->field_marc_xml_snippet[0]->value();
+    $snippets = new File_MARCXML($snippet, File_MARC::SOURCE_STRING, "http://www.loc.gov/MARC21/slim");
+    if ($record) {
+      //there's only one record snippet per file resource so just advance once
+      $snippet_context = $snippets->next();
+      $empty = $snippet_context->getFields()->isEmpty();
+      foreach ($snippet_context->getFields() as $tag => $value) {
+
+        //adjust byte 6 of the leader to reflect additional formats since
+        //ingest?
+        $record->appendField($value);
+        $check_record = $record->toXML();
+      }
+
+      //Stub + new fields goes into sorter, returns File_MARC_Record comes out
+      $sorted_record = _cals_importer_exporter_sort_record_datafields($record);
+
+      //For each format add to string as XML
+      //We are in next() so this should be only a single record collection.
+      //Might need to break it out from <collection> node
+      $records .= $sorted_record->toXML();
+    }
+  }
+  return $records;
+}
+
 
 function _cals_entity_wrapper($arr) {
   $node = new EntityDrupalWrapper('node', 1);
