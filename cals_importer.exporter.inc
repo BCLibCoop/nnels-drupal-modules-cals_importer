@@ -298,17 +298,17 @@ function _cals_importer_exporter_callback_245($vars) {
   }
   $code = 245;
   $subfield = 'a';
-  $ind1 = $tag['subfields'][0]['field_indc1'];
-  $rec[245]['ind1'] = $tag['subfields'][0]['field_indc1'];
-  $rec[245]['ind2'] = $tag['subfields'][0]['field_ind2'];
+  $ind2 = 0;
+
   foreach($safe_values as $value) {
     $value = trim($value);
     $ind2 = _cals_importer_exporter_filing_characters($value);
     $rec[245]['subfields'][] = array(
       'value' => $value . '.', 'subfield' => 'a',
     );
-
   }
+  $rec[245]['ind1'] = $tag['field_indc1'];
+  $rec[245]['ind2'] = $ind2;
 
   return $rec;
 
@@ -326,9 +326,9 @@ function _cals_importer_exporter_callback_264($vars) {
   $wrapper = $vars['node_wrapper'];
   $values = _cals_importer_exporter_field_value($node, 'field_publisher');
 
-  $return[264] = array(
-    'ind1' => ' ',
-    'ind2' => ' ',
+  $arr[264] = array(
+    'ind1' => '',
+    'ind2' => '',
   );
   //field_view_field('node', $node, 'title_field', array('default'));
   $safe_values = array();
@@ -341,7 +341,7 @@ function _cals_importer_exporter_callback_264($vars) {
     $s = ($k == 0) ? 'a' : 'b';
     $v = trim($v);
     //$ind2 = _cals_importer_exporter_filing_characters($value);
-    $return[264]['subfields'][] = array(
+    $arr[264]['subfields'][] = array(
       'value' => $v, 'subfield' => $s,
     );
   }
@@ -356,11 +356,14 @@ function _cals_importer_exporter_callback_264($vars) {
     }
   }
   if($dateset) {
-    $return[264]['subfields'][] = array(
+    $arr[264]['subfields'][] = array(
       'value' => $d, 'subfield' => 'c',
     );
   }
-  return $return;
+  $arr[264]['ind1'] = ''; //$tag['field_indc1'];
+  $arr[264]['ind2'] = $tag['field_ind2'];
+  //printAndDie($arr);
+  return $arr;
 
 }
 
@@ -714,13 +717,14 @@ function _cals_importer_exporter_iterate_record($node, &$record, $tags) {
             //e.g., _cals_importer_exporter_callback_245
             //'record' => $record,
             $vars = array('node' => $node, 'tag' => $tag, 'node_wrapper' => $node_wrapper);
+            printPre($callback);
             $tmp = $callback($vars);
+
             $datafields  = $datafields + $tmp;
           }
       }
     }
   }
-
 
   _cals_importer_exporter_iterate_new_record_array($record, $datafields);
 
@@ -730,12 +734,12 @@ function _cals_importer_exporter_iterate_record($node, &$record, $tags) {
 function _cals_importer_exporter_iterate_new_record_array(&$record, $datafields) {
   foreach($datafields as $code => $arr) {
     $subfields = $arr['subfields'];
-    printPre($code, $arr, $subfields);
+    //printPre($code, $arr, $subfields);
     $marc_subfields = _cals_importer_exporter_get_marc_subfield($subfields);
     $field = new File_MARC_Data_Field($code, $marc_subfields, 0, null);
     $field->setIndicator(1, $arr['ind1']);
     $field->setIndicator(2, $arr['ind2']);
-    _cals_importer_exporter_insert_field($record, $field, $key);
+    _cals_importer_exporter_insert_field($record, $field, $code);
   }
 
 }
