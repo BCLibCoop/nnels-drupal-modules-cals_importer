@@ -119,8 +119,8 @@ function rebuild_marc_tag($entity) {
   $subs = array();
   $keys = array(
     'field_subfield_code',
-    'field_indc1',
-    'field_ind2',
+    //'field_indc1',
+    //'field_ind2',
     'field_include_in_export',
     'field_source_value',
     'field_description',
