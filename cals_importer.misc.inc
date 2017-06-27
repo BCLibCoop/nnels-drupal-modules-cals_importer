@@ -44,7 +44,6 @@ function _cals_importer_update_admin_audit($node, $action) {
   $e->save(); 
 }
 
-
  
 /**
  * Helper function to return the nid for a given system number (MARC)
@@ -85,6 +84,38 @@ function _cals_get_message_invalid_xml($node) {
 }
 
 /**
+ * returns
+ * @param $tag
+ * @param null $ind1
+ * @param null $ind2
+ * @param null $code
+ * @return string
+ */
+function _cals_importer_get_xpath_path($tag, $ind1 = NULL, $ind2 = NULL, $code = NULL) {
+  $path = "//marc:datafield[@tag=$tag]";
+  if(isset($ind1)) $path .= "[@ind1='{$ind1}']";
+  if(isset($ind2)) $path .= "[@ind2='{$ind2}']";
+  if(isset($code)) $path .= "/marc:subfield[@code='{$code}']";
+  return $path;
+}
+/**
+ * Returns an array of string values from an xpath statement
+ * @param $path
+ * @return array
+ */
+function _cals_importer_get_xpath_values($tag, $ind1, $ind2, $code, $xml) {
+  $arr = array();
+  $path = _cals_importer_get_xpath_path($tag, $ind1, $ind2, $code);
+  $xpathvalue = $xml->xpath($path);
+  //$tmp = $xml->xpath($path);
+  if (count($xpathvalue) >= 1) {
+    foreach ($xpathvalue as $me)
+      $arr[] = (string) trim($me[0]);
+  }
+  return $arr;
+}
+
+/**
  * Loads XML string from node.
  *
  * @param $node
@@ -110,11 +141,59 @@ function _cals_get_marc_xml_string($node) {
 }
 
 
-function _cals_entity_wrapper($arr) {
-  $node = new EntityDrupalWrapper('node', 1);
-  $node->field_reference[0]->set(463); // Note that this is a multi value field.
-  $node->field_text->set('Some Value'); // Note that this is a single value field.
+/**
+ * Returns an array of indicators for given tag
+ * @param $xml
+ * @param $tag
+ * @return array
+ */
+function _cals_importer_get_marc_indicators($xml, $tag) {
+  $parent = $xml->xpath("//marc:datafield[@tag=$tag]");
+  $ind = array();
+  foreach($parent as $i => $child) {
+    $ind = array(
+      1 => (string) $parent[$i]->attributes()->ind1,
+      2 =>  (string) $parent[$i]->attributes()->ind2,
+    );
+  }
+  return $ind;
 }
+
+/**
+ * Returns number of nonfiling characters (for title fields, etc.)
+ * @param $value
+ * @return int
+ */
+
+function _cals_importer_exporter_filing_characters($value) {
+  $value = strtolower($value);
+  $arr = array(
+    "a ", "a'", "al ", "al- ", "am ", "an ", "an t- ", "ane ", "ang ", "ang mga ",
+    "as ", "az ", "bat ", "bir ", "d'", "da ", "das ", "de ", "dei ", "dem ",
+    "den ", "der ", "des ", "det ", "di ", "die ", "dos ", "e ", "'e ", "een ",
+    "eene ", "egy ", "ei ", "ein ", "eine ", "einem ", "einen ", "einer ",
+    "eines ", "eit ", "el ", "el- ", "els ", "en ", "enne ", "et ", "ett ",
+    "eyn ", "eyne ", "gl'", "gli ", "ha- ", "hai ", "he ", "hē ", "he- ",
+    "heis ", "hen ", "hena ", "henas ", "het ", "hin ", "hina ", "hinar ", "hinir ",
+    "hinn ", "hinna ", "hinnar ", "hinni ", "hins ", "hinu ", "hinum ", "hið ",
+    "ho ", "hoi ", "i ", "ih'", "il ", "il- ", "in ", "it ",
+    "ka ", "ke ", "l'", "l- ", "la ", "las ", "le ", "les ", "lh ", "lhi ",
+    "li ", "lis ", "lo ", "los ", "lou ", "lu ", "mga ", "mia ", "'n ", "na ",
+    "na h- ", "njē ", "ny ", "'o ", "o ", "os ", "'r ", "'s ", "'t ", "ta ",
+    "tais ", "tas ", "tē ", "tēn ", "tēs ", "the ", "to ", "tō ", "tois ",
+    "ton ", "tōn ", "tou ", "um ", "uma ", "un ", "un'", "una ", "une ",
+    "unei ", "unha ", "uno ", "uns ", "unui ", "us ", "y ", "ye ", "yr ");
+
+  foreach($arr as $char) {
+    $len = strlen($char);
+    $substr = substr($value, 0, $len);
+    if($substr == $char) return $len;
+  }
+  return 0;
+
+}
+
+
 
 function _cals_get_tid_by_name($vid, $name) {
   //$name = $v['value'];
