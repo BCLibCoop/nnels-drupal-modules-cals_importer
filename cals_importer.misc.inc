@@ -108,7 +108,7 @@ function _cals_importer_get_xpath_values($tag, $ind1, $ind2, $code, $xml) {
   $path = _cals_importer_get_xpath_path($tag, $ind1, $ind2, $code);
   $xpathvalue = $xml->xpath($path);
   //$tmp = $xml->xpath($path);
-  if (count($xpathvalue) >= 1) {
+  if (count($xpathvalue)) {
     foreach ($xpathvalue as $me)
       $arr[] = (string) trim($me[0]);
   }
