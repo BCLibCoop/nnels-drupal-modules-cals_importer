@@ -196,7 +196,6 @@ function _cals_importer_get_subfield_array() {
     }
   }
   ksort($me);
-  printAndDie($me);
   return $me;
 }
 
