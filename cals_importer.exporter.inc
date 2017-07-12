@@ -619,8 +619,15 @@ function _cals_importer_exporter_parse_subfields($tagset, $wrapper, $record, $xm
     //or do we extract the value directly from Drupal?
     elseif (!empty($fields['drupal_fieldname'])) {
       $tmp = $fields['drupal_fieldname'];
-      $values = $wrapper->{$tmp}->value();
-      $subfields[$code] = $values;
+      if (isset($wrapper->{$tmp})) {
+        $values = $wrapper->{$tmp}->value();
+        $subfields[$code] = $values;
+      }
+      else {
+        drupal_set_message( t("Field not found: please check 'marc-tags-entity-view'
+        to ensure there's no mismatch on fieldname {$tmp} entered for tag = $tag
+        and subcode = $code") );
+      }
     }
     //Otherwise, reparse the original marc record string
     else {
