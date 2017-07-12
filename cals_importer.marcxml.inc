@@ -10,8 +10,30 @@
  */
 function _cals_importer_view_marcxml_stub($node) {
 
-  if(!empty($node->field_xml_stub[LANGUAGE_NONE])) {
-    return $node->field_xml_stub[LANGUAGE_NONE][0]['safe_value'];
+  if(!empty($node->field_xml_stub)) {
+    $array = unserialize($node->field_xml_stub[LANGUAGE_NONE][0]['value']);
+    $items = array();
+    foreach($array as $type => $tags){
+      foreach($tags as $tag => $value) {
+        if($type == 'controlfields') {
+          $items[] = "$tag  = {$value['value']}";
+        }
+        else {
+          if(!empty($value['subfields'])) {
+            foreach($value['subfields'] as $code => $subfield) {
+              $ind1 = (isset($value['ind1'])) ? $value['ind1'] : 'n/a';
+              $ind2 = (isset($value['ind2'])) ? $value['ind2'] : 'n/a';
+              foreach($subfield as $me)
+                $items[] = "$tag\$$code($ind1)($ind2) = $me";
+            }
+          }
+        }
+      }
+    }
+    $vars = array('title' => t('here'), 'items' => $items, 'type' => 'ul', 'attributes' => array());
+    $html = theme('item_list', $vars);
+    return $html;
+    //return $node->field_xml_stub[LANGUAGE_NONE][0]['safe_value'];
   }
   return t('Stub has not been defined. You can click on Create XML Stub entry to generate this');
 }

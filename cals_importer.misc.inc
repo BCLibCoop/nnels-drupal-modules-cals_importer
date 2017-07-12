@@ -147,16 +147,23 @@ function _cals_get_marc_xml_string($node) {
  * @param $tag
  * @return array
  */
-function _cals_importer_get_marc_indicators($xml, $tag) {
+function _cals_importer_get_marc_indicators($xml, $tag, $int) {
   $parent = $xml->xpath("//marc:datafield[@tag=$tag]");
   $ind = array();
+  printAndDie(__FUNCTION__, $parent);
   foreach($parent as $i => $child) {
+    /*
     $ind = array(
       1 => (string) $parent[$i]->attributes()->ind1,
       2 =>  (string) $parent[$i]->attributes()->ind2,
     );
+    */
+    return ($int1 == 1) ? (string) $parent[$i]->attributes()->ind1 :
+      (string) $parent[$i]->attributes()->ind2;
+
   }
-  return $ind;
+
+
 }
 
 /**
@@ -273,7 +280,11 @@ function _cals_get_iso_date($value) {
 
 }
 
-
+/**
+ * @param $arr
+ * @param $entries
+ * @return array
+ */
 
 function _cals_get_keyword_index_values($arr, $entries) {
 
@@ -340,37 +351,56 @@ function _cals_increase_field_size($fieldname = "field_isbn", $size = "30") {
 
 }
 
+function printPrettyArray() {
+  $num = func_num_args();
+  $args = func_get_args();
+  $html = '<hr><blockquote>';
+  for ($i = 0; $i < $num; $i++) {
+    //$my = var_export($args[$i],true);
+    $html .= '<pre>'; print_r($args[$i]); echo'</pre>';
+  }
+  $html .= "</pre></blockquote>";
+  return $html;
+}
+
 function printPre() {
-
-    $num = func_num_args();
-    $args = func_get_args();
-
-    echo '<hr><blockquote>';
-
-    for ($i = 0; $i < $num; $i++) {
-        //$my = var_export($args[$i],true);
-        echo '<pre>'; print_r($args[$i]); echo'</pre>';
-    }
-
-    echo '</blockquote>';
-
-
-    //print("<hr><blockquote><pre>"); print_r($tmp);
-    print("</pre></blockquote>");
+  $num = func_num_args();
+  $args = func_get_args();
+  print '<hr><blockquote>';
+  $functions = debug_backtrace()[1]['function'];
+  //get prior function, if exists
+  if(debug_backtrace()[2]['function']) $functions = debug_backtrace()[2]['function'] . ' => ' . $functions;
+  print $functions;
+  for ($i = 0; $i < $num; $i++) {
+    //$my = var_export($args[$i],true);
+    print '<pre>'; print_r($args[$i]); echo'</pre>';
+  }
+  print("</pre></blockquote>");
 }
 
 function printAndDie() {
-    $num = func_num_args();
-    $args = func_get_args();
+  $num = func_num_args();
+  $args = func_get_args();
+  print '<div class="indented">';
 
-    echo '<div class="indented">';
+  $functions = debug_backtrace()[1]['function'];
+  //get prior function, if exists
+  if(debug_backtrace()[2]['function']) $functions = debug_backtrace()[2]['function'] . ' => ' . $functions;
+  print $functions;
 
-    for ($i = 0; $i < $num; $i++) {
-        //$my = var_export($args[$i],true);
-        echo '<pre>';  print_r($args[$i]);  echo'</pre>';
-    }
-    echo '</div>';
-    die;
+  for ($i = 0; $i < $num; $i++) {
+    //$my = var_export($args[$i],true);
+    print '<pre>';
+    print_r($args[$i]);
+    print '</pre>';
+  }
+  print '</div>';
+  //$functions = debug_backtrace()[1]['function'];
+  //get prior function, if exists
+
+
+  print '</div>';
+  die;
 }
 function printSQL($sql) {
   $sql = trim($sql);
@@ -431,4 +461,153 @@ function _cals_array_sort($array, $on, $order=SORT_ASC){
     }
 
     return $new_array;
+}
+
+/**
+ * To deprecate?
+ */
+
+/**
+ * Iterate thru taxonomy terms (field_subject, field_genre) and add values to
+ * current record
+ *
+ * @param $node
+ * @param $record
+ */
+function _cals_importer_exporter_add_nnels_values_marcxml($node, &$record) {
+  //if vocab, $term = 'field_subject';
+  $fieldnames =
+    array(
+      //'field_system_control_number' => array('001', '', '', '', NULL),
+      'field_dc_creator' => array('040', 'a', 1, '', NULL),
+      'title_field' => array(245, 'a', 1, 4, 'normalize_title'),
+
+      //'field_access_restrictions' => array(),
+    );
+
+  foreach($fieldnames as $fieldname => $marc) {
+    $tag = $marc[0];
+    $code = $marc[1];
+    $ind1 = $marc[2];
+    $ind2 = $marc[3];
+    $callback = $marc[4];
+    $values = field_view_field('node', $node, $fieldname, array('default'));
+
+    if(is_array($values)) {
+      foreach($values['#items'] as $value) {
+        $subfields = array();
+        $safe_value = trim($value['value']);
+        if(!empty($callback)) $callback($safe_value);
+        $subfields = array();
+        if($tag != '001') $subfields[] = new File_MARC_Subfield($code, $safe_value);
+        $field = new File_MARC_Data_Field($tag, $subfields, 0, null);
+        $field->setIndicator(1, $ind1);
+        $field->setIndicator(2, $ind2);
+        _cals_importer_exporter_insert_field($record, $field, $key);
+      }
+    }
+
+  }
+  //return new File_MARC_Data_Field('650', $subfields, 0, null);
+}
+function _iterate_tags_deprecate() {
+
+  $fieldnames =
+    array(
+      //'field_system_control_number' => array('001', '', '', '', NULL),
+      'field_dc_creator' => array('040', 'a', 1, '', NULL),
+      'title_field' => array(245, 'a', 1, 4, 'normalize_title'),
+
+      //'field_access_restrictions' => array(),
+    );
+
+  foreach($fieldnames as $fieldname => $marc) {
+    $tag = $marc[0];
+    $code = $marc[1];
+    $ind1 = $marc[2];
+    $ind2 = $marc[3];
+    $callback = $marc[4];
+    $values = field_view_field('node', $node, $fieldname, array('default'));
+
+    if(is_array($values)) {
+      foreach($values['#items'] as $value) {
+        $subfields = array();
+        $safe_value = trim($value['value']);
+        if(!empty($callback)) $callback($safe_value);
+        $subfields = array();
+        if($tag != '001') $subfields[] = new File_MARC_Subfield($code, $safe_value);
+        $field = new File_MARC_Data_Field($tag, $subfields, 0, null);
+        $field->setIndicator(1, $ind1);
+        $field->setIndicator(2, $ind2);
+        _cals_importer_exporter_insert_field($record, $field, $key);
+      }
+    }
+
+  }
+
+  foreach ($record->getFields() as $tag=>$value) {
+
+    if ($value instanceof File_MARC_Control_Field) {
+
+    }
+    else {
+      $sub = array();
+      foreach ($value->getSubfields() as $code=>$subdata) {
+        $sub[$code] = array(
+          'value' => $subdata->getData(),
+        );
+      }
+      if(!empty($tag)) {
+        //$tag2 = str_replace($tag,'', 0, 0);
+        if(substr($tag, 0, 1) == '0') {
+          $tag = ltrim($tag, '0');
+
+        }
+        $df[$tag] = array(
+          'ind1' => $value->getIndicator(1),
+          'ind2' => $value->getIndicator(2),
+          'sub' => $sub,
+
+        );
+
+      }
+
+    }
+  }
+  ksort($df);
+}
+
+
+/**
+ * Taxonomy terms (field_subject, field_genre) and add values to
+ * current record
+ *
+ * @param $node
+ * @param $record
+ */
+function _cals_importer_exporter_add_taxonomy_terms_marcxml($node, &$record) {
+  //if vocab, $term = 'field_subject';
+  $fieldnames =
+    array(
+      'field_subject' => array(650, 'a', 1, 4),
+      'field_genre' => array(655, 'a', ' ', 7),
+    );
+
+  foreach($fieldnames as $fieldname => $marc) {
+    $tag = $marc[0];
+    $code = $marc[1];
+    $ind1 = $marc[2];
+    $ind2 = $marc[3];
+    $terms = field_view_field('node', $node, $fieldname, array('default'));
+    if(is_array($terms)) {
+      foreach($terms["#items"] as $term){
+        $subfields = array();
+        $subfields[] = new File_MARC_Subfield($code, $term["taxonomy_term"]->name);
+        $field = new File_MARC_Data_Field($tag, $subfields, 0, null);
+        $field->setIndicator(1, $ind1);
+        $field->setIndicator(2, $ind2);
+        _cals_importer_exporter_insert_field($record, $field, $tag);
+      }
+    }
+  }
 }

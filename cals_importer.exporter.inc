@@ -65,14 +65,25 @@ function _cals_importer_create_marc_stub_vbo(&$entity, $context = array()) {
     else{
       drupal_set_message(t("Invalid selection: not a repos item"));
     }
-
   }//end main if
 
   return "";
 
 }
 
-function rebuild_marc_tag($entity) {
+
+function _cals_importer_normalize_indicators($str) {
+  $str = trim($str);
+  if($str == '""' || $str = "''") return '';
+  return $str;
+}
+
+/**
+ * @param $entity
+ * @return array|void
+ */
+
+function _cals_importer_exporter_rebuild_array_marc_tag($entity) {
   $me = array();
   $wrapper = $entity->wrapper();
   $field = 'id';
@@ -80,65 +91,93 @@ function rebuild_marc_tag($entity) {
   $code = $wrapper->{$field}->value();
   $field_code = _cals_importer_exporter_get_normalized_code(
     trim($wrapper->{$field}->value()));
-  if($field_code == 'ldr' || $code < 20) return;
+  //if($field_code == 'ldr' || $code < 20) return;
+  $tag_type = $wrapper->field_marc_tag_type->value();
+  if($tag_type < 2) return;
   $me['field_code'] = $field_code;
+  $me['tag'] = $field_code;
+  $me['tag_type'] = $tag_type;
   $me['callback'] = '_cals_importer_exporter_callback_' . $field_code;
   $me['callback_exists'] = (function_exists($me['callback'])) ? TRUE : FALSE;
+
+  $ind1 = ($wrapper->field_indc1->value() == "''") ? '' : $wrapper->field_indc1->value();
+  $ind2 = ($wrapper->field_ind2->value() == "''") ? '' : $wrapper->field_ind2->value();
+
+  $me['ind1'] = $ind1; // $wrapper->field_indc1->value();
+  $me['ind2'] = $ind2; //$wrapper->field_ind2->value();
+
+  if($tag_type == 3) {
+    //$me['ind1'] = _cals_importer_normalize_indicators($wrapper->field_indc1->value());
+    //$me['ind2'] = _cals_importer_normalize_indicators($wrapper->field_ind2->value());
+  }
+
+  //if($field_code == 246) printAndDie($me, $wrapper->field_indc1->value(), $wrapper->field_ind2->value());
+
+  //printAndDie(__FUNCTION__,$wrapper->getPropertyInfo());
   $fields = array(
     //'id',
     'title',
     'field_include_in_export',
-
     'field_functions',
-    'field_indc1',
-    'field_ind2',
     'field_source_value',
     'field_subfield_code',
+    'field_marc_tag_type',
   );
 
   foreach($fields as $field) {
     $info = $wrapper->{$field}->info();
+    $abbrev = str_replace("field_", '', $field);
 
     switch($field) {
 
       case 'title':
-        $me[$field] = $wrapper->{$field}->value(array('sanitize' => TRUE));
+        $me[$abbrev] = $wrapper->{$field}->value(array('sanitize' => TRUE));
         break;
       case 'field_description':
-        $me[$field] = $wrapper->{$field}->value(array('decode' => TRUE));
+        $me[$abbrev] = $wrapper->{$field}->value(array('decode' => TRUE));
         break;
 
       default:
         $value = $wrapper->{$field}->value();
-        if(is_string($value)) $me[$field] = trim($value);
+        if(is_string($value)) $me[$abbrev] = trim($value);
         break;
-
     }
   }
-  $subs = array();
-  $keys = array(
-    'field_subfield_code',
-    //'field_indc1',
-    //'field_ind2',
-    'field_include_in_export',
-    'field_source_value',
-    'field_description',
-  );
-
-  foreach($wrapper->field_marc_subfield_collection as $fc_wrapper) {
-    //$info = $fc_wrapper->getPropertyInfo();
-    //$keys = array_keys($info);
-    foreach($keys as $field) {
-      $subs[$field] = trim($fc_wrapper->{$field}->value());
-      $key = $fc_wrapper->field_subfield_code->value();
-    }
-    $me['subfields'][$key] = $subs;
+  if($tag_type == 3) {
+    $subs = array();
+    $me['subfields'] = _cals_importer_get_subfields_collection_fields($wrapper);
   }
-  $field = 'field_description';
-  $me[$field] = trim($wrapper->{$field}->value());
 
+  $me['description'] = trim($wrapper->field_description->value());
   return $me;
 
+}
+function _cals_importer_get_subfields_collection_fields($wrapper) {
+  $subfields = array();
+  foreach($wrapper->field_marc_subfield_collection as $fc_wrapper) {
+    $info = $fc_wrapper->getPropertyInfo();
+    $subs = array();
+    $code = $fc_wrapper->field_subfield_code->value();
+    foreach($fc_wrapper as $fieldname => $array) {
+      if(substr($fieldname, 0, 6) == 'field_' && $fieldname != 'field_name') {
+        $str = str_replace("field_", '', $fieldname);
+        $fieldtype = trim($info[$fieldname]['type']) . "x"; //for some reason, can't check this.
+        if($fieldtype == 'listx') printAndDie(__FUNCTION__,"WTF");
+        if($str == 'drupal_fieldname') {
+          $val = $fc_wrapper->{$fieldname}[0]->value();
+        }
+        else {
+          $val = trim($fc_wrapper->{$fieldname}->value());
+        }
+        $subs[$str] = $val;
+
+      }
+    }
+
+    $subfields[$code] = $subs;
+
+  }
+  return $subfields;
 }
 
 function _cals_importer_get_subfield_array() {
@@ -146,15 +185,18 @@ function _cals_importer_get_subfield_array() {
   $es = entity_load("marc_tag", FALSE);
   $me = array();
   foreach($es as $id => $e) {
-    $tagset = rebuild_marc_tag($e);
-    if(is_array($tagset)) {
-      $key = $tagset['field_code'];
-      $me[$key] = $tagset;
+    if(!empty($e->field_marc_tag_type) && $e->field_marc_tag_type[LANGUAGE_NONE][0]['value'] > 1) {
+      $tagset = _cals_importer_exporter_rebuild_array_marc_tag($e);
+      //if($me['field_code'] == 720) printAndDie(__FUNCTION__,$me);
+      if(is_array($tagset)) {
+        $key = $tagset['field_code'];
+        $type = ($e->field_marc_tag_type[LANGUAGE_NONE][0]['value'] == 2) ? 'controlfields' : 'datafields';
+        $me[$type][$key] = $tagset;
+      }
     }
-
   }
+  ksort($me);
   return $me;
-
 }
 
 /**
@@ -166,27 +208,26 @@ function _cals_importer_get_subfield_array() {
  */
 function _cals_importer_create_marc_stub($node) {
   $tags = _cals_importer_get_subfield_array(); //tag mappings
-
   $lint = new File_MARC_Lint();
-
   $xml_string = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
   $xml_string = MARC_HEADER . $xml_string . '</marc:collection>';
-  //$xml = simplexml_load_string($xml_string);
+
   $records = new File_MARCXML($xml_string, File_MARC::SOURCE_STRING, "http://www.loc.gov/MARC21/slim");
   //$xml = _cals_get_marc_xml_string($node);
-
-  //printAndDie($xml);
-
+  
   $n = 0;
   while ($record = $records->next()) {
-    $n++;
-    //_cals_importer_exporter_marcxml_remove_tags($record, $tags);
+
+    //$xml = simplexml_load_string($xml_string);
+    _cals_importer_exporter_marcxml_remove_tags($record, $tags);
     //_cals_importer_exporter_callback_245($node, $record);
     //_cals_importer_exporter_add_taxonomy_terms_marcxml($node, $record);
-    //iterate through records
 
+    $marcfields = _cals_importer_exporter_get_marc_fields($node, $record, $tags);
+    $node->field_xml_stub[LANGUAGE_NONE][0]['value'] = serialize($marcfields);
 
-    _cals_importer_exporter_iterate_record($node, $record, $tags);
+    //with new datafields, generate the new record
+    _cals_importer_exporter_build_new_record($record, $marcfields);
     $valid = $lint->checkRecord($record);
     if(count($valid)) {
       $vars = array("items" => $valid , "title" => "XML Stub Created with following errors", "type" => "ol", "attributes" => array());
@@ -198,56 +239,15 @@ function _cals_importer_create_marc_stub($node) {
 
     $new_xml_stub = $record->toXML("UTF-8", FALSE, FALSE);
     //$new_xml_stub = $record->toRaw();
+
+    //$node->field_xml_stub[LANGUAGE_NONE][0]['value'] = $new_xml_stub;
+    //_cals_importer_update_admin_audit($node,  $action);
+    node_save($node);
   }
 
-  $node->field_xml_stub[LANGUAGE_NONE][0]['value'] = $new_xml_stub;
-  //_cals_importer_update_admin_audit($node,  $action);
-  node_save($node);
 
 }
-/**
- * Iterate thru taxonomy terms (field_subject, field_genre) and add values to
- * current record
- *
- * @param $node
- * @param $record
- */
-function _cals_importer_exporter_add_nnels_values_marcxml($node, &$record) {
-  //if vocab, $term = 'field_subject';
-  $fieldnames =
-    array(
-      //'field_system_control_number' => array('001', '', '', '', NULL),
-      'field_dc_creator' => array('040', 'a', 1, '', NULL),
-      'title_field' => array(245, 'a', 1, 4, 'normalize_title'),
 
-      //'field_access_restrictions' => array(),
-    );
-
-  foreach($fieldnames as $fieldname => $marc) {
-    $tag = $marc[0];
-    $code = $marc[1];
-    $ind1 = $marc[2];
-    $ind2 = $marc[3];
-    $callback = $marc[4];
-    $values = field_view_field('node', $node, $fieldname, array('default'));
-
-    if(is_array($values)) {
-      foreach($values['#items'] as $value) {
-        $subfields = array();
-        $safe_value = trim($value['value']);
-        if(!empty($callback)) $callback($safe_value);
-        $subfields = array();
-        if($tag != '001') $subfields[] = new File_MARC_Subfield($code, $safe_value);
-        $field = new File_MARC_Data_Field($tag, $subfields, 0, null);
-        $field->setIndicator(1, $ind1);
-        $field->setIndicator(2, $ind2);
-        _cals_importer_exporter_insert_field($record, $field, $key);
-      }
-    }
-
-  }
-  //return new File_MARC_Data_Field('650', $subfields, 0, null);
-}
 
 function _cals_importer_exporter_field_value($node, $fieldname) {
   $values = field_view_field('node', $node, $fieldname, array('default'));
@@ -256,47 +256,14 @@ function _cals_importer_exporter_field_value($node, $fieldname) {
 
 
 function normalize_title(&$value) {
-  $last = substr($string, -1);
-
+  $last = substr($value, -1);
   if($last != '.') $value .= '.';
 }
 
-
 /**
- * Taxonomy terms (field_subject, field_genre) and add values to
- * current record
- *
- * @param $node
- * @param $record
+ * @param $code
+ * @return string
  */
-function _cals_importer_exporter_add_taxonomy_terms_marcxml($node, &$record) {
-  //if vocab, $term = 'field_subject';
-  $fieldnames =
-    array(
-      'field_subject' => array(650, 'a', 1, 4),
-      'field_genre' => array(655, 'a', ' ', 7),
-    );
-
-  foreach($fieldnames as $fieldname => $marc) {
-    $tag = $marc[0];
-    $code = $marc[1];
-    $ind1 = $marc[2];
-    $ind2 = $marc[3];
-    $terms = field_view_field('node', $node, $fieldname, array('default'));
-    if(is_array($terms)) {
-      foreach($terms["#items"] as $term){
-        $subfields = array();
-        $subfields[] = new File_MARC_Subfield($code, $term["taxonomy_term"]->name);
-        $field = new File_MARC_Data_Field($tag, $subfields, 0, null);
-        $field->setIndicator(1, $ind1);
-        $field->setIndicator(2, $ind2);
-        _cals_importer_exporter_insert_field($record, $field, $tag);
-      }
-    }
-  }
-  //return new File_MARC_Data_Field('650', $subfields, 0, null);
-}
-
 function _cals_importer_exporter_get_normalized_code($code) {
   $code = trim($code);
 
@@ -495,188 +462,235 @@ function _cals_importer_exporter_add_gmd_per_format($field_collection) {
  * @param $record
  */
 function _cals_importer_exporter_marcxml_remove_tags(&$record, $tags) {
-  $tags = array(
-    '020', '040', 100, 245, 246,
-    300, 336, 337, 338, 344,
-    347, 538, 506, 520, 521, 534,
-    650, 655);
-  foreach($tags as $tag) {
-    $x = $record->deleteFields($tag);
-  }
-}
-function _cals_importer_exporter_marcxml_remove_tagsxxxx() {
-  foreach($tags as $tag) {
-    $code = _cals_importer_exporter_get_normalized_code($tag['field_code']);
-    $title = $tag['title'];
-    $export = $tag['field_include_in_export'];
-    $source = $tag['field_source_value'];
+  $tags = array();
+  //control tags to delete
+  $arr = array('001', '005', '008');
 
-    //$tmp = array("code", "export", "source");
-    if($code != 'ldr') {
-
-      switch($export . '::' . $source) {
-        case "1::1":
-          //printPre("$title | code = $code | export = $export | source = $source");
-          $x = $record->deleteFields($code);
-
-
-          break;
-      }
-
+  foreach ($record->getFields() as $tag=>$value) {
+    if ($value instanceof File_MARC_Data_Field || in_array($tag, $arr) ) {
+      $tags[] = $tag;
+    }
+    else {
+      if($tag == 0051111) $tags[] = $tag;
     }
   }
-}
-
-function _cals_importer_exporter_get_something($vars) {
-  $subfields = $vars['subfields'];
-  foreach($subfields as $subcode => $details) {
-
-    printAndDie(__FUNCTION__, "SUBCODE = $subcode", $details, $vars);
-
-    if($key == $tag && $details['field_include_in_export'] == 2) {
-      $sub[$code][] = array(
-        'value' => $subdata->getData(),
-        'subfield' => $code
-      );
-    }
+  foreach($tags as $tag) {
+    $n = $record->deleteFields($tag);
   }
-
 }
-
 /**
  * Parses the original marc file
  * @param $record
  * @param $tags
  * @param $xml
  */
-function _cals_importer_exporter_parse_original_marc($record, $vars, $xml) {
-  $tag = $vars['field_code'];
-  //printAndDie(__FUNCTION__, $tag, $vars);
-
-  foreach($vars['subfields'] as $code => $value) {
-    if(strlen($code) != 1) return;
-    $values = _cals_importer_get_xpath_values($tag, NULL, NULL, $code, $xml);
-    if(empty($values)) return;
-
-    //else continue
-
-    $ind1 = $vars['field_indc1'];
-    $ind2 = $vars['field_ind2'];
-    $inds = array();
-    if ($ind1 == 'use MarcXML indicators') {
-      $inds = _cals_importer_get_marc_indicators($xml, $tag);
-      printPre("USE MARC INDICATORS", $inds);
-    }
-    else {
-      $inds[1] = $ind1;
-      $inds[2] = $ind2;
-
-    }
-    if(count($inds)) {
-      $values = _cals_importer_get_xpath_values($tag, $inds[1], $inds[2], $code, $xml);
-      if (count($values)) {
-
-        $return = array($tag => array("ind1" => $inds[1], "ind2" => $inds[2]));
-        foreach ($values as $value) {
-          $return[$tag]['subfield'][$code][] =  $value;
-        }
-      }
-    }
-    return $return;
-
-  }
-
-
-    /*
-  printPre($tags[$tag]);
-  foreach($record->getFields(240) as $code=>$value) {
-    printPre("CODE = $code", $value);
-    $ind1 = $value->getIndicator(1);
-    $ind2 = $value->getIndicator(2);
-    $subdata = $value->getSubfields();
-    foreach($subdata as $i => $v) {
-      printPre("SUBDATA: $tag = $tag | ind1 = $ind1 | ind2 = $ind2 | code = {$v->getCode()} | value = {$v->getData()}");
-    }
-    printPre($code, "IND1: $ind1", $value->getSubfields());
-  }
-  //die;
-
-  //method using xpath:
-
-  */
-
+function _cals_importer_exporter_parse_original_marc($tagset, $code, $record, $xml) {
+  $ind1 = $tagset['ind1'];
+  $ind2 = $tagset['ind2'];
+  $tag = $tagset['tag'];
+  $subdata = $tagset['subfields'][$code];
+  $values =  _cals_importer_get_xpath_values($tag, NULL, NULL, $code, $xml);
+  if(empty($values)) return;
+  return $values;
 }
 
 /**
  * Placeholder function
  * @param $record
  */
-function _cals_importer_exporter_iterate_record($node, &$record, $tags) {
-  //$tags = _cals_importer_exporter_normalize_tags($tags);
+function _cals_importer_exporter_get_marc_fields($node, &$record, $tags) {
   $node_wrapper = entity_metadata_wrapper('node', $node);
-  $datafields = array();
+  $fields = array();
   $xml = _cals_get_marc_xml_string($node);
-  //loop thru tags
+  //_cals_importer_exporter_parse_controlfields or
+  // _cals_importer_exporter_parse_datafields
+  foreach ($tags as $type => $tagset) {
+    $function = '_cals_importer_exporter_parse_' . $type;
+    $tmp = $function($node, $node_wrapper, $record, $tagset);
+    if(!empty($tmp))
+      $fields = $fields + $tmp;
+  }
+  ksort($fields);
+  return $fields;
+}
 
-  foreach($tags as $tag) {
-    $callback_exists = $tag['callback_exists'];
-    $code = $tag['field_code'];
-    if($code != 24533333) {
-      $export = $tag['field_include_in_export'];
-      $source = $tag['field_source_value'];
-      $ex_source = $export . '.' . $source;
-      $x = $record->deleteFields($code);
+function _cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$record, $tags) {
+  foreach($tags as $tag => $arr) {
 
-      switch ($ex_source) {
-        case 1.1:
+    switch($tag) {
+      case '001':
+        if(!empty($node->field_system_control_number))
+          $val = $node->field_system_control_number[LANGUAGE_NONE][0]['value'];
+        else
+          $val = $node->field_isbn[LANGUAGE_NONE][0]['value'];
+        break;
 
-          break;
-        case 2.1:
-        case 5.1:
-          $vars = array("code" => $code, 'tag' => $tag);
-          break;
-      }
+      case '003':
+        $val = 'BVNNELS';
+        break;
+
+      case '005':
+        $val = $node->changed;
+        //yyyymmddhhmmss.f
+        $val = date('YmdHis.0', $val);
+        break;
+      case '008':
+
+        $val = _cals_importer_export_callback_008($node);
+
+        break;
+
+    }
+    $tmp['controlfields'][$tag] = array(
+      'value' => $val,
+      'required' => $arr['include_in_export']
+    );
+
+
+  }
+  return $tmp;
+
+}
+
+function _cals_importer_exporter_parse_datafields($node, $node_wrapper, &$record, $tags) {
+  $xml = _cals_get_marc_xml_string($node);
+  $arr = array();
+  $tmp = array();
+  foreach($tags as $tag => $tagset) {
+    $callback_exists = $tagset['callback_exists'];
+    if($tag !== 511111111) {
+      $subs = $tagset['subfields'];
+      //Treat parent tag as a unit if callback exists.
       if ($callback_exists) {
         $vars = array(
           'node' => $node,
           'tag' => $tag,
           'node_wrapper' => $node_wrapper
         );
-        $callback = $tag['callback'];
+        $callback = $tagset['callback'];
         $tmp = $callback($vars);
-        $datafields = $datafields + $tmp;
       }
       else {
-        $tmp = _cals_importer_exporter_parse_original_marc($record, $tag, $xml);
-        if(is_array($tmp))
-          $datafields = $datafields + $tmp;
-        //printAndDie($tags);
+        //parse subfields
+        $tmp = _cals_importer_exporter_parse_subfields($tagset, $node_wrapper, $record, $xml);
+        if (is_array($tmp) && !empty($tmp[$tag]['subfields'])) {
+          $ind1 = $tagset['ind1'];
+          $ind2 = $tagset['ind2'];
+          if ($ind1 == 'use MarcXML indicators') {
+            $ind1 = _cals_importer_get_marc_indicators($xml, $tag);
+          }
+          if ($ind2 == 'use MarcXML indicators') {
+            $ind2 = _cals_importer_get_marc_indicators($xml, $tag);
+          }
+          $tmp[$tag]['ind1'] = $ind1;
+          $tmp[$tag]['ind2'] = $ind2;
+        }
+      }
 
+    }
+    //include the array even if empty so we can track invalid records
+    if(!empty($tmp[$tag]['subfields']) || $tmp[$tag]['required'] == 1) {
+      $arr['datafields'][$tag] = $tmp[$tag];
+      $arr['datafields'][$tag]['required'] = $tagset['include_in_export'];
+    }
+  }
+  return $arr;
+}
+
+/**
+ * @param $tagset
+ * @param $wrapper
+ * @param $record
+ * @param $xml
+ * @return array
+ */
+function _cals_importer_exporter_parse_subfields($tagset, $wrapper, $record, $xml) {
+  $tag = $tagset['tag'];
+  $datafields = $tagset['subfields'];
+  $subfields = array();
+  foreach($datafields as $code => $fields) {
+    $code = trim($fields['subcode']);
+    $cb = "_cals_importer_exporter_callback_" . $tag . "_" . $code;
+    //check to see if there is a callback for specific code
+    if (function_exists($cb)) {
+      //still working on these!!
+      $subfields[$code] = array("YO PLACEHOLDER");
+    }
+    //or do we extract the value directly from Drupal?
+    elseif (!empty($fields['drupal_fieldname'])) {
+      $tmp = $fields['drupal_fieldname'];
+      $values = $wrapper->{$tmp}->value();
+      $subfields[$code] = $values;
+    }
+    //Otherwise, reparse the original marc record string
+    else {
+      $tmp = _cals_importer_exporter_parse_original_marc($tagset, $code, $record, $xml);
+      if (!empty($tmp)) {
+        $subfields[$code] = $tmp;
       }
     }
   }
-  ksort($datafields);
-
-  _cals_importer_exporter_iterate_new_record_array($record, $datafields);
-
+  $me[$tag]['subfields'] = $subfields;
+  return $me;
 }
 
-function _cals_importer_exporter_iterate_new_record_array(&$record, $datafields) {
-  //printAndDie(__FUNCTION__, $datafields);
-  //printPre($datafields);
-  foreach($datafields as $code => $arr) {
-    $subfields = $arr['subfield'];
-    //printPre($code, $arr, $subfields);
-    $marc_subfields = _cals_importer_exporter_get_marc_subfield($subfields);
-    //printAndDie($subfields, $marc_subfields,  __FUNCTION__);
+/**
+ * Returns a new record based on datafields
+ *
+ * @param $record
+ * @param $datafields
+ */
+function _cals_importer_exporter_build_new_record(&$record, $marcfields) {
+  foreach ($marcfields as $type => $arr) {
+    $fields = $marcfields[$type];
+    $function = '_cals_importer_exporter_iterate_' . $type;
+    $function($record, $fields);
+  }
+}
 
-    $field = new File_MARC_Data_Field($code, $marc_subfields, 0, null);
-    $field->setIndicator(1, $arr['ind1']);
-    $field->setIndicator(2, $arr['ind2']);
+/**
+ * Iterate thru array of controlfields to insert xml controlfields
+ * @param $record
+ * @param $controlfields
+ */
+function _cals_importer_exporter_iterate_controlfields(&$record, $controlfields) {
+  foreach($controlfields as $tag => $arr) {
+    $data = $arr['value'];
+    $field = new File_MARC_Control_Field($tag, $data, null, null);
+    if($arr['required'] == 1 && empty($data))
+      drupal_set_message("Missing subfields for tag $code. Invalid XML Record Stub.");
     _cals_importer_exporter_insert_field($record, $field, $code);
   }
-
 }
+/**
+ * Iterate thru array of datafields to insert xml datafields
+ * @param $record
+ * @param $datafields
+ */
+function _cals_importer_exporter_iterate_datafields(&$record, $datafields) {
+  foreach($datafields as $code => $arr) {
+
+    $subfields = $arr['subfields'];
+    if(empty($subfields)) {
+      if($arr['required'] == 1)
+        //throw error msg
+        drupal_set_message("Missing subfields for tag $code. Invalid XML Record Stub.");
+    }
+    else {
+      $marc_subfields = _cals_importer_exporter_get_marc_subfield($subfields);
+      $field = new File_MARC_Data_Field($code, $marc_subfields, 0, null);
+      $field->setIndicator(1, "{$arr['ind1']}");
+      $field->setIndicator(2, "{$arr['ind2']}");
+      _cals_importer_exporter_insert_field($record, $field, $code);
+    }
+  }
+}
+
+/**
+ * Get MARC formatted subfields (see FILE_MARC)
+ * @param $arr
+ * @return array
+ */
 function _cals_importer_exporter_get_marc_subfield($arr) {
   $subfields = array();
   foreach ($arr as $code => $values) {
@@ -685,18 +699,6 @@ function _cals_importer_exporter_get_marc_subfield($arr) {
     }
   }
   return $subfields;
-}
-
-function _populate_record() {
-  printAndDie(__FUNCTION__, $tags);
-  printAndDie(__FUNCTION__, $tag, $value, "indicator 2 = $ind2");
-
-  $subfields = array();
-  $subfields[] = new File_MARC_Subfield($subfield, $value);
-  $field = new File_MARC_Data_Field($tag, $subfields, 0, null);
-  $field->setIndicator(1, $ind1);
-  $field->setIndicator(2, $ind2);
-  _cals_importer_exporter_insert_field($record, $field, $key);
 }
 
 /**
@@ -708,75 +710,6 @@ function _populate_record() {
  */
 function _cals_importer_exporter_insert_field(&$record, $field, $id) {
   //e.g., id = 650
-  //_cals_importer_exporter_iterate_record($record);
+  //_cals_importer_exporter_get_datafields($record);
   $record->appendField($field);
-}
-
-function _iterate_tags_deprecate() {
-
-  $fieldnames =
-    array(
-      //'field_system_control_number' => array('001', '', '', '', NULL),
-      'field_dc_creator' => array('040', 'a', 1, '', NULL),
-      'title_field' => array(245, 'a', 1, 4, 'normalize_title'),
-
-      //'field_access_restrictions' => array(),
-    );
-
-  foreach($fieldnames as $fieldname => $marc) {
-    $tag = $marc[0];
-    $code = $marc[1];
-    $ind1 = $marc[2];
-    $ind2 = $marc[3];
-    $callback = $marc[4];
-    $values = field_view_field('node', $node, $fieldname, array('default'));
-
-    if(is_array($values)) {
-      foreach($values['#items'] as $value) {
-        $subfields = array();
-        $safe_value = trim($value['value']);
-        if(!empty($callback)) $callback($safe_value);
-        $subfields = array();
-        if($tag != '001') $subfields[] = new File_MARC_Subfield($code, $safe_value);
-        $field = new File_MARC_Data_Field($tag, $subfields, 0, null);
-        $field->setIndicator(1, $ind1);
-        $field->setIndicator(2, $ind2);
-        _cals_importer_exporter_insert_field($record, $field, $key);
-      }
-    }
-
-  }
-
-  foreach ($record->getFields() as $tag=>$value) {
-
-    if ($value instanceof File_MARC_Control_Field) {
-      //printPre("TAG = $tag | CODE = $code | VALUE = " . $value->getData());
-    }
-    else {
-
-      $sub = array();
-      foreach ($value->getSubfields() as $code=>$subdata) {
-        //printPre("TAG = $tag | CODE = $code | VALUE = " . $subdata->getData());
-        $sub[$code] = array(
-          'value' => $subdata->getData(),
-        );
-      }
-      if(!empty($tag)) {
-        //$tag2 = str_replace($tag,'', 0, 0);
-        if(substr($tag, 0, 1) == '0') {
-          $tag = ltrim($tag, '0');
-
-        }
-        $df[$tag] = array(
-          'ind1' => $value->getIndicator(1),
-          'ind2' => $value->getIndicator(2),
-          'sub' => $sub,
-
-        );
-
-      }
-
-    }
-  }
-  ksort($df);
 }
