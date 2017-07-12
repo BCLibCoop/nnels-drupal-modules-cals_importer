@@ -589,7 +589,7 @@ function _cals_importer_exporter_parse_datafields($node, $node_wrapper, &$record
 
     }
     //include the array even if empty so we can track invalid records
-    if(!empty($tmp[$tag]['subfields']) || (isset($tmp[$tag]) && $tmp[$tag]['required'] == 1)) {
+    if(!empty($tmp[$tag]['subfields']) || (isset($tmp[$tag]['required']) && $tmp[$tag]['required'] == 1)) {
       $arr['datafields'][$tag] = $tmp[$tag];
       $arr['datafields'][$tag]['required'] = $tagset['include_in_export'];
     }
