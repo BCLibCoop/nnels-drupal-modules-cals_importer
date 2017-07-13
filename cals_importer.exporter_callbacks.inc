@@ -283,6 +283,32 @@ function _cals_importer_exporter_callback_511($vars) {
   return $me;
 
 }
+
+/**
+ * This should be the Publisher (Source) field in Drupal. For example:
+ * $c Englewood Cliffs, N.J. : Prentice Hall, 1974.
+ * Ideally, we would include the date from the DC Date Issued field in Drupal
+ * if the date doesn’t exist in the Publisher (Source) field in Drupal.
+ * @param $vars
+ * @return array
+ */
+function _cals_importer_exporter_callback_534($vars) {
+  $node = $vars['node'];
+  $tag = $vars['tag'];
+
+  $wrapper = $vars['node_wrapper'];
+  $subfields = array();
+  $values = $wrapper->field_publisher_source->value();
+  foreach($values as $value) {
+    $subfields['c'][] = $value;
+  }
+
+  $arr =  _cals_build_marc_subfield_array($tag, $subfields);
+  $arr[$tag]['ind1'] = '';
+  $arr[$tag]['ind2'] = '';
+  return $arr;
+
+}
 /**
  * Added Entry--Uncontrolled Name/Name
  * $a should be the Creator field in Drupal
