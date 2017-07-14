@@ -157,7 +157,7 @@ function _cals_importer_get_marc_indicators($xml, $tag, $int) {
       2 =>  (string) $parent[$i]->attributes()->ind2,
     );
     */
-    return ($int1 == 1) ? (string) $parent[$i]->attributes()->ind1 :
+    return ($int == 1) ? (string) $parent[$i]->attributes()->ind1 :
       (string) $parent[$i]->attributes()->ind2;
   }
 }
