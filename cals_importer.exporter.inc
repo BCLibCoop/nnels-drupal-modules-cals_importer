@@ -478,7 +478,7 @@ function _cals_importer_exporter_parse_original_marc($tagset, $code, $record, $x
   $ind1 = $tagset['ind1'];
   $ind2 = $tagset['ind2'];
   $tag = $tagset['tag'];
-  $subdata = $tagset['subfields'][$code];
+  //$subdata = $tagset['subfields'][$code];
   $values =  _cals_importer_get_xpath_values($tag, NULL, NULL, $code, $xml);
   if(empty($values)) return;
   return $values;
