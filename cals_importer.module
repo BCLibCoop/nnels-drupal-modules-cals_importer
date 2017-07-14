@@ -172,7 +172,7 @@ function cals_importer_menu() {
     'page arguments' => array(1),
     'weight' => 100,
     'access arguments' => array('view marcxml stub'),
-    'file' => 'cals_importer.marcxml.inc',
+    'file' => 'cals_importer.exporter.inc',
 
   );
   //generate cors s3 filesize values

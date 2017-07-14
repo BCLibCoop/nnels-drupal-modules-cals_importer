@@ -150,7 +150,7 @@ function _cals_get_marc_xml_string($node) {
 function _cals_importer_get_marc_indicators($xml, $tag, $int) {
   $parent = $xml->xpath("//marc:datafield[@tag=$tag]");
   $ind = array();
-  printAndDie(__FUNCTION__, $parent);
+  //printAndDie(__FUNCTION__, $parent);
   foreach($parent as $i => $child) {
     /*
     $ind = array(
@@ -360,6 +360,10 @@ function printPrettyArray() {
     $html .= '<pre>'; print_r($args[$i]); echo'</pre>';
   }
   $html .= "</pre></blockquote>";
+
+  print $html;
+  die;
+
   return $html;
 }
 

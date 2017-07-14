@@ -1,4 +1,47 @@
 <?php
+
+/**
+ * Returns the subfield array when provided w/ a Drupal fieldname + code +
+ * wrappper
+ *
+ * @param $code
+ * @param $fieldname
+ * @param $wrapper
+ * @return array
+ */
+
+function _cals_importer_exporter_get_subfield_array_from_drupal_fields($code, $fieldname, $wrapper) {
+  $arr = array();
+  if(!empty($wrapper->{$fieldname}->value())) {
+    $values = $wrapper->{$fieldname}->value();
+    if(is_string($values) && !empty(trim($values))) {
+      $arr[$code][] = $values;
+    }
+    if(is_array($values)) {
+      foreach($values as $value) {
+        $arr[$code][] = $value;
+      }
+    }
+  }
+  return $arr; // = array();
+}
+
+/**
+ * Returns a subfield array when given a tag and existing subfield array;
+ *
+ * @param $tag
+ * @param $subfields
+ * @return array
+ *
+ */
+function _cals_build_marc_subfield_array($tag, $subfields) {
+  if(is_array($subfields) && count($subfields)) {
+    return array($tag => array(
+      'subfields' => $subfields,
+    ));
+  }
+  return '';
+}
 /**
  * Returns date and time of latest transaction
  * @param $vars
@@ -23,6 +66,49 @@ function _cals_importer_exporter_callback_005($vars) {
   return $arr;
 }
 
+/**
+ *
+ * All 24 character positions (00-23) are mandatory.
+ * 00-04 (record length) = entry is system generated (count the entire length of the bibliographic record)
+ * 05 (record status) = default code n
+ * 06 (type of record) = generate the code based on the file format in Drupal:
+ *   MP3 = i
+ *   DAISY, etext, PDF, epub, AZW3, Braille = a
+ * 07 (bibliographic level) = default code m
+ * 08 (type of control) = default code blank
+ * 09 (character encoding scheme) = this value is either Unicode (code a) or MARC-8 (blank), I’m unsure which applies?
+ * 10 (indicator count) = default code 2
+ * 11 (subfield code count) = default code 2
+ * 12-16 (base address of data) = always system generated...
+ * 17 (encoding level) = default code 7
+ * 18 (descriptive cataloguing form) = default code u
+ * 19 (multipart resource record level) = default code blank
+ * 20-23 (entry map) = default codes: 20=4, 21=5, 22=0, 23=0
+ *
+ * @param $node
+ * @return mixed
+ */
+function _cals_importer_exporter_callback_ldr($wrapper) {
+  $vals['00-04'] = 10000; //figure this out?
+  $vals['05'] = 'n';
+  $vals['06'] = 'i'; //Jonathan?
+  $vals['07'] = 'm';
+  $vals['08'] = ' ';
+  $vals['09'] = ' ';
+  $vals['10'] = 2;
+  $vals['11'] = 2;
+  $vals['12-16'] = 'XXXXX'; //not sure how to calculate this, either??
+  $vals['17'] = 7;
+  $vals['18'] = 'u';
+  $vals['19'] = ' ';
+  $vals['20-23'] = '4500';
+
+  $val = implode('', $vals);
+
+  //printAndDie($val, strlen($val), $vals); or dpm()
+
+  return $val;
+}
 /**
  * 00-05 (Date entered on file) = system generated;
  * this is the date MARC record was first created; format must be: ddmmyy
@@ -52,7 +138,9 @@ function _cals_importer_export_callback_008($node) {
   return $val;
 }
 /**
- * Returns restrictions tag: 0 = no restrictions, 1 = restrictions
+ * $b = language of cataloguing - include if present in MarcXML
+ * $c and $d = hard-coded to BVNNELS
+ *
  * @param $vars
  * @return mixed
  */
@@ -75,6 +163,29 @@ function _cals_importer_exporter_callback_040($vars) {
   return $arr;
 }
 
+/**
+ * $a = original cataloguing agency
+ * @param $vars
+ * @return mixed
+ */
+function _cals_importer_exporter_callback_040a($vars) {
+  $node = $vars['node'];
+  $tag = $vars['tag'];
+  $wrapper = $vars['node_wrapper'];
+  $value = $wrapper->field_dc_creator->value();
+  //$label = ($value == 0) ? "no restrictions" : "restrictions";
+  $arr['040'] = array(
+    'ind1' => '',
+    'ind2' => '',
+    'subfields' => array(
+      'c' => array('BVNNELS'),
+      'd' => array('BVNNELS')
+      //array('value' => $label, 'subfield' => 'a'),
+      //array('value' => 'BVNNELS', 'subfield' => 'b'),
+    ),
+  );
+  return $arr;
+}
 
 /**
  * Uniform title, include if this exists in the original marc xml
@@ -200,11 +311,11 @@ function _cals_importer_exporter_callback_245($vars) {
   foreach($safe_values as $value) {
     normalize_title($value);
     $ind2 = _cals_importer_exporter_filing_characters($value);
-    $rec[245]['subfields']['a'][] = $value;
+    $arr[245]['subfields']['a'][] = $value;
   }
-  $rec[245]['ind1'] = 0;
-  $rec[245]['ind2'] = $ind2;
-  return $rec;
+  $arr[245]['ind1'] = 0;
+  $arr[245]['ind2'] = $ind2;
+  return $arr;
 
 }
 
@@ -273,6 +384,15 @@ function _cals_importer_exporter_callback_506($vars) {
   return $arr;
 }
 
+/**
+ * NB: this is one of the file attachment stubs.
+ *
+ * @param $vars
+ * @return array
+ *
+ * @todo
+ *   grab values from attachment
+ */
 function _cals_importer_exporter_callback_511($vars) {
   $node = $vars['node'];
   $tag = $vars['tag'];
@@ -282,6 +402,49 @@ function _cals_importer_exporter_callback_511($vars) {
   $me[$tag]['ind2'] = '';
   return $me;
 
+}
+
+/**
+ * Include if present in Abstract (body) field in Drupal
+ * @param $vars
+ * @return array
+ * @todo - review the proper way to extract body values.
+ */
+function _cals_importer_exporter_callback_520($vars) {
+  $node = $vars['node'];
+  $tag = $vars['tag'];
+  $wrapper = $vars['node_wrapper'];
+  $subfields = array();
+  $values = trim($wrapper->body->value->value(array('decode' => TRUE)));
+  if(is_string($values)) $subfields['a'][] = $values;
+  if(is_array($values)) {
+    foreach($values as $value) {
+      $value = trim($value);
+      if(!empty($value))
+        $subfields['a'][] = $value;
+    }
+  }
+  $arr =  _cals_build_marc_subfield_array($tag, $subfields);
+  $arr[$tag]['ind1'] = '';
+  $arr[$tag]['ind2'] = '';
+  return $arr;
+}
+
+
+/**
+ * Include if Audience exists in Drupal
+ * @param $vars
+ * @return array
+ */
+function _cals_importer_exporter_callback_521($vars) {
+  $node = $vars['node'];
+  $tag = $vars['tag'];
+  $wrapper = $vars['node_wrapper'];
+  $subfields =  _cals_importer_exporter_get_subfield_array_from_drupal_fields('a', 'field_audience', $wrapper);
+  $arr =  _cals_build_marc_subfield_array($tag, $subfields);
+  $arr[$tag]['ind1'] = '';
+  $arr[$tag]['ind2'] = '';
+  return $arr;
 }
 
 /**
@@ -295,20 +458,15 @@ function _cals_importer_exporter_callback_511($vars) {
 function _cals_importer_exporter_callback_534($vars) {
   $node = $vars['node'];
   $tag = $vars['tag'];
-
   $wrapper = $vars['node_wrapper'];
-  $subfields = array();
-  $values = $wrapper->field_publisher_source->value();
-  foreach($values as $value) {
-    $subfields['c'][] = $value;
-  }
-
+  $subfields = _cals_importer_exporter_get_subfield_array_from_drupal_fields('c', 'field_publisher_source', $wrapper);
   $arr =  _cals_build_marc_subfield_array($tag, $subfields);
   $arr[$tag]['ind1'] = '';
   $arr[$tag]['ind2'] = '';
   return $arr;
 
 }
+
 /**
  * Added Entry--Uncontrolled Name/Name
  * $a should be the Creator field in Drupal
@@ -354,22 +512,13 @@ function _cals_importer_exporter_callback_7201_e($vars) {
   return _cals_build_marc_subfield_array($tag, $subfields);
 }
 
+
 /**
- * @param $tag
- * @param $subfields
- * @return array
+ * returns 856 subfield
+ *
+ * @param $vars
+ * @return mixed
  */
-function _cals_build_marc_subfield_array($tag, $subfields) {
-  //if($tag['field_code'] == 720) printAndDie($tag);
-  //printPre($tag);
-  //if($tag['field_indc1'] == "''") $tag['field_indc1'] = '';
-  //if($tag['field_ind2'] == "''") $tag['field_ind2'] = '';
-  return array($tag => array(
-    'subfields' => $subfields,
-  ));
-
-}
-
 function _cals_importer_exporter_callback_856($vars) {
   $tag = $vars['tag'];
   $node = $vars['node'];
