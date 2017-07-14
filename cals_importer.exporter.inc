@@ -1,4 +1,6 @@
 <?php
+require 'File/MARCXML.php';
+require 'File/MARC/Lint.php';
 
 module_load_include("inc", "cals_importer", "cals_importer.exporter_callbacks");
 
@@ -10,8 +12,6 @@ module_load_include("inc", "cals_importer", "cals_importer.exporter_callbacks");
  */
 
 function _cals_importer_create_marc_stub_node($node) {
-  require 'File/MARCXML.php';
-  require 'File/MARC/Lint.php';
   _cals_importer_create_marc_stub($node);
   drupal_goto("node/{$node->nid}/view-xml-stub");
 
@@ -572,10 +572,10 @@ function _cals_importer_exporter_parse_datafields($node, $node_wrapper, &$record
           //if($ind1 = "''") $ind1 = '';
           if($ind2 = "''") $ind2 = '';
           if ($ind1 == 'use MarcXML indicators') {
-            $ind1 = _cals_importer_get_marc_indicators($xml, $tag);
+            $ind1 = _cals_importer_get_marc_indicators($xml, $tag, 1);
           }
           if ($ind2 == 'use MarcXML indicators') {
-            $ind2 = _cals_importer_get_marc_indicators($xml, $tag);
+            $ind2 = _cals_importer_get_marc_indicators($xml, $tag, 2);
           }
           $tmp[$tag]['ind1'] = $ind1;
           $tmp[$tag]['ind2'] = $ind2;
@@ -781,8 +781,6 @@ function _cals_importer_view_marcxml_stub($node) {
 }
 
 function cals_importer_exporter_get_xmlstring_from_array($node) {
-  require 'File/MARCXML.php';
-  require 'File/MARC/Lint.php';
 
   $xml_string = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
   $xml_string = MARC_HEADER . $xml_string . '</marc:collection>';

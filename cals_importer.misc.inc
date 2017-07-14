@@ -150,7 +150,6 @@ function _cals_get_marc_xml_string($node) {
 function _cals_importer_get_marc_indicators($xml, $tag, $int) {
   $parent = $xml->xpath("//marc:datafield[@tag=$tag]");
   $ind = array();
-  //printAndDie(__FUNCTION__, $parent);
   foreach($parent as $i => $child) {
     /*
     $ind = array(
@@ -160,10 +159,7 @@ function _cals_importer_get_marc_indicators($xml, $tag, $int) {
     */
     return ($int1 == 1) ? (string) $parent[$i]->attributes()->ind1 :
       (string) $parent[$i]->attributes()->ind2;
-
   }
-
-
 }
 
 /**
