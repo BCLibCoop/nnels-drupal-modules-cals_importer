@@ -18,10 +18,6 @@ function _cals_importer_create_marc_stub_node($node) {
 }
 
 function _cals_importer_create_marcxml_snippet_file_resource($node) {
-
-  require 'File/MARCXML.php';
-  require 'File/MARC/Lint.php';
-
   //need field_collection->field_file_resource entity
   $node_wrapper = entity_metadata_wrapper('node', $node);
 
@@ -658,6 +654,7 @@ function _cals_importer_exporter_build_new_record(&$record, $marcfields) {
   }
 }
 
+
 /**
  * Iterate thru array of controlfields to insert xml controlfields
  * @param $record
@@ -769,10 +766,13 @@ function _cals_importer_view_marcxml_stub($node) {
       'attributes' => array()
     );
     $html = theme('item_list', $vars);
-    $xml = cals_importer_exporter_get_xmlstring_from_array($node);
+    /*
+    $xml = cals_importer_exporter_build_marcxml_from_array($node);
+    $xml->__toString();
     //printAndDie($xml);
     $xml = str_replace("\n", "<br/>", $xml);
-    return $html . $xml;
+    */
+    return $html;
   }
   else{
 
@@ -780,24 +780,59 @@ function _cals_importer_view_marcxml_stub($node) {
   }
 }
 
-function cals_importer_exporter_get_xmlstring_from_array($node) {
+function cals_importer_exporter_build_marcxml_from_array($node) {
+  //$xml_string = MARC_HEADER . '</marc:collection>';
+  $record = new File_MARC_Record(NULL);
+  $marcfields = unserialize($node->field_xml_stub[LANGUAGE_NONE][0]['value']);
+  if(function_exists('dpm')) dpm($marcfields);
+  //printAndDie($marcfields);
+  _cals_importer_exporter_array_to_marcxml($record, $marcfields);
+  $lint = new File_MARC_Lint();
 
-  $xml_string = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
-  $xml_string = MARC_HEADER . $xml_string . '</marc:collection>';
+  $valid = $lint->checkRecord($record);
+  if(count($valid)) {
+    $vars = array("items" => $valid , "title" => "XML Stub Created with following errors", "type" => "ol", "attributes" => array());
+    drupal_set_message(theme_item_list($vars));
+  }
 
-  $records = new File_MARCXML($xml_string, File_MARC::SOURCE_STRING, "http://www.loc.gov/MARC21/slim");
-  $n = 0;
-  while ($record = $records->next()) {
+  return $record;
+}
 
-    _cals_importer_exporter_marcxml_remove_tags($record, $tags);
+/**
+* Returns a new record based on datafields
+*
+* @param $record
+* @param $datafields
+*/
+function _cals_importer_exporter_array_to_marcxml(&$record, $marcfields) {
 
-    $marcfields = unserialize($node->field_xml_stub[LANGUAGE_NONE][0]['value']);
-    _cals_importer_exporter_build_new_record($record, $marcfields);
+  $xml = array();
+  foreach ($marcfields as $type => $arr) {
+    $function = '_cals_importer_exporter_array_to_marcxml_' . $type;
+    if($function) $function($record, $arr);
+  }
 
-    $new_xml_stub = $record->toXML("UTF-8", FALSE, FALSE);
-    ////printAndDie($record);
-    return $record->__toString();
+}
+function _cals_importer_exporter_array_to_marcxml_controlfields(&$record, $tags) {
+  $xml = array();
+  foreach($tags as $tag => $value) {
+    $field = new File_MARC_Control_Field($tag, $value['value'], null, null);
+    $record->appendField($field);
+  }
+}
 
-    //return $node->field_xml_stub[LANGUAGE_NONE][0]['safe_value'];
+function _cals_importer_exporter_array_to_marcxml_datafields(&$record, $tags) {
+  $xml = array();
+  foreach($tags as $tag => $tagset) {
+    $subfields = array();
+    $ind1 = $tagset['ind1'];
+    $ind2 = $tagset['ind2'];
+    foreach ($tagset['subfields'] as $code => $values) {
+      foreach ($values as $value) {
+        $subfields[] = new File_MARC_Subfield($code, $value);
+      }
+      $field = new File_MARC_Data_Field($tag, $subfields, $ind1, $ind2);
+      $record->appendField($field);
+    }
   }
 }
