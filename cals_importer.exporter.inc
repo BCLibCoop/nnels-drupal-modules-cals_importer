@@ -30,6 +30,10 @@ function _cals_importer_create_marcxml_snippet_file_resource($node) {
     //must now use each field_collection found
     $snippet = _cals_importer_exporter_add_gmd_per_format($field_collection);
     $new_xml_snippet = $snippet->toXML("UTF-8", FALSE, FALSE);
+    $dom = new DOMDocument();
+    $dom->loadXML($new_xml_snippet);
+    $xml_out = $dom->saveXML($dom->documentElement);
+    //need to remove prologue here
     $fc_wrapper = entity_metadata_wrapper('field_collection_item',
       $field_collection);
     $fc_wrapper->field_marc_xml_snippet->set( array(
@@ -187,7 +191,7 @@ function _cals_importer_exporter_add_gmd_per_format($field_collection) {
    * Electronic text (EPUB, PDF, e-text)
    *  =336 \\$a txt $2 rdacontent
    *  =337 \\$a computer $2 rdamedia
-   * =338 \\$a online resource $2 rdacarrier
+   *  =338 \\$a online resource $2 rdacarrier
    **/
 
   $etext_pattern = array(
@@ -462,11 +466,14 @@ function _cals_importer_exporter_sort_record_datafields($stub) {
 
   $sorted_record->setLeader($leader);
 
-//  foreach ($warnings as $warning) {
-//    $sorted_record->addWarning($warning);
-//  }
+  //Single record XML string outside of collection, namespace
+  $sorted_xml = simplexml_load_string(
+    $sorted_record
+    ->toXML())
+    ->children(NAME_SPACE)
+    ->asXML();
 
-  return $sorted_record;
+  return $sorted_xml;
 }
 
 /**

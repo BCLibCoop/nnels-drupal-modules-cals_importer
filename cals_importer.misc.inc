@@ -109,47 +109,45 @@ function _cals_get_marc_xml_string($node) {
   return $xml;
 }
 
-function _cals_get_set_xml_snippet($host_wrapper, $str) {
-  //libxml_use_internal_errors(true);
-  //require '/File/MARCBASE.php';
+function _cals_wrap_fc($entity) {
+    $fc_wrapper = entity_metadata_wrapper('field_collection_item', $entity);
+  return $fc_wrapper;
+}
 
-  //This function gets called multiple times in a bulk op!
+/**
+ * Given a wrapped FieldCollectionItemEntity, append each tag-value pair
+ * from its snippet to its stub, pass through Data_Field sorting
+ * function and return an XML string for writing to export file.
+ *
+ * @param EntityDrupalWrapper $fc_wrapper
+ * @param string $str
+ * @return string $records
+ */
+function _cals_get_set_xml_snippet($fc_wrapper, $str) {
+
   require_once 'File/MARCXML.php';
   require_once 'File/MARC/Lint.php';
 
   $records = '';
-  $stub_record = new File_MARCXML($str, File_MARC::SOURCE_STRING,
-  "http://www.loc.gov/MARC21/slim");
+  $stub_record = new File_MARCXML($str, File_MARC::SOURCE_STRING);
   $record = $stub_record->next();
+  $this_snippet = $fc_wrapper->field_marc_xml_snippet[0]->value();
 
-  foreach  ( $host_wrapper->field_file_resource->value() as $delta =>
-             $fc ) {
-    $fc_wrapper = entity_metadata_wrapper('field_collection_item',
-      $fc);
+  $snippets = new File_MARCXML($this_snippet, File_MARC::SOURCE_STRING);
 
-    $snippet = $fc_wrapper->field_marc_xml_snippet[0]->value();
-    $snippets = new File_MARCXML($snippet, File_MARC::SOURCE_STRING, "http://www.loc.gov/MARC21/slim");
-    if ($record) {
+  if ($record) {
       //there's only one record snippet per file resource so just advance once
       $snippet_context = $snippets->next();
-      $empty = $snippet_context->getFields()->isEmpty();
-      foreach ($snippet_context->getFields() as $tag => $value) {
 
-        //adjust byte 6 of the leader to reflect additional formats since
-        //ingest?
+      foreach ($snippet_context->getFields() as $tag => $value) {
+        //adjust byte 6 of leader to reflect added formats since ingest
         $record->appendField($value);
-        $check_record = $record->toXML();
       }
 
-      //Stub + new fields goes into sorter, returns File_MARC_Record comes out
-      $sorted_record = _cals_importer_exporter_sort_record_datafields($record);
-
-      //For each format add to string as XML
-      //We are in next() so this should be only a single record collection.
-      //Might need to break it out from <collection> node
-      $records .= $sorted_record->toXML();
-    }
+      //Stub + new fields to sorter, returns XML string
+      $records .= _cals_importer_exporter_sort_record_datafields($record) . "\n";
   }
+
   return $records;
 }
 
