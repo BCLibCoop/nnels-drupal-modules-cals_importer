@@ -189,20 +189,19 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
     !empty($host->field_nnels_856_tag) &&
     $host->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] == 1 ) {
     $xml = _cals_get_marc_xml_string($host);
-    //stub not string this doesnt matter
+    //stub not string this doesn't matter
     if($xml !== 0) {
           $str = $host->field_xml_stub[LANGUAGE_NONE][0]['value'];
 
           $fc_wrapper = _cals_wrap_fc($entity);
-          //Build the new records from the stub + snippet, sorted and as XML
-          // string
+          //Build the new records from stub + snippet, sorted as XML string
           $full_format_record = _cals_get_set_xml_snippet($fc_wrapper,
             $str);
-          //Append to storage each round
+          //Append raw collection to file temporarily
           file_put_contents($filename, $full_format_record, FILE_APPEND |
             LOCK_EX);
       }
-    //Save export set node with ref back to marc_xml_string source for this run
+      //Save export set node with ref back to marc_xml_string source for this run
       $pnode->field_nid_entry[LANGUAGE_NONE][] = array("nid" => $nid);
       node_save($pnode);
   }

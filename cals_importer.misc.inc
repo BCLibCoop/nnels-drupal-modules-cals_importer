@@ -109,6 +109,10 @@ function _cals_get_marc_xml_string($node) {
   return $xml;
 }
 
+/**
+ * @param \FieldCollectionItemEntity $entity
+ * @return \EntityMetadataWrapper
+ */
 function _cals_wrap_fc($entity) {
     $fc_wrapper = entity_metadata_wrapper('field_collection_item', $entity);
   return $fc_wrapper;
@@ -119,7 +123,7 @@ function _cals_wrap_fc($entity) {
  * from its snippet to its stub, pass through Data_Field sorting
  * function and return an XML string for writing to export file.
  *
- * @param EntityDrupalWrapper $fc_wrapper
+ * @param \EntityDrupalWrapper $fc_wrapper
  * @param string $str
  * @return string $records
  */

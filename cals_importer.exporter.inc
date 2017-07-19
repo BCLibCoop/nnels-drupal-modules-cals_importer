@@ -14,16 +14,19 @@ function _cals_importer_create_marc_stub_node($node) {
 
 }
 
+/**
+ * Calls for each format in field collections.
+ * Gets back a File_MARC_Record, converts to XML snippet for storage
+ *
+ * @param stdClass $node
+ *
+ */
 function _cals_importer_create_marcxml_snippet_file_resource($node) {
 
   require 'File/MARCXML.php';
   require 'File/MARC/Lint.php';
 
-  //need field_collection->field_file_resource entity
   $node_wrapper = entity_metadata_wrapper('node', $node);
-
-  //Calls for each format in field collections
-  //Gets back a File_MARC_Record, converts to XML snippet for storage
 
   foreach ($node_wrapper->field_file_resource->getIterator() as $delta =>
            $field_collection) {
@@ -38,7 +41,6 @@ function _cals_importer_create_marcxml_snippet_file_resource($node) {
       $field_collection);
     $fc_wrapper->field_marc_xml_snippet->set( array(
       $new_xml_snippet) );
-    //_cals_importer_update_admin_audit($node,  $action);
     $fc_wrapper->save();
   }
   $node_wrapper->save();
