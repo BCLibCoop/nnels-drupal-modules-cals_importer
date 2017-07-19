@@ -185,21 +185,33 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
   $pnid = $context['fields']['pnid'];
   $pnode = node_load($pnid); //get updated parent node
 
-  if (!empty($host->field_xml_string) &&
+  if (!empty($host->field_xml_stub) &&
     !empty($host->field_nnels_856_tag) &&
     $host->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] == 1 ) {
     $xml = _cals_get_marc_xml_string($host);
+    //stub not string this doesn't matter
     if($xml !== 0) {
-      $str =  $host->field_xml_string[LANGUAGE_NONE][0]['value'];
-      file_put_contents($filename, $str, FILE_APPEND | LOCK_EX);
+          $str = $host->field_xml_stub[LANGUAGE_NONE][0]['value'];
+
+          $fc_wrapper = _cals_wrap_fc($entity);
+          //Build the new records from stub + snippet, sorted as XML string
+          $full_format_record = _cals_get_set_xml_snippet($fc_wrapper,
+            $str);
+          //Append raw collection to file temporarily
+          file_put_contents($filename, $full_format_record, FILE_APPEND |
+            LOCK_EX);
+      }
+      //Save export set node with ref back to marc_xml_string source for this run
       $pnode->field_nid_entry[LANGUAGE_NONE][] = array("nid" => $nid);
       node_save($pnode);
-    }
   }
+
   if ($context['progress']['current'] == $context['progress']['total']) {
     $uri = file_create_url($filename);
-    //add closing marc:collection tag
-    $content = MARC_HEADER . file_get_contents($filename) . '</marc:collection>';
+    //Wrap in marc:collection tag upon retrieval
+    $content = MARC_HEADER . "\n" . file_get_contents($filename) .
+      "</marc:collection>";
+
     $xml = simplexml_load_string($content);
     $file = file_save_data($xml->asXml(), $filename, FILE_EXISTS_REPLACE);
     $file->display = 1;
@@ -207,6 +219,7 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
     node_save($pnode);
     drupal_set_message(t("File saved: please download via <a href='@url'>@url</a>",
       array("@url" => url("node/" . $pnode->nid) ) ) );
+
   }
 }
 

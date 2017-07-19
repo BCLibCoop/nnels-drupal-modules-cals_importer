@@ -140,6 +140,52 @@ function _cals_get_marc_xml_string($node) {
   return $xml;
 }
 
+/**
+ * @param \FieldCollectionItemEntity $entity
+ * @return \EntityMetadataWrapper
+ */
+function _cals_wrap_fc($entity) {
+    $fc_wrapper = entity_metadata_wrapper('field_collection_item', $entity);
+  return $fc_wrapper;
+}
+
+/**
+ * Given a wrapped FieldCollectionItemEntity, append each tag-value pair
+ * from its snippet to its stub, pass through Data_Field sorting
+ * function and return an XML string for writing to export file.
+ *
+ * @param \EntityDrupalWrapper $fc_wrapper
+ * @param string $str
+ * @return string $records
+ */
+function _cals_get_set_xml_snippet($fc_wrapper, $str) {
+
+  require_once 'File/MARCXML.php';
+  require_once 'File/MARC/Lint.php';
+
+  $records = '';
+  $stub_record = new File_MARCXML($str, File_MARC::SOURCE_STRING);
+  $record = $stub_record->next();
+  $this_snippet = $fc_wrapper->field_marc_xml_snippet[0]->value();
+
+  $snippets = new File_MARCXML($this_snippet, File_MARC::SOURCE_STRING);
+
+  if ($record) {
+      //there's only one record snippet per file resource so just advance once
+      $snippet_context = $snippets->next();
+
+      foreach ($snippet_context->getFields() as $tag => $value) {
+        //adjust byte 6 of leader to reflect added formats since ingest
+        $record->appendField($value);
+      }
+
+      //Stub + new fields to sorter, returns XML string
+      $records .= _cals_importer_exporter_sort_record_datafields($record) . "\n";
+  }
+
+  return $records;
+}
+
 
 /**
  * Returns an array of indicators for given tag
