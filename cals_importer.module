@@ -177,8 +177,8 @@ function cals_importer_menu() {
   );
   //menu callback to provide access to re-validate / view xml stub
   $items['node/%node/build-validate-marcxml-output'] = array(
-    'page callback' => 'cals_importer_exporter_build_marcxml_from_array',
-    'title' => "View XML Stub",
+    'page callback' => '_cals_importer_exporter_build_marcxml_from_array',
+    'title' => "Validate / Preview XML Stub",
     'type' => MENU_CALLBACK,
     'page arguments' => array(1),
     'weight' => 100,
@@ -526,9 +526,9 @@ function _cals_importer_get_block_items() {
     'title' => "Add MARC-ready stub entry",
     'description' => 'Add MARC-readyL Stub',
   );
-  $items['cals_importer_exporter_build_marcxml_from_array'] = array(
+  $items['_cals_importer_exporter_build_marcxml_from_array'] = array(
     'access arguments' => array('parse s3 paths'),
-    'page callback' => 'cals_importer_exporter_build_marcxml_from_array',
+    'page callback' => '_cals_importer_exporter_build_marcxml_from_array',
     'file' => "cals_importer.exporter.inc",
     'title' => "Build / Validate MARC-XML File",
     'description' => 'Added MARC-XML File',
@@ -596,7 +596,7 @@ function _cals_importer_block_process_repo_item($form_state) {
         if(!user_access($i['access arguments'][0])) $include = FALSE;
 
         if($cb == 'cals_importer_exporter_build_marcxml_from_array' && empty($node->field_xml_stub)) {
-          $include = FALSE;
+          //$include = FALSE;
         }
 
         if ($include) {
@@ -642,8 +642,8 @@ function _cals_importer_block_process_repo_item_submit($form, &$form_state) {
     if (isset($i['description'])) {
       drupal_set_message($i['description']);
     }
-    //if (isset())
     //printAndDie($callback);
+    //if (isset())
     $callback($node);
   }
 }

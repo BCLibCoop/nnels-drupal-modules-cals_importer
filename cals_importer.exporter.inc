@@ -831,12 +831,10 @@ function _cals_importer_view_marcxml_stub($node) {
               }
               $ind1 = (isset($value['ind1'])) ? $value['ind1'] : '';
               $ind2 = (isset($value['ind2'])) ? $value['ind2'] : '';
-
               if (is_array($subfield)) {
                 foreach ($subfield as $me) {
                   $items[] = "$tag\$" . $code . "($ind1)($ind2) = $me";
                 }
-
               }
             }
           }
@@ -864,7 +862,7 @@ function _cals_importer_view_marcxml_stub($node) {
   }
 }
 
-function cals_importer_exporter_build_marcxml_from_array($node) {
+function _cals_importer_exporter_build_marcxml_from_array($node) {
   //$xml_string = MARC_HEADER . '</marc:collection>';
   $record = new File_MARC_Record(NULL);
   $marcfields = unserialize($node->field_xml_stub[LANGUAGE_NONE][0]['value']);
@@ -878,25 +876,33 @@ function cals_importer_exporter_build_marcxml_from_array($node) {
     $vars = array("items" => $valid , "title" => "XML Stub Created with following errors", "type" => "ol", "attributes" => array());
     drupal_set_message(theme_item_list($vars));
   }
+  return $record->__toString();
+  //drupal_goto("node/{$node->nid}/build-validate-marcxml-output");
 
-  return $record;
+
 }
 
 /**
-* Returns a new record based on datafields
-*
-* @param $record
-* @param $datafields
-*/
+ * Returns a new record based on datafields
+ *
+ * @param $record
+ * @param $datafields
+ */
 function _cals_importer_exporter_array_to_marcxml(&$record, $marcfields) {
-
   $xml = array();
   foreach ($marcfields as $type => $arr) {
     $function = '_cals_importer_exporter_array_to_marcxml_' . $type;
-    if($function) $function($record, $arr);
+    if ($function) {
+      $function($record, $arr);
+    }
   }
-
 }
+
+/**
+ * Create marcxml controlfields
+ * @param $record
+ * @param $tags
+ */
 function _cals_importer_exporter_array_to_marcxml_controlfields(&$record, $tags) {
   $xml = array();
   foreach($tags as $tag => $value) {
@@ -905,6 +911,11 @@ function _cals_importer_exporter_array_to_marcxml_controlfields(&$record, $tags)
   }
 }
 
+/**
+ * Create marcxml datafields
+ * @param $record
+ * @param $tags
+ */
 function _cals_importer_exporter_array_to_marcxml_datafields(&$record, $tags) {
   $xml = array();
   foreach($tags as $tag => $tagset) {
@@ -915,7 +926,8 @@ function _cals_importer_exporter_array_to_marcxml_datafields(&$record, $tags) {
       foreach ($values as $value) {
         $subfields[] = new File_MARC_Subfield($code, $value);
       }
-      $field = new File_MARC_Data_Field($tag, $subfields, $ind1, $ind2);
+      $field = new File_MARC_Data_Field($tag, $subfields, "$ind1", "$ind2");
+      //dpm("tag = $tag, ind1 = $ind1, ind2 = $ind2");
       $record->appendField($field);
     }
   }
