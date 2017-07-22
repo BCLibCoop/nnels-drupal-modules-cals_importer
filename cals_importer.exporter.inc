@@ -2,7 +2,9 @@
 require 'File/MARCXML.php';
 require 'File/MARC/Lint.php';
 
-module_load_include("inc", "cals_importer", "cals_importer.exporter_callbacks");
+module_load_include('inc', 'cals_importer', 'cals_importer.exporter_callbacks');
+module_load_include('inc', 'cals_importer', 'cals_importer.exporter_file_snippets');
+
 
 /**
  * Simple wrapper so we can invoke from main repo node page for testing purposes
@@ -15,38 +17,6 @@ function _cals_importer_create_marc_stub_node($node) {
   _cals_importer_create_marc_stub($node);
   drupal_goto("node/{$node->nid}/view-xml-stub");
 
-}
-
-/**
- * Calls for each format in field collections.
- * Gets back a File_MARC_Record, converts to XML snippet for storage
- *
- * @param stdClass $node
- *
- */
-function _cals_importer_create_marcxml_snippet_file_resource($node) {
-
-  $node_wrapper = entity_metadata_wrapper('node', $node);
-
-  foreach ($node_wrapper->field_file_resource->getIterator() as $delta =>
-           $field_collection) {
-    //must now use each field_collection found
-    $snippet = _cals_importer_exporter_add_gmd_per_format($field_collection);
-    $new_xml_snippet = $snippet->toXML("UTF-8", FALSE, FALSE);
-    $dom = new DOMDocument();
-    $dom->loadXML($new_xml_snippet);
-    $xml_out = $dom->saveXML($dom->documentElement);
-    //need to remove prologue here
-    $fc_wrapper = entity_metadata_wrapper('field_collection_item',
-      $field_collection);
-    $fc_wrapper->field_marc_xml_snippet->set( array(
-      $new_xml_snippet) );
-    $fc_wrapper->save();
-  }
-  $node_wrapper->save();
-
-  //this should show all of them on one display
-  //drupal_goto("node/{$field_collection->id}/view-xml-snippet");
 }
 
 /**
@@ -74,14 +44,58 @@ function _cals_importer_create_marc_stub_vbo(&$entity, $context = array()) {
 
 }
 
+/**
+ * Updates the node with stub marc-xml record
+ *
+ * @param $node
+ *   the node passed to the parser
+ *
+ */
+function _cals_importer_create_marc_stub($node) {
+  $tags = _cals_importer_get_tag_array(); //tag mappings
+  $lint = new File_MARC_Lint();
+  $xml_string = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
+  $xml_string = MARC_HEADER . $xml_string . '</marc:collection>';
 
-function _cals_importer_normalize_indicators($str) {
-  $str = trim($str);
-  if($str == '""' || $str = "''") return '';
-  return $str;
+  $records = new File_MARCXML($xml_string, File_MARC::SOURCE_STRING, "http://www.loc.gov/MARC21/slim");
+  //$xml = _cals_get_marc_xml_string($node);
+  $n = 0;
+  while ($record = $records->next()) {
+
+    //$xml = simplexml_load_string($xml_string);
+    _cals_importer_exporter_marcxml_remove_tags($record, $tags);
+    //_cals_importer_exporter_callback_245($node, $record);
+    //_cals_importer_exporter_add_taxonomy_terms_marcxml($node, $record);
+
+    $marcfields = _cals_importer_exporter_get_marc_fields($node, $record, $tags);
+    $node->field_xml_stub[LANGUAGE_NONE][0]['value'] = serialize($marcfields);
+
+    //with new datafields, generate the new record
+    _cals_importer_exporter_build_new_record($record, $marcfields);
+
+    $valid = $lint->checkRecord($record);
+    if(count($valid)) {
+      $vars = array("items" => $valid , "title" => "XML Stub Created with following errors", "type" => "ol", "attributes" => array());
+      drupal_set_message(theme_item_list($vars));
+    }
+    else {
+      drupal_set_message(t("XML Stub Created"));
+    }
+
+    $new_xml_stub = $record->toXML("UTF-8", FALSE, FALSE);
+    /* */
+    //$new_xml_stub = $record->toRaw();
+
+    //$node->field_xml_stub[LANGUAGE_NONE][0]['value'] = $new_xml_stub;
+    //_cals_importer_update_admin_audit($node,  $action);
+    node_save($node);
+  }
+
+
 }
 
 /**
+ * Returns a slightly cleaned up array of all tags
  * @param $entity
  * @return array|void
  */
@@ -133,6 +147,7 @@ function _cals_importer_exporter_rebuild_array_marc_tag($entity) {
         break;
     }
   }
+  //if tag type = datafield
   if($tag_type == 3) {
     $subs = array();
     $me['subfields'] = _cals_importer_get_subfields_collection_fields($wrapper);
@@ -141,6 +156,11 @@ function _cals_importer_exporter_rebuild_array_marc_tag($entity) {
   return $me;
 
 }
+
+/**
+ * @param $wrapper
+ * @return array
+ */
 function _cals_importer_get_subfields_collection_fields($wrapper) {
   $subfields = array();
   foreach($wrapper->field_marc_subfield_collection as $fc_wrapper) {
@@ -151,25 +171,34 @@ function _cals_importer_get_subfields_collection_fields($wrapper) {
       if(substr($fieldname, 0, 6) == 'field_' && $fieldname != 'field_name') {
         $str = str_replace("field_", '', $fieldname);
         $fieldtype = trim($info[$fieldname]['type']) . "x"; //for some reason, can't check this.
-        if($fieldtype == 'listx') printAndDie(__FUNCTION__,"WTF");
         if($str == 'drupal_fieldname') {
           $val = $fc_wrapper->{$fieldname}[0]->value();
         }
         else {
           $val = trim($fc_wrapper->{$fieldname}->value());
         }
-        $subs[$str] = $val;
-
+        if($str != 'description')
+          $subs[$str] = $val;
       }
     }
-
     $subfields[$code] = $subs;
-
   }
   return $subfields;
 }
 
-function _cals_importer_get_subfield_array() {
+/**
+ * Returns an array of all tags in structure similar to this:
+ * $me['datafields'][245] = array(
+ *   'ind1'=> 1, 'ind2 => 2,
+ *
+ *   'subfields' = array(
+ *     'a' => array('value' => 'Value of 245$a tag', 'required' => TRUE|FALSE ),
+ *     'b' => array('value' => 'Value of 245$b tag', 'required' => TRUE|FALSE ),
+ *   )
+ * );
+ * @return array
+ */
+function _cals_importer_get_tag_array() {
   //$rs = db_query("select * from {eck_marc_tag} ");
   $es = entity_load("marc_tag", FALSE);
   $me = array();
@@ -188,60 +217,18 @@ function _cals_importer_get_subfield_array() {
     }
   }
   ksort($me);
+  printAndDie($me);
   return $me;
 }
 
 /**
- * Updates the node with stub marc-xml record
+ * Returns array of values for a given node + fieldname.
+ * Used by various callbacks.
  *
  * @param $node
- *   the node passed to the parser
- *
+ * @param $fieldname
+ * @return mixed
  */
-function _cals_importer_create_marc_stub($node) {
-  $tags = _cals_importer_get_subfield_array(); //tag mappings
-  $lint = new File_MARC_Lint();
-  $xml_string = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
-  $xml_string = MARC_HEADER . $xml_string . '</marc:collection>';
-
-  $records = new File_MARCXML($xml_string, File_MARC::SOURCE_STRING, "http://www.loc.gov/MARC21/slim");
-  //$xml = _cals_get_marc_xml_string($node);
-  $n = 0;
-  while ($record = $records->next()) {
-
-    //$xml = simplexml_load_string($xml_string);
-    _cals_importer_exporter_marcxml_remove_tags($record, $tags);
-    //_cals_importer_exporter_callback_245($node, $record);
-    //_cals_importer_exporter_add_taxonomy_terms_marcxml($node, $record);
-
-    $marcfields = _cals_importer_exporter_get_marc_fields($node, $record, $tags);
-    $node->field_xml_stub[LANGUAGE_NONE][0]['value'] = serialize($marcfields);
-
-    //with new datafields, generate the new record
-    _cals_importer_exporter_build_new_record($record, $marcfields);
-
-    $valid = $lint->checkRecord($record);
-    if(count($valid)) {
-      $vars = array("items" => $valid , "title" => "XML Stub Created with following errors", "type" => "ol", "attributes" => array());
-      drupal_set_message(theme_item_list($vars));
-    }
-    else {
-      drupal_set_message(t("XML Stub Created"));
-    }
-
-    $new_xml_stub = $record->toXML("UTF-8", FALSE, FALSE);
-    /* */
-    //$new_xml_stub = $record->toRaw();
-
-    //$node->field_xml_stub[LANGUAGE_NONE][0]['value'] = $new_xml_stub;
-    //_cals_importer_update_admin_audit($node,  $action);
-    node_save($node);
-  }
-
-
-}
-
-
 function _cals_importer_exporter_field_value($node, $fieldname) {
   $values = field_view_field('node', $node, $fieldname, array('default'));
   return $values;
@@ -267,188 +254,6 @@ function _cals_importer_exporter_get_normalized_code($code) {
   }
   return $code;
 }
-/**
- * Given a collection of formats and corresponding Data Field pattern, create
- * the Data Fields per format and append to the record.
- *
- * @param $node
- * @param $record
- * @return int|void
- */
-
-function _cals_importer_exporter_add_gmd_per_format($field_collection) {
-
-  $format_keys = array(
-    'epub 2' => 'etext',
-    'epub 3' => 'etext',
-    'pdf' => 'etext',
-    'e-text' => 'etext',
-    'azw3' => 'etext',
-    'mp3' => 'mp3',
-    'daisy 202' => 'daisy',
-    'daisy 3' => 'daisy',
-  );
-
-  /**
-   * Electronic text (EPUB, PDF, e-text)
-   *  =336 \\$a txt $2 rdacontent
-   *  =337 \\$a computer $2 rdamedia
-   *  =338 \\$a online resource $2 rdacarrier
-   **/
-
-  $etext_pattern = array(
-    0 => array(
-      '336' => array (
-        'a' => 'txt',
-        2 => 'rdacontent',
-      )
-    ),
-    1 => array(
-      '337' => array(
-        'a' => 'computer',
-        2 => 'rdamedia',
-      )
-    ),
-    2 => array(
-      '338' => array(
-        'a' => 'online resource',
-        2 => 'rdacarrier',
-      )
-    ),
-  );
-
-  /**
-   * MP3 books
-   * =336  \\$a spoken word $b spw $2 rdacontent
-   * =337  \\$a audio $b s $2 rdamedia
-   * =337  \\$a computer $b c $2 rdamedia
-   * =338  \\$a other $b sz $2 rdacarrier
-   * =338  \\$a online resource $b cr $2 rdacarrier
-   **/
-
-  $mp3_pattern = array(
-    0 => array(
-      '336' => array (
-        'a' => 'spoken word',
-        'b' => 'spw',
-        2 => 'rdacontent',
-      )
-    ),
-    1 => array(
-      '337' => array(
-        'a' => 'audio',
-        'b' => 's',
-        2 => 'rdamedia',
-      )
-    ),
-    2 => array(
-      '337' => array(
-        'a' => 'computer',
-        'b' => 'c',
-        2 => 'rdamedia',
-      )
-    ),
-    3 => array(
-      '338' => array(
-        'a' => 'other',
-        'b' => 'sz',
-        2 => 'rdacarrier',
-      )
-    ),
-    4 => array(
-      '338' => array(
-        'a' => 'online-resource',
-        'b' => 'cr',
-        2 => 'rdacarrier',
-      ),
-    ),
-  );
-
-  /**
-   * DAISY books
-   * =336  \\$a spoken word $b spw $2 rdacontent
-   * =336  \\$a txt $2 rdacontent
-   * =337  \\$a audio $b s $2 rdamedia
-   * =337  \\$a computer $b c $2 rdamedia
-   * =338  \\$a other $b sz $2 rdacarrier
-   * =338  \\$a online resource $b cr $2 rdacarrier
-   **/
-
-  $daisy_pattern = array(
-    0 => array(
-      '336' => array (
-        'a' => 'spoken word',
-        'b' => 'spw',
-        2 => 'rdacontent',
-      )
-    ),
-    1 => array(
-      '336' => array(
-        'a' => 'txt',
-        2 => 'rdacontent',
-      )
-    ),
-    2 => array(
-      '337' => array(
-        'a' => 'audio',
-        'b' => 's',
-        2 => 'rdamedia',
-      )
-    ),
-    3 => array(
-      '337' => array(
-        'a' => 'computer',
-        'b' => 'c',
-        2 => 'rdamedia',
-      )
-    ),
-    4 => array(
-      '338' => array(
-        'a' => 'other',
-        'b' => 'sz',
-        2 => 'rdacarrier',
-      ),
-    ),
-    5 => array(
-      '338' => array(
-        'a' => 'online-resource',
-        'b' => 'cr',
-        2 => 'rdacarrier',
-      )
-    ),
-  );
-
-    $format = strtolower($field_collection->field_file_format->label());
-
-    $pattern = (string) $format_keys[$format] . '_pattern';
-    $loaded_pattern = $$pattern;
-
-    if (empty($loaded_pattern)) {
-      drupal_set_message($loaded_pattern, "No pattern found: ");
-      return;
-    }
-
-    $subfields = array();
-    $snippet = new File_MARC_Record();
-
-    foreach ($loaded_pattern as $instance => $tags) { //0 => array of tags
-      foreach ($tags as $tag => $codes) { //336 => array of codes
-        foreach ($codes as $key => $value) { //code => entry
-          if (in_array($key, array('a', 'b', 1, 2, 3))) {
-            $subfields[] = new File_MARC_Subfield($key, $value);
-            unset($key);
-          }
-        }
-        //Roll up all subfields into a DataField array for each tag
-        $field = new File_MARC_Data_Field($tag, $subfields, 0, NULL);
-        //_cals_importer_exporter_insert_field($record, $field, $tag);
-        $snippet->appendField($field);
-        unset($subfields);
-        unset($field);
-      }
-    }
-    return $snippet;
-}
 
 /**
  * Remove tags from record
@@ -472,7 +277,7 @@ function _cals_importer_exporter_marcxml_remove_tags(&$record, $tags) {
   }
 }
 /**
- * Parses the original marc file
+ * Parses the original marc file to find values associated w/ specific tag / indicators
  * @param $record
  * @param $tags
  * @param $xml
@@ -648,10 +453,10 @@ function _cals_importer_exporter_parse_subfields($tagset, $wrapper, $record, $xm
 }
 
 /**
- * Returns a new record based on datafields
+ * Loops thru control and datafields array to return new MARC XML record
  *
  * @param $record
- * @param $datafields
+ * @param $marcfields
  */
 function _cals_importer_exporter_build_new_record(&$record, $marcfields) {
   foreach ($marcfields as $type => $arr) {
@@ -660,7 +465,6 @@ function _cals_importer_exporter_build_new_record(&$record, $marcfields) {
     $function($record, $fields);
   }
 }
-
 
 /**
  * Iterate thru array of controlfields to insert xml controlfields
@@ -684,7 +488,6 @@ function _cals_importer_exporter_iterate_controlfields(&$record, $controlfields)
  * @param $datafields
  */
 function _cals_importer_exporter_iterate_datafields(&$record, $datafields) {
-
   foreach($datafields as $code => $arr) {
     $subfields = $arr['subfields'];
     if(empty($subfields)) {
@@ -715,83 +518,6 @@ function _cals_importer_exporter_get_marc_subfield($arr) {
     }
   }
   return $subfields;
-}
-
-/**
- * @param File_MARC_Record $record
- */
-function _cals_importer_exporter_sort_record_datafields($stub) {
-
-  $sortlist = new File_MARC_List();
-  $fresh_list = new File_MARC_List();
-  $unsortedlist = $stub->getFields();
-  $leader = $stub->getLeader();
-  $warnings = $stub->getWarnings();
-
-  /*
-   * Note: For unknown reasons, possibly related to the override of key() in
-   * File_MARC_List class, the next()
-   * method inherited from the parent class
-   * sets current() to null. So while we are calling SplDoublyLinkedList
-   * methods, they aren't iterating at all. $index value and checking
-   * the offset before doing any adding or comparing is the hack to implement
-   * Insert Sort algorithm.
-  */
-
-  foreach ($unsortedlist as $item ) {
-
-    $cloned_item = clone $item; //clone field objects or else the
-    // deleteFields on the record will wipe them out by reference.
-
-    //Dealing with an empty list, append item and manually advance index
-    if ($sortlist->isEmpty() ) {
-      $sortlist->appendNode($cloned_item);
-    } else { //Non-empty list
-      $sortlist->rewind();
-      $index = 0;
-
-      $unsorted_tag = $item->getTag();
-      $check_sort_tag = $sortlist->offsetGet($index)->getTag();//latest
-      settype($unsorted_tag, "integer");
-      settype($check_sort_tag, "integer");
-
-      $valid = $sortlist->valid(); //checking valid status
-      while($sortlist->valid() && $check_sort_tag <= $unsorted_tag
-      ) {
-          $sortlist->next();
-          $index++;
-          //If this position exists, set its tag for next sorting
-          if ($sortlist->offsetExists($index) ) {
-            $check_sort_tag = $sortlist->offsetGet($index)
-            ->getTag(); //get the new
-            // item offset tag and re-run the while check.
-            settype($check_sort_tag, "integer");
-        }
-      }
-      $sortlist->add($index, $cloned_item);
-    }
-    //next $item
-  }
-
-  //Need a new object because __destruct() sets data to NULL and we cannot
-  // build a new one with an existing File_MARC_List object
-  $sorted_record = new File_MARC_Record();
-
-  //Append the sorted fields from the linked list
-  foreach ($sortlist as $tag => $field) {
-    $sorted_record->appendField($field);
-  }
-
-  $sorted_record->setLeader($leader);
-
-  //Single record XML string outside of collection, namespace
-  $sorted_xml = simplexml_load_string(
-    $sorted_record
-    ->toXML())
-    ->children(NAME_SPACE)
-    ->asXML();
-
-  return $sorted_xml;
 }
 
 /**
@@ -862,6 +588,10 @@ function _cals_importer_view_marcxml_stub($node) {
   }
 }
 
+/**
+ * @param $node
+ * @return mixed
+ */
 function _cals_importer_exporter_build_marcxml_from_array($node) {
   //$xml_string = MARC_HEADER . '</marc:collection>';
   $record = new File_MARC_Record(NULL);
@@ -878,8 +608,6 @@ function _cals_importer_exporter_build_marcxml_from_array($node) {
   }
   return $record->__toString();
   //drupal_goto("node/{$node->nid}/build-validate-marcxml-output");
-
-
 }
 
 /**

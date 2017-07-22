@@ -524,7 +524,7 @@ function _cals_importer_get_block_items() {
     'page callback' => '_cals_importer_create_marc_stub_node',
     'file' => "cals_importer.exporter.inc",
     'title' => "Add MARC-ready stub entry",
-    'description' => 'Add MARC-readyL Stub',
+    'description' => 'Add MARC-ready Stub',
   );
   $items['_cals_importer_exporter_build_marcxml_from_array'] = array(
     'access arguments' => array('parse s3 paths'),

@@ -227,6 +227,18 @@ function _cals_importer_get_marc_indicators($xml, $tag, $int) {
 }
 
 /**
+ * Resets blank indicators to a Null value
+ * @param $str
+ * @return string
+ */
+
+function _cals_importer_normalize_indicators($str) {
+  $str = trim($str);
+  if($str == '""' || $str = "''") return '';
+  return $str;
+}
+
+/**
  * Returns number of nonfiling characters (for title fields, etc.)
  * @param $value
  * @return int
