@@ -217,7 +217,7 @@ function _cals_importer_get_tag_array() {
     }
   }
   ksort($me);
-  printAndDie($me);
+  //printAndDie($me);
   return $me;
 }
 
@@ -313,6 +313,8 @@ function _cals_importer_exporter_get_marc_fields($node, &$record, $tags) {
 }
 
 function _cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$record, $tags) {
+
+
   foreach($tags as $tag => $arr) {
 
     switch($tag) {
@@ -352,14 +354,17 @@ function _cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$rec
   return $tmp;
 
 }
+//_cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$record, $tags) {
+
 
 function _cals_importer_exporter_parse_datafields($node, $node_wrapper, &$record, $tags) {
   $xml = _cals_get_marc_xml_string($node);
+
   $arr = array();
   $tmp = array();
   foreach($tags as $tag => $tagset) {
     $callback_exists = $tagset['callback_exists'];
-    if($tag !== 511111111) {
+    try {
       $subs = $tagset['subfields'];
       //Treat parent tag as a unit if callback exists.
       if ($callback_exists) {
@@ -390,13 +395,26 @@ function _cals_importer_exporter_parse_datafields($node, $node_wrapper, &$record
         }
       }
 
+
+      //printPre($tmp, $tagset);
+
+      //include the array even if empty so we can track invalid records
+      if(!empty($tmp[$tag]['subfields']) ||
+        (isset($tmp[$tag]['required']) && $tmp[$tag]['required'] == 1)) {
+        $arr['datafields'][$tag] = $tmp[$tag];
+        $arr['datafields'][$tag]['required'] = $tagset['include_in_export'];
+      }
     }
-    //include the array even if empty so we can track invalid records
-    if(!empty($tmp[$tag]['subfields']) || (isset($tmp[$tag]['required']) && $tmp[$tag]['required'] == 1)) {
-      $arr['datafields'][$tag] = $tmp[$tag];
-      $arr['datafields'][$tag]['required'] = $tagset['include_in_export'];
+
+//catch exception
+    catch(Exception $e) {
+      drupal_set_message('Message: issue with  ' . $tag . ": " .$e->getMessage());
+      //printAndDie($tags[$tag]);
     }
+
   }
+  //printAndDie($arr);
+
   return $arr;
 }
 

@@ -411,17 +411,22 @@ function _cals_importer_exporter_callback_511($vars) {
  * @todo - review the proper way to extract body values.
  */
 function _cals_importer_exporter_callback_520($vars) {
+
   $node = $vars['node'];
   $tag = $vars['tag'];
   $wrapper = $vars['node_wrapper'];
   $subfields = array();
-  $values = trim($wrapper->body->value->value(array('decode' => TRUE)));
-  if(is_string($values)) $subfields['a'][] = $values;
+  if(!isset($wrapper->body)) {
+    return;
+  }
+  $values = $wrapper->body->value->value(array('decode' => TRUE));
+
+  if(is_string($values)) $subfields['a'][] = trim($values);
   if(is_array($values)) {
     foreach($values as $value) {
       $value = trim($value);
       if(!empty($value))
-        $subfields['a'][] = $value;
+        $subfields['a'][] = trim($value);
     }
   }
   $arr =  _cals_build_marc_subfield_array($tag, $subfields);
