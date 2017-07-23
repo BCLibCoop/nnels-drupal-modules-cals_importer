@@ -216,7 +216,7 @@ function _cals_importer_get_tag_array() {
       }
     }
   }
-  ksort($me);
+  ksort($me['datafields']);
   //printAndDie($me);
   return $me;
 }

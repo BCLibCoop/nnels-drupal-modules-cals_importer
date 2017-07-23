@@ -375,9 +375,14 @@ function _cals_importer_exporter_callback_506($vars) {
   $tag = $vars['tag'];
   $wrapper = $vars['node_wrapper'];
   $value = $wrapper->field_access_restrictions->value();
-  $label = ($value == 0) ? "no restrictions" : "restrictions";
+  $label = 'Open access';
+  $ind1 = 0;
+  if($value != 0) {
+    $label = 'Restricted to use by people with a documented print impairment';
+    $ind1 = 1;
+  }
   $arr[506] = array(
-    'ind1' => '',
+    'ind1' => $ind1,
     'ind2' => '',
     'subfields' => array('a' => array($label)),
   );
@@ -385,7 +390,11 @@ function _cals_importer_exporter_callback_506($vars) {
 }
 
 /**
- * NB: this is one of the file attachment stubs.
+ * Field 506 subfield a identifies restrictions imposed on individuals wishing
+ * to see the materials.
+ *
+ * Open access ind2 = 0
+ * Restricted ind2 = 1
  *
  * @param $vars
  * @return array
@@ -397,10 +406,15 @@ function _cals_importer_exporter_callback_511($vars) {
   $node = $vars['node'];
   $tag = $vars['tag'];
   $subfields['a'][] = 'Kisly, Dave';
-  $me =  _cals_build_marc_subfield_array($tag, $subfields);
-  $me[$tag]['ind1'] = 0;
-  $me[$tag]['ind2'] = '';
-  return $me;
+  $wrapper = $vars['node_wrapper'];
+  $values = $wrapper->field_access_restrictions->value();
+
+  printAndDie($values);
+
+  $arr =  _cals_build_marc_subfield_array($tag, $subfields);
+  $arr[$tag]['ind1'] = 0;
+  $arr[$tag]['ind2'] = '';
+  return $arr;
 
 }
 
