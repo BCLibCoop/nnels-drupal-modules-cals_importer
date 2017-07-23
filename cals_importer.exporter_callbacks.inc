@@ -471,6 +471,49 @@ function _cals_importer_exporter_callback_534($vars) {
   return $arr;
 
 }
+/**
+ * Subject
+ * @param $vars
+ * @return mixed
+ */
+function _cals_importer_exporter_callback_653($vars) {
+  $node = $vars['node'];
+  $tag = $vars['tag'];
+
+  $wrapper = $vars['node_wrapper'];
+  $subfields = array();
+  $values = $wrapper->field_subject->value();
+  foreach($values as $value) {
+    $subfields['a'][] = $value->name;
+  }
+  return _cals_build_marc_subfield_array($tag, $subfields);
+}
+
+/**
+ * Genre
+ * @param $vars
+ * @return array
+ */
+function _cals_importer_exporter_callback_655($vars) {
+  $node = $vars['node'];
+  $tag = $vars['tag'];
+
+  $wrapper = $vars['node_wrapper'];
+  $subfields = array();
+  $values = $wrapper->field_genre->value();
+  foreach($values as $value) {
+    $subfields['a'][] = $value->name;
+  }
+  $arr[$tag] = array(
+    'ind1' => '',
+    'ind2' => 4,
+    'subfields' => $subfields,
+  );
+  return $arr;
+  //return _cals_build_marc_subfield_array($tag, $subfields);
+}
+
+
 
 /**
  * Added Entry--Uncontrolled Name/Name
