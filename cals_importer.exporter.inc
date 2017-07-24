@@ -64,13 +64,14 @@ function _cals_importer_create_marc_stub($node) {
 
     //$xml = simplexml_load_string($xml_string);
     _cals_importer_exporter_marcxml_remove_tags($record, $tags);
-    //_cals_importer_exporter_callback_245($node, $record);
-    //_cals_importer_exporter_add_taxonomy_terms_marcxml($node, $record);
-
+    //get marc-ready array
     $marcfields = _cals_importer_exporter_get_marc_fields($node, $record, $tags);
     $node->field_xml_stub[LANGUAGE_NONE][0]['value'] = serialize($marcfields);
 
-    if(function_exists('dpm')) dpm($marcfields);
+    if(function_exists('dpm')) {
+      dpm($marcfields['controlfields']);
+      dpm($marcfields['datafields']);
+    }
     //with new datafields, generate the new record
     _cals_importer_exporter_build_new_record($record, $marcfields);
 
@@ -83,7 +84,7 @@ function _cals_importer_create_marc_stub($node) {
       drupal_set_message(t("XML Stub Created"));
     }
 
-    $new_xml_stub = $record->toXML("UTF-8", FALSE, FALSE);
+    //$new_xml_stub = $record->toXML("UTF-8", FALSE, FALSE);
     /* */
     //$new_xml_stub = $record->toRaw();
 
