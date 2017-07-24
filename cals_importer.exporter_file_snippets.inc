@@ -1,6 +1,70 @@
 <?php
 
 /**
+ * Simple wrapper so we can invoke from main repo node page for testing purposes
+ *
+ * @param $node
+ *   the node passed to the parser
+ */
+
+function _cals_importer_exporter_build_marcxml_file_node($node) {
+  _cals_importer_exporter_build_marcxml_file($node);
+  drupal_goto("node/{$node->nid}/TBA");
+}
+
+/**
+ * VBO to add populate the stub marc-xml string
+ *
+ * @param $entity
+ *   the node passed to the parser
+ */
+function _cals_importer_exporter_build_marcxml_file_vbo(&$entity, $context = array()) {
+  if (isset($entity->nid)) {
+    $node = node_load($entity->nid);
+    //safety check to make sure we're parsing repos items!!
+    $content_types = array('repository_item');
+    if (in_array($node->type, $content_types)  ) {
+      _cals_importer_exporter_build_marcxml_file($node);
+    }
+    else{
+      drupal_set_message(t("Invalid selection: not a repos item"));
+    }
+  }//end main if
+
+  return "";
+
+}
+
+/**
+ * The main workhorse
+ *
+ * @param $node
+ *   the node passed to the parser
+ *
+ */
+function _cals_importer_exporter_build_marcxml_file($node) {
+  $tags = _cals_importer_get_tag_array(); //tag mappings
+  $lint = new File_MARC_Lint();
+
+  //not sure if you need this?
+  $xml_string = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
+  $xml_string = MARC_HEADER . $xml_string . '</marc:collection>';
+
+  $stubfields = unserialize($node->field_xml_stub[LANGUAGE_NONE][0]['value']);
+
+  /**
+   JS' logic to merge in data structure from snippet fields
+
+   e.g., loop thru each field attachment to create file?
+
+   */
+
+
+}
+
+
+
+/**
  * Calls for each format in field collections.
  * Gets back a File_MARC_Record, converts to XML snippet for storage
  *
