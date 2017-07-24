@@ -69,8 +69,8 @@ function _cals_importer_create_marc_stub($node) {
     $node->field_xml_stub[LANGUAGE_NONE][0]['value'] = serialize($marcfields);
 
     if(function_exists('dpm')) {
-      dpm($marcfields['controlfields']);
-      dpm($marcfields['datafields']);
+      //dpm($marcfields['controlfields']);
+      //dpm($marcfields['datafields']);
     }
     //with new datafields, generate the new record
     _cals_importer_exporter_build_new_record($record, $marcfields);
