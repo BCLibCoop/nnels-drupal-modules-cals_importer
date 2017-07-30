@@ -576,7 +576,8 @@ function _cals_importer_exporter_callback_7201_e($vars) {
 
 
 /**
- * returns 856 subfield
+ * returns 856 subfield.
+ * @see https://www.loc.gov/marc/856guide.html
  *
  * @param $vars
  * @return mixed
@@ -587,8 +588,8 @@ function _cals_importer_exporter_callback_856($vars) {
   //field_publisher
   $nid = $node->nid;
   $arr[856] = array(
-    'ind1' => '',
-    'ind2' => '',
+    'ind1' => 4,
+    'ind2' => 0,
   );
   $arr[856]['subfields']['u'][] = 'http://nnels.ca/node/' . $nid;
 
