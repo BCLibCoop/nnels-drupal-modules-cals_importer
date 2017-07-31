@@ -246,7 +246,7 @@ function _cals_importer_normalize_indicators($str) {
 
 function _cals_importer_exporter_filing_characters($value) {
   $value = strtolower($value);
-  $arr = array(
+  /*$arr = array(
     "a ", "a'", "al ", "al- ", "am ", "an ", "an t- ", "ane ", "ang ", "ang mga ",
     "as ", "az ", "bat ", "bir ", "d'", "da ", "das ", "de ", "dei ", "dem ",
     "den ", "der ", "des ", "det ", "di ", "die ", "dos ", "e ", "'e ", "een ",
@@ -261,8 +261,10 @@ function _cals_importer_exporter_filing_characters($value) {
     "na h- ", "njē ", "ny ", "'o ", "o ", "os ", "'r ", "'s ", "'t ", "ta ",
     "tais ", "tas ", "tē ", "tēn ", "tēs ", "the ", "to ", "tō ", "tois ",
     "ton ", "tōn ", "tou ", "um ", "uma ", "un ", "un'", "una ", "une ",
-    "unei ", "unha ", "uno ", "uns ", "unui ", "us ", "y ", "ye ", "yr ");
-
+    "unei ", "unha ", "uno ", "uns ", "unui ", "us ", "y ", "ye ", "yr "); */
+  $str = variable_get('cals_importer_non_filing_characters');
+  $str = str_replace('\s', ' ', $str);
+  $arr = explode("\r\n", $str);
   foreach($arr as $char) {
     $len = strlen($char);
     $substr = substr($value, 0, $len);
