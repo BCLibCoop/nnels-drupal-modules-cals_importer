@@ -21,7 +21,7 @@ function cals_importer_config_form($form, &$form_state) {
     '#default_value' => variable_get('cals_importer_non_filing_characters'),
     '#rows' => 10,
     '#resizable' => TRUE,
-    '#description' => t('Strings that are counted in calculating 245 indicators. Please add one per line. Do not include blank character that follows.'),
+    '#description' => t('Strings that are counted in calculating 245 indicators. Please add one per line. Use \s to indicate trailing blank space.'),
     '#required' => TRUE,
   );
   $form['cals_importer_stop_words'] = array(
