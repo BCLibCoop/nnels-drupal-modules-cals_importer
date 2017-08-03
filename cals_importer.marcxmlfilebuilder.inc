@@ -259,7 +259,7 @@ function _cals_importer_build_marcxml($node) {
   }
   else {
     if(empty($parent_nid) ) drupal_set_message("No parent record-set to associate file with.");
-    if(empty($node->field_xml_string) ) drupal_set_message("No Xml string to parse");
+    if(empty($node->field_xml_stub) ) drupal_set_message("No Xml stub to parse");
     if(empty($node->field_nnels_856_tag) || $node->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] != 1)
       drupal_set_message("No 856 Tag");
     return;

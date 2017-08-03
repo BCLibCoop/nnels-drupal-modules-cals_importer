@@ -171,9 +171,8 @@ function _cals_importer_exporter_add_taxonomy_terms_marcxml($node, &$record) {
  * Given a collection of formats and corresponding Data Field pattern, create
  * the Data Fields per format and append to the record.
  *
- * @param $node
- * @param $record
- * @return int|void
+ * @param \FieldCollectionItemEntity $field_collection
+ * @return \File_MARC_Record $snippet
  */
 
 function _cals_importer_exporter_add_gmd_per_format($field_collection) {

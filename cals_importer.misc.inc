@@ -123,7 +123,7 @@ function _cals_wrap_fc($entity) {
  * from its snippet to its stub, pass through Data_Field sorting
  * function and return an XML string for writing to export file.
  *
- * @param \EntityDrupalWrapper $fc_wrapper
+ * @param \EntityMetadataWrapper $fc_wrapper
  * @param string $str
  * @return string $records
  */
