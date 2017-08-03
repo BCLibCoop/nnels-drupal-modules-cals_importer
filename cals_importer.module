@@ -162,18 +162,28 @@ function cals_importer_menu() {
     'file' => 'cals_importer.clean_up.inc',
 
   );
-
-  //Add tab to view xml stub, etc.
+  //menu callback to provide access to creating the parent xml stub
   $items['node/%node/view-xml-stub'] = array(
     'page callback' => '_cals_importer_view_marcxml_stub',
     'title' => "View XML Stub",
     'type' => MENU_LOCAL_TASK,
-    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'type' => MENU_CALLBACK,
+    //'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'page arguments' => array(1),
     'weight' => 100,
     'access arguments' => array('view marcxml stub'),
-    'file' => 'cals_importer.marcxml.inc',
+    'file' => 'cals_importer.exporter.inc',
 
+  );
+  //menu callback to provide access to re-validate / view xml stub
+  $items['node/%node/build-validate-marcxml-output'] = array(
+    'page callback' => '_cals_importer_exporter_build_marcxml_from_array',
+    'title' => "Validate / Preview XML Stub",
+    'type' => MENU_CALLBACK,
+    'page arguments' => array(1),
+    'weight' => 100,
+    'access arguments' => array('view marcxml stub'),
+    'file' => 'cals_importer.exporter.inc',
   );
   //generate cors s3 filesize values
   $items['admin/%node/update-filesize-field-collection'] = array(
@@ -513,9 +523,19 @@ function _cals_importer_get_block_items() {
     'access arguments' => array('parse s3 paths'),
     'page callback' => '_cals_importer_create_marc_stub_node',
     'file' => "cals_importer.exporter.inc",
-    'title' => "Create XML stub entry",
-    'description' => 'Added MARC-XML Stub',
-  );  /*
+    'title' => "Add MARC-ready stub entry",
+    'description' => 'Add MARC-ready Stub',
+  );
+  $items['_cals_importer_exporter_build_marcxml_from_array'] = array(
+    'access arguments' => array('parse s3 paths'),
+    'page callback' => '_cals_importer_exporter_build_marcxml_from_array',
+    'file' => "cals_importer.exporter.inc",
+    'title' => "Build / Validate MARC-XML File",
+    'description' => 'Added MARC-XML File',
+  );
+
+
+  /*
     $items['_cals_importer_generate_marcxml_file'] = array(
       'access arguments' => array('administer site configuration'),
       'page callback' => '_cals_importer_generate_marcxml_file',
@@ -570,11 +590,18 @@ function _cals_importer_block_process_repo_item($form_state) {
 
       $items = _cals_importer_get_block_items();
       foreach ($items as $i) {
-        if (user_access($i['access arguments'][0])) {
-          $cb = $i['page callback'];
+
+        $cb = $i['page callback'];
+        $include = TRUE;
+        if(!user_access($i['access arguments'][0])) $include = FALSE;
+
+        if($cb == 'cals_importer_exporter_build_marcxml_from_array' && empty($node->field_xml_stub)) {
+          //$include = FALSE;
+        }
+
+        if ($include) {
           if($cb == 'drupal_get_form') {
             $cb = $i['page arguments'][0];
-
           }
           $options[$cb] = $i['title'];
 
@@ -615,8 +642,8 @@ function _cals_importer_block_process_repo_item_submit($form, &$form_state) {
     if (isset($i['description'])) {
       drupal_set_message($i['description']);
     }
-    //if (isset())
     //printAndDie($callback);
+    //if (isset())
     $callback($node);
   }
 }

@@ -5,19 +5,6 @@
  */
 
 /**
- * View marc-xml stub for repository item
- * @param $node
- */
-function _cals_importer_view_marcxml_stub($node) {
-
-  if(!empty($node->field_xml_stub[LANGUAGE_NONE])) {
-    return $node->field_xml_stub[LANGUAGE_NONE][0]['safe_value'];
-  }
-  return t('Stub has not been defined. You can click on Create XML Stub entry to generate this');
-}
-
-
-/**
  * Simple wrapper to call main parser; if preferred, can invoke batch api instead. 
  * @param $node
  */
@@ -211,7 +198,7 @@ function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
       if(!isset($v['parser']['function'])) printAndDie("???", $v);
       $function = $v['parser']['function'];
       if(is_array($function)) {
-        printAndDie($map);
+        //printAndDie($map);
         foreach($function as $f) {
           $function($xml, $k, $map);
         }

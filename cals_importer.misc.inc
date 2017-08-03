@@ -44,7 +44,6 @@ function _cals_importer_update_admin_audit($node, $action) {
   $e->save(); 
 }
 
-
  
 /**
  * Helper function to return the nid for a given system number (MARC)
@@ -82,6 +81,38 @@ function _cals_get_message_invalid_xml($node) {
 		'error'
 	);
 	
+}
+
+/**
+ * returns
+ * @param $tag
+ * @param null $ind1
+ * @param null $ind2
+ * @param null $code
+ * @return string
+ */
+function _cals_importer_get_xpath_path($tag, $ind1 = NULL, $ind2 = NULL, $code = NULL) {
+  $path = "//marc:datafield[@tag=$tag]";
+  if(isset($ind1)) $path .= "[@ind1='{$ind1}']";
+  if(isset($ind2)) $path .= "[@ind2='{$ind2}']";
+  if(isset($code)) $path .= "/marc:subfield[@code='{$code}']";
+  return $path;
+}
+/**
+ * Returns an array of string values from an xpath statement
+ * @param $path
+ * @return array
+ */
+function _cals_importer_get_xpath_values($tag, $ind1, $ind2, $code, $xml) {
+  $arr = array();
+  $path = _cals_importer_get_xpath_path($tag, $ind1, $ind2, $code);
+  $xpathvalue = $xml->xpath($path);
+  //$tmp = $xml->xpath($path);
+  if (count($xpathvalue)) {
+    foreach ($xpathvalue as $me)
+      $arr[] = (string) trim($me[0]);
+  }
+  return $arr;
 }
 
 /**
@@ -134,7 +165,7 @@ function _cals_get_set_xml_snippet($fc_wrapper, $str) {
 
   $records = '';
   $stub_record = new File_MARCXML($str, File_MARC::SOURCE_STRING);
-  $record = $stub_record->next();
+  $record = $stub_record->next(); //File_MARC_Record instance
   $this_snippet = $fc_wrapper->field_marc_xml_snippet[0]->value();
 
   $snippets = new File_MARCXML($this_snippet, File_MARC::SOURCE_STRING);
@@ -144,9 +175,27 @@ function _cals_get_set_xml_snippet($fc_wrapper, $str) {
       $snippet_context = $snippets->next();
 
       foreach ($snippet_context->getFields() as $tag => $value) {
-        //adjust byte 6 of leader to reflect added formats since ingest
         $record->appendField($value);
       }
+
+      //Adjust byte 6 of leader to reflect added format since ingest
+      $ldr_arr = str_split($record->getLeader());
+      $format = $fc_wrapper->field_file_format->value();
+
+      switch($format) {
+        case 4:
+          //Nonmusical Sound Recording (i) for MP3
+          $ldr_arr[6] = 'i';
+          break;
+        default:
+          //Language Material (a) for all other formats
+          $ldr_arr[6] = 'a';
+          break;
+      }
+
+      //Restore string and set
+      $ldr_arr = implode("", $ldr_arr);
+      $record->setLeader($ldr_arr);
 
       //Stub + new fields to sorter, returns XML string
       $records .= _cals_importer_exporter_sort_record_datafields($record) . "\n";
@@ -156,11 +205,76 @@ function _cals_get_set_xml_snippet($fc_wrapper, $str) {
 }
 
 
-function _cals_entity_wrapper($arr) {
-  $node = new EntityDrupalWrapper('node', 1);
-  $node->field_reference[0]->set(463); // Note that this is a multi value field.
-  $node->field_text->set('Some Value'); // Note that this is a single value field.
+/**
+ * Returns an array of indicators for given tag
+ * @param $xml
+ * @param $tag
+ * @return array
+ */
+function _cals_importer_get_marc_indicators($xml, $tag, $int) {
+  $parent = $xml->xpath("//marc:datafield[@tag=$tag]");
+  $ind = array();
+  foreach($parent as $i => $child) {
+    /*
+    $ind = array(
+      1 => (string) $parent[$i]->attributes()->ind1,
+      2 =>  (string) $parent[$i]->attributes()->ind2,
+    );
+    */
+    return ($int == 1) ? (string) $parent[$i]->attributes()->ind1 :
+      (string) $parent[$i]->attributes()->ind2;
+  }
 }
+
+/**
+ * Resets blank indicators to a Null value
+ * @param $str
+ * @return string
+ */
+
+function _cals_importer_normalize_indicators($str) {
+  $str = trim($str);
+  if($str == '""' || $str = "''") return '';
+  return $str;
+}
+
+/**
+ * Returns number of nonfiling characters (for title fields, etc.)
+ * @param $value
+ * @return int
+ */
+
+function _cals_importer_exporter_filing_characters($value) {
+  $value = strtolower($value);
+  /*$arr = array(
+    "a ", "a'", "al ", "al- ", "am ", "an ", "an t- ", "ane ", "ang ", "ang mga ",
+    "as ", "az ", "bat ", "bir ", "d'", "da ", "das ", "de ", "dei ", "dem ",
+    "den ", "der ", "des ", "det ", "di ", "die ", "dos ", "e ", "'e ", "een ",
+    "eene ", "egy ", "ei ", "ein ", "eine ", "einem ", "einen ", "einer ",
+    "eines ", "eit ", "el ", "el- ", "els ", "en ", "enne ", "et ", "ett ",
+    "eyn ", "eyne ", "gl'", "gli ", "ha- ", "hai ", "he ", "hē ", "he- ",
+    "heis ", "hen ", "hena ", "henas ", "het ", "hin ", "hina ", "hinar ", "hinir ",
+    "hinn ", "hinna ", "hinnar ", "hinni ", "hins ", "hinu ", "hinum ", "hið ",
+    "ho ", "hoi ", "i ", "ih'", "il ", "il- ", "in ", "it ",
+    "ka ", "ke ", "l'", "l- ", "la ", "las ", "le ", "les ", "lh ", "lhi ",
+    "li ", "lis ", "lo ", "los ", "lou ", "lu ", "mga ", "mia ", "'n ", "na ",
+    "na h- ", "njē ", "ny ", "'o ", "o ", "os ", "'r ", "'s ", "'t ", "ta ",
+    "tais ", "tas ", "tē ", "tēn ", "tēs ", "the ", "to ", "tō ", "tois ",
+    "ton ", "tōn ", "tou ", "um ", "uma ", "un ", "un'", "una ", "une ",
+    "unei ", "unha ", "uno ", "uns ", "unui ", "us ", "y ", "ye ", "yr "); */
+  $str = variable_get('cals_importer_non_filing_characters');
+  $str = str_replace('\s', ' ', $str);
+  $arr = explode("\r\n", $str);
+  foreach($arr as $char) {
+    $len = strlen($char);
+    $substr = substr($value, 0, $len);
+    if($substr == $char) return $len;
+  }
+  return 0;
+
+}
+
+
 
 function _cals_get_tid_by_name($vid, $name) {
   //$name = $v['value'];
@@ -240,7 +354,11 @@ function _cals_get_iso_date($value) {
 
 }
 
-
+/**
+ * @param $arr
+ * @param $entries
+ * @return array
+ */
 
 function _cals_get_keyword_index_values($arr, $entries) {
 
@@ -307,37 +425,60 @@ function _cals_increase_field_size($fieldname = "field_isbn", $size = "30") {
 
 }
 
+function printPrettyArray() {
+  $num = func_num_args();
+  $args = func_get_args();
+  $html = '<hr><blockquote>';
+  for ($i = 0; $i < $num; $i++) {
+    //$my = var_export($args[$i],true);
+    $html .= '<pre>'; print_r($args[$i]); echo'</pre>';
+  }
+  $html .= "</pre></blockquote>";
+
+  print $html;
+  die;
+
+  return $html;
+}
+
 function printPre() {
-
-    $num = func_num_args();
-    $args = func_get_args();
-
-    echo '<hr><blockquote>';
-
-    for ($i = 0; $i < $num; $i++) {
-        //$my = var_export($args[$i],true);
-        echo '<pre>'; print_r($args[$i]); echo'</pre>';
-    }
-
-    echo '</blockquote>';
-
-
-    //print("<hr><blockquote><pre>"); print_r($tmp);
-    print("</pre></blockquote>");
+  $num = func_num_args();
+  $args = func_get_args();
+  print '<hr><blockquote>';
+  $functions = debug_backtrace()[1]['function'];
+  //get prior function, if exists
+  if(debug_backtrace()[2]['function']) $functions = debug_backtrace()[2]['function'] . ' => ' . $functions;
+  print $functions;
+  for ($i = 0; $i < $num; $i++) {
+    //$my = var_export($args[$i],true);
+    print '<pre>'; print_r($args[$i]); echo'</pre>';
+  }
+  print("</pre></blockquote>");
 }
 
 function printAndDie() {
-    $num = func_num_args();
-    $args = func_get_args();
+  $num = func_num_args();
+  $args = func_get_args();
+  print '<div class="indented">';
 
-    echo '<div class="indented">';
+  $functions = debug_backtrace()[1]['function'];
+  //get prior function, if exists
+  if(debug_backtrace()[2]['function']) $functions = debug_backtrace()[2]['function'] . ' => ' . $functions;
+  print $functions;
 
-    for ($i = 0; $i < $num; $i++) {
-        //$my = var_export($args[$i],true);
-        echo '<pre>';  print_r($args[$i]);  echo'</pre>';
-    }
-    echo '</div>';
-    die;
+  for ($i = 0; $i < $num; $i++) {
+    //$my = var_export($args[$i],true);
+    print '<pre>';
+    print_r($args[$i]);
+    print '</pre>';
+  }
+  print '</div>';
+  //$functions = debug_backtrace()[1]['function'];
+  //get prior function, if exists
+
+
+  print '</div>';
+  die;
 }
 function printSQL($sql) {
   $sql = trim($sql);
@@ -398,4 +539,153 @@ function _cals_array_sort($array, $on, $order=SORT_ASC){
     }
 
     return $new_array;
+}
+
+/**
+ * To deprecate?
+ */
+
+/**
+ * Iterate thru taxonomy terms (field_subject, field_genre) and add values to
+ * current record
+ *
+ * @param $node
+ * @param $record
+ */
+function _cals_importer_exporter_add_nnels_values_marcxml($node, &$record) {
+  //if vocab, $term = 'field_subject';
+  $fieldnames =
+    array(
+      //'field_system_control_number' => array('001', '', '', '', NULL),
+      'field_dc_creator' => array('040', 'a', 1, '', NULL),
+      'title_field' => array(245, 'a', 1, 4, 'normalize_title'),
+
+      //'field_access_restrictions' => array(),
+    );
+
+  foreach($fieldnames as $fieldname => $marc) {
+    $tag = $marc[0];
+    $code = $marc[1];
+    $ind1 = $marc[2];
+    $ind2 = $marc[3];
+    $callback = $marc[4];
+    $values = field_view_field('node', $node, $fieldname, array('default'));
+
+    if(is_array($values)) {
+      foreach($values['#items'] as $value) {
+        $subfields = array();
+        $safe_value = trim($value['value']);
+        if(!empty($callback)) $callback($safe_value);
+        $subfields = array();
+        if($tag != '001') $subfields[] = new File_MARC_Subfield($code, $safe_value);
+        $field = new File_MARC_Data_Field($tag, $subfields, 0, null);
+        $field->setIndicator(1, $ind1);
+        $field->setIndicator(2, $ind2);
+        _cals_importer_exporter_insert_field($record, $field, $key);
+      }
+    }
+
+  }
+  //return new File_MARC_Data_Field('650', $subfields, 0, null);
+}
+function _iterate_tags_deprecate() {
+
+  $fieldnames =
+    array(
+      //'field_system_control_number' => array('001', '', '', '', NULL),
+      'field_dc_creator' => array('040', 'a', 1, '', NULL),
+      'title_field' => array(245, 'a', 1, 4, 'normalize_title'),
+
+      //'field_access_restrictions' => array(),
+    );
+
+  foreach($fieldnames as $fieldname => $marc) {
+    $tag = $marc[0];
+    $code = $marc[1];
+    $ind1 = $marc[2];
+    $ind2 = $marc[3];
+    $callback = $marc[4];
+    $values = field_view_field('node', $node, $fieldname, array('default'));
+
+    if(is_array($values)) {
+      foreach($values['#items'] as $value) {
+        $subfields = array();
+        $safe_value = trim($value['value']);
+        if(!empty($callback)) $callback($safe_value);
+        $subfields = array();
+        if($tag != '001') $subfields[] = new File_MARC_Subfield($code, $safe_value);
+        $field = new File_MARC_Data_Field($tag, $subfields, 0, null);
+        $field->setIndicator(1, $ind1);
+        $field->setIndicator(2, $ind2);
+        _cals_importer_exporter_insert_field($record, $field, $key);
+      }
+    }
+
+  }
+
+  foreach ($record->getFields() as $tag=>$value) {
+
+    if ($value instanceof File_MARC_Control_Field) {
+
+    }
+    else {
+      $sub = array();
+      foreach ($value->getSubfields() as $code=>$subdata) {
+        $sub[$code] = array(
+          'value' => $subdata->getData(),
+        );
+      }
+      if(!empty($tag)) {
+        //$tag2 = str_replace($tag,'', 0, 0);
+        if(substr($tag, 0, 1) == '0') {
+          $tag = ltrim($tag, '0');
+
+        }
+        $df[$tag] = array(
+          'ind1' => $value->getIndicator(1),
+          'ind2' => $value->getIndicator(2),
+          'sub' => $sub,
+
+        );
+
+      }
+
+    }
+  }
+  ksort($df);
+}
+
+
+/**
+ * Taxonomy terms (field_subject, field_genre) and add values to
+ * current record
+ *
+ * @param $node
+ * @param $record
+ */
+function _cals_importer_exporter_add_taxonomy_terms_marcxml($node, &$record) {
+  //if vocab, $term = 'field_subject';
+  $fieldnames =
+    array(
+      'field_subject' => array(650, 'a', 1, 4),
+      'field_genre' => array(655, 'a', ' ', 7),
+    );
+
+  foreach($fieldnames as $fieldname => $marc) {
+    $tag = $marc[0];
+    $code = $marc[1];
+    $ind1 = $marc[2];
+    $ind2 = $marc[3];
+    $terms = field_view_field('node', $node, $fieldname, array('default'));
+    if(is_array($terms)) {
+      foreach($terms["#items"] as $term){
+        $subfields = array();
+        $subfields[] = new File_MARC_Subfield($code, $term["taxonomy_term"]->name);
+        $field = new File_MARC_Data_Field($tag, $subfields, 0, null);
+        $field->setIndicator(1, $ind1);
+        $field->setIndicator(2, $ind2);
+        _cals_importer_exporter_insert_field($record, $field, $tag);
+      }
+    }
+  }
 }
