@@ -123,21 +123,30 @@ function _cals_importer_exporter_callback_ldr($wrapper) {
  * @param $node
  * @return bool|string
  */
-function _cals_importer_export_callback_008($node) {
+function _cals_importer_export_callback_008($node, $node_wrapper, $xml) {
 
+  $tmp = $xml->xpath("//marc:datafield[@tag='040']/marc:subfield[@code='a']");
+  $source = '|';
+  if (count($tmp) >= 1) {
+    $source = (string) $tmp[0];
+  }
+
+  //printAndDie($tmp, $node, $node_wrapper);
   $val = $node->changed;
+  $val = $node->created;
   //yyyymmddhhmmss.f
-  $val = date('dmy', $val[0]);
-  $val =  str_pad($val, 30);
+  $val = date('dmy', $val);
+  $val =  str_pad($val, 35);
   $lgs = array();
   //$lgs = $node->field_iso_language[LANGUAGE_NONE];
   $lg = (!empty($node->field_iso_language)) ?
     $node->field_iso_language[LANGUAGE_NONE][0]['value']:
     'eng';
-  $val .= $lg . '|';
+  $val .= $lg . $source;
   return $val;
 }
 /**
+ * $a = Original cataloguing agency (contains the code or name of the organization)
  * $b = language of cataloguing - include if present in MarcXML
  * $c and $d = hard-coded to BVNNELS
  *
@@ -148,8 +157,10 @@ function _cals_importer_exporter_callback_040($vars) {
   $node = $vars['node'];
   $tag = $vars['tag'];
   $wrapper = $vars['node_wrapper'];
+  $xml = $vars['xml'];
   $value = $wrapper->field_dc_creator->value();
   //$label = ($value == 0) ? "no restrictions" : "restrictions";
+
   $arr['040'] = array(
     'ind1' => '',
     'ind2' => '',
@@ -160,6 +171,20 @@ function _cals_importer_exporter_callback_040($vars) {
       //array('value' => 'BVNNELS', 'subfield' => 'b'),
     ),
   );
+
+  $tmp = $xml->xpath("//marc:datafield[@tag='040']/marc:subfield[@code='a']");
+  if (count($tmp) >= 1) {
+    $a = (string) $tmp[0];
+    $arr['040']['subfields']['a'][] = trim($a);
+  }
+
+  $tmp = $xml->xpath("//marc:datafield[@tag='040']/marc:subfield[@code='b']");
+  if (count($tmp) >= 1) {
+    $b = (string) $tmp[0];
+    $arr['040']['subfields']['b'][] = trim($b);
+  }
+
+
   return $arr;
 }
 
@@ -168,7 +193,7 @@ function _cals_importer_exporter_callback_040($vars) {
  * @param $vars
  * @return mixed
  */
-function _cals_importer_exporter_callback_040a($vars) {
+function _cals_importer_exporter_callback_040ax($vars) {
   $node = $vars['node'];
   $tag = $vars['tag'];
   $wrapper = $vars['node_wrapper'];
@@ -286,6 +311,36 @@ function _cals_importer_exporter_callback_240x($vars) {
   return $rec;
 
 }
+
+/**
+ * Primary title, a bit tricky due to nonfiling characters.
+ *
+ * @param $node
+ * @param $record
+ */
+function _cals_importer_exporter_callback_240($vars) {
+  //if vocab, $term = 'field_subject';
+  $node = $vars['node'];
+  $tag = $vars['tag'];
+
+  $wrapper = $vars['node_wrapper'];
+  $subfields = array();
+
+  $term = $wrapper->field_uniform_title->value();
+  if(is_object($term)) {
+    $value = trim($term->name);
+    $code = 240;
+    $subfield = 'a';
+    $ind2 = 0;
+    $ind2 = _cals_importer_exporter_filing_characters($value);
+    $arr[240]['subfields']['a'][] = $value;
+    $arr[240]['ind1'] = 0;
+    $arr[240]['ind2'] = $ind2;
+  }
+  return $arr;
+
+}
+
 /**
  * Primary title, a bit tricky due to nonfiling characters.
  *

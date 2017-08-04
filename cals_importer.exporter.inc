@@ -236,6 +236,20 @@ function _cals_importer_exporter_field_value($node, $fieldname) {
   return $values;
 }
 
+/**
+ * Returns array of values for a given node + fieldname.
+ * Used by various callbacks.
+ *
+ * @param $node
+ * @param $fieldname
+ * @return mixed
+ */
+function _cals_importer_exporter_field_value_taxonomy_term($node, $fieldname) {
+  printAndDie($values);
+
+  $values = field_view_field('taxonomy_term', $node, $fieldname, array('default'));
+  return $values;
+}
 
 function normalize_title(&$value) {
   $last = substr($value, -1);
@@ -306,7 +320,7 @@ function _cals_importer_exporter_get_marc_fields($node, &$record, $tags) {
   // _cals_importer_exporter_parse_datafields
   foreach ($tags as $type => $tagset) {
     $function = '_cals_importer_exporter_parse_' . $type;
-    $tmp = $function($node, $node_wrapper, $record, $tagset);
+    $tmp = $function($node, $node_wrapper, $record, $tagset, $xml);
     if(!empty($tmp))
       $fields = $fields + $tmp;
   }
@@ -314,9 +328,8 @@ function _cals_importer_exporter_get_marc_fields($node, &$record, $tags) {
   return $fields;
 }
 
-function _cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$record, $tags) {
-
-
+function _cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$record, $tags, $xml) {
+  //$xml = _cals_get_marc_xml_string($node);
   foreach($tags as $tag => $arr) {
 
     switch($tag) {
@@ -340,9 +353,7 @@ function _cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$rec
         $val = date('YmdHis.0', $val);
         break;
       case '008':
-
-        $val = _cals_importer_export_callback_008($node);
-
+        $val = _cals_importer_export_callback_008($node, $node_wrapper, $xml);
         break;
 
     }
@@ -359,8 +370,8 @@ function _cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$rec
 //_cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$record, $tags) {
 
 
-function _cals_importer_exporter_parse_datafields($node, $node_wrapper, &$record, $tags) {
-  $xml = _cals_get_marc_xml_string($node);
+function _cals_importer_exporter_parse_datafields($node, $node_wrapper, &$record, $tags, $xml) {
+  //$xml = _cals_get_marc_xml_string($node);
 
   $arr = array();
   $tmp = array();
@@ -373,7 +384,8 @@ function _cals_importer_exporter_parse_datafields($node, $node_wrapper, &$record
         $vars = array(
           'node' => $node,
           'tag' => $tag,
-          'node_wrapper' => $node_wrapper
+          'node_wrapper' => $node_wrapper,
+          'xml' => $xml,
         );
         $callback = $tagset['callback'];
         $tmp = $callback($vars);
@@ -566,7 +578,9 @@ function _cals_importer_view_marcxml_stub($node) {
     foreach ($array as $type => $tags) {
       foreach ($tags as $tag => $value) {
         if ($type == 'controlfields') {
-          $items[] = "$tag  = {$value['value']}";
+          $str = $value['value'];
+          if($tag == '008') $str = str_replace(' ', '.', $str);;
+          $items[] = "$tag = $str";
         }
         else {
           if (!empty($value['subfields'])) {
@@ -587,8 +601,9 @@ function _cals_importer_view_marcxml_stub($node) {
         }
       }
     }
+    //printAndDie($items);
     $vars = array(
-      'title' => t('Currently Saved Array of MARC ready fields'),
+      'title' => t('Currently saved array of MARC ready fields'),
       'items' => $items,
       'type' => 'ul',
       'attributes' => array()
