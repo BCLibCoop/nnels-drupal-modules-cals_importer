@@ -251,6 +251,54 @@ function _cals_importer_exporter_field_value_taxonomy_term($node, $fieldname) {
   return $values;
 }
 
+/**
+ * Returns the subfield array when provided w/ a Drupal fieldname + code +
+ * wrappper
+ *
+ * @param $code
+ * @param $fieldname
+ * @param $wrapper
+ * @return array
+ */
+
+function _cals_importer_exporter_get_subfield_array_from_drupal_fields($code, $fieldname, $wrapper, $enumerations = NULL) {
+  $arr = array();
+  if(!empty($wrapper->{$fieldname}->value())) {
+    $values = $wrapper->{$fieldname}->value();
+    if(is_string($values) && !empty(trim($values))) {
+      $arr[$code][] = (is_array($enumerations)) ? $enumerations[$values] : $values;
+    }
+
+    if(is_array($values)) {
+      foreach($values as $value) {
+        $arr[$code][] = (is_array($enumerations)) ? $enumerations[$values] : $values;
+      }
+    }
+  }
+  return $arr; // = array();
+}
+
+/**
+ * Returns a subfield array when given a tag and existing subfield array;
+ *
+ * @param $tag
+ * @param $subfields
+ * @return array
+ *
+ */
+function _cals_build_marc_subfield_array($tag, $subfields) {
+  if(is_array($subfields) && count($subfields)) {
+    return array($tag => array(
+      'subfields' => $subfields,
+    ));
+  }
+  return '';
+}
+
+/**
+ * Returns a normalized title field
+ * @param $value
+ */
 function normalize_title(&$value) {
   $last = substr($value, -1);
   if($last != '.') $value .= '.';

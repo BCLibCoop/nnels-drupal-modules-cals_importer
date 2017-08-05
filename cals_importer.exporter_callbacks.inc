@@ -1,48 +1,6 @@
 <?php
 
 /**
- * Returns the subfield array when provided w/ a Drupal fieldname + code +
- * wrappper
- *
- * @param $code
- * @param $fieldname
- * @param $wrapper
- * @return array
- */
-
-function _cals_importer_exporter_get_subfield_array_from_drupal_fields($code, $fieldname, $wrapper) {
-  $arr = array();
-  if(!empty($wrapper->{$fieldname}->value())) {
-    $values = $wrapper->{$fieldname}->value();
-    if(is_string($values) && !empty(trim($values))) {
-      $arr[$code][] = $values;
-    }
-    if(is_array($values)) {
-      foreach($values as $value) {
-        $arr[$code][] = $value;
-      }
-    }
-  }
-  return $arr; // = array();
-}
-
-/**
- * Returns a subfield array when given a tag and existing subfield array;
- *
- * @param $tag
- * @param $subfields
- * @return array
- *
- */
-function _cals_build_marc_subfield_array($tag, $subfields) {
-  if(is_array($subfields) && count($subfields)) {
-    return array($tag => array(
-      'subfields' => $subfields,
-    ));
-  }
-  return '';
-}
-/**
  * Returns date and time of latest transaction
  * @param $vars
  * @return mixed
@@ -514,7 +472,9 @@ function _cals_importer_exporter_callback_521($vars) {
   $node = $vars['node'];
   $tag = $vars['tag'];
   $wrapper = $vars['node_wrapper'];
-  $subfields =  _cals_importer_exporter_get_subfield_array_from_drupal_fields('a', 'field_audience', $wrapper);
+  $def = field_info_field("field_audience");
+  $enumerations = list_allowed_values($def);
+  $subfields =  _cals_importer_exporter_get_subfield_array_from_drupal_fields('a', 'field_audience', $wrapper, $enumerations);
   $arr =  _cals_build_marc_subfield_array($tag, $subfields);
   $arr[$tag]['ind1'] = '';
   $arr[$tag]['ind2'] = '';
