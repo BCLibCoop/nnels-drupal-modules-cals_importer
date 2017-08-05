@@ -244,7 +244,7 @@ function _cals_importer_normalize_indicators($str) {
  * @return int
  */
 
-function _cals_importer_exporter_filing_characters($value) {
+function _cals_importer_exporter_filing_characters($value, $start = 0) {
   $value = strtolower($value);
   /*$arr = array(
     "a ", "a'", "al ", "al- ", "am ", "an ", "an t- ", "ane ", "ang ", "ang mga ",
@@ -265,13 +265,17 @@ function _cals_importer_exporter_filing_characters($value) {
   $str = variable_get('cals_importer_non_filing_characters');
   $str = str_replace('\s', ' ', $str);
   $arr = explode("\r\n", $str);
+  //add Quotation marks to end.
+  $arr[] = '"';
   foreach($arr as $char) {
     $len = strlen($char);
-    $substr = substr($value, 0, $len);
-    if($substr == $char) return $len;
+    $substr = substr($value, $start, $len);
+    if($substr == $char) {
+      printPre("CHAR =  $char| Start = $start | LEN = $len");
+      return _cals_importer_exporter_filing_characters($value, $start + $len);
+    }
   }
-  return 0;
-
+  return $start;
 }
 
 

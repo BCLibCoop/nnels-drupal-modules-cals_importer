@@ -271,7 +271,7 @@ function _cals_importer_exporter_get_subfield_array_from_drupal_fields($code, $f
 
     if(is_array($values)) {
       foreach($values as $value) {
-        $arr[$code][] = (is_array($enumerations)) ? $enumerations[$values] : $values;
+        $arr[$code][] = (is_array($enumerations)) ? $enumerations[$values] : $value;
       }
     }
   }
