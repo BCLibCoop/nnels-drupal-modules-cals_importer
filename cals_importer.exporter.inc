@@ -66,6 +66,7 @@ function _cals_importer_create_marc_stub($node) {
     _cals_importer_exporter_marcxml_remove_tags($record, $tags);
     //get marc-ready array
     $marcfields = _cals_importer_exporter_get_marc_fields($node, $record, $tags);
+    //printAndDie($marcfields);
     $node->field_xml_stub[LANGUAGE_NONE][0]['value'] = serialize($marcfields);
 
     if(function_exists('dpm')) {
@@ -577,10 +578,25 @@ function _cals_importer_exporter_iterate_datafields(&$record, $datafields) {
     }
     else {
       $marc_subfields = _cals_importer_exporter_get_marc_subfield($subfields);
-      $field = new File_MARC_Data_Field($code, $marc_subfields, 0, null);
-      $field->setIndicator(1, "{$arr['ind1']}");
-      $field->setIndicator(2, "{$arr['ind2']}");
-      _cals_importer_exporter_insert_field($record, $field, $code);
+      //if($code == 720) printAndDie($marc_subfields);
+      if($code == 720) {
+        foreach($marc_subfields as $marc_subfield) {
+          $tmp = array($marc_subfield);
+          //printAndDie($marc_subfields, $marc_subfield, $tmp);
+          $field = new File_MARC_Data_Field($code, $tmp, 0, null);
+          $field->setIndicator(1, "{$arr['ind1']}");
+          $field->setIndicator(2, "{$arr['ind2']}");
+          _cals_importer_exporter_insert_field($record, $field, $code);
+
+        }
+
+      }
+      else {
+        $field = new File_MARC_Data_Field($code, $marc_subfields, 0, null);
+        $field->setIndicator(1, "{$arr['ind1']}");
+        $field->setIndicator(2, "{$arr['ind2']}");
+        _cals_importer_exporter_insert_field($record, $field, $code);
+      }
     }
   }
 }
