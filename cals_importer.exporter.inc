@@ -65,7 +65,6 @@ function _cals_importer_create_marc_stub($node) {
     _cals_importer_exporter_marcxml_remove_tags($record, $tags);
     //get marc-ready array
     $marcfields = _cals_importer_exporter_get_marc_fields($node, $record, $tags);
-    //printAndDie($marcfields);
     $node->field_xml_stub[LANGUAGE_NONE][0]['value'] = serialize($marcfields);
 
     if(function_exists('dpm')) {
