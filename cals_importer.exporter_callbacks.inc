@@ -123,8 +123,10 @@ function _cals_importer_exporter_callback_040($vars) {
     'ind1' => '',
     'ind2' => '',
     'subfields' => array(
-      'c' => array('BVNNELS'),
-      'd' => array('BVNNELS')
+      array(
+        'c' => 'BVNNELS',
+        'd' => 'BVNNELS',
+      ),
       //array('value' => $label, 'subfield' => 'a'),
       //array('value' => 'BVNNELS', 'subfield' => 'b'),
     ),
@@ -133,7 +135,7 @@ function _cals_importer_exporter_callback_040($vars) {
   $tmp = $xml->xpath("//marc:datafield[@tag='040']/marc:subfield[@code='a']");
   if (count($tmp) >= 1) {
     $a = (string) $tmp[0];
-    $arr['040']['subfields']['a'][] = trim($a);
+    $arr['040']['subfields'][0]['a'] = trim($a);
   }
 
   $tmp = $xml->xpath("//marc:datafield[@tag='040']/marc:subfield[@code='b']");
@@ -144,130 +146,6 @@ function _cals_importer_exporter_callback_040($vars) {
 
 
   return $arr;
-}
-
-/**
- * $a = original cataloguing agency
- * @param $vars
- * @return mixed
- */
-function _cals_importer_exporter_callback_040ax($vars) {
-  $node = $vars['node'];
-  $tag = $vars['tag'];
-  $wrapper = $vars['node_wrapper'];
-  $value = $wrapper->field_dc_creator->value();
-  //$label = ($value == 0) ? "no restrictions" : "restrictions";
-  $arr['040'] = array(
-    'ind1' => '',
-    'ind2' => '',
-    'subfields' => array(
-      'c' => array('BVNNELS'),
-      'd' => array('BVNNELS')
-      //array('value' => $label, 'subfield' => 'a'),
-      //array('value' => 'BVNNELS', 'subfield' => 'b'),
-    ),
-  );
-  return $arr;
-}
-
-/**
- * Uniform title, include if this exists in the original marc xml
- *
- * @param $node
- * @param $record
- */
-function _cals_importer_exporter_callback_240x($vars) {
-  //if vocab, $term = 'field_subject';
-  //printAndDie($vars);
-  $subfields = array();
-  $tag = $vars['tag'];
-  $code = $vars['code'];
-  $subs1 = $tag['subfields'];
-  $subs2 = $tag['original']['sub'];
-
-  $keys = array_keys($subs1);
-
-
-  foreach($subs1 as $k => $v) {
-    $code = $v['field_subfield_code'];
-    //printPre("CODE = $code");
-
-  }
-  foreach($subs2 as $kk => $vv) {
-
-    $subfields = $subfields + $subs2[$kk];
-    if($kk == $code) {
-
-    }
-  }
-
-  printAndDie("HERE?", $subfields,  $tag);
-  $arr = array(240, 650);
-
-  foreach ($record->getFields() as $tag => $subfields) {
-    // Skip everything except for 650 fields
-    if ($tag == '650' || $tag == '240') {
-      foreach ($subfields->getSubfields() as $code => $value) {
-        $subfields[] = array(
-          'value' => $value,
-          'subfields' => 'a',
-        );
-      }
-    }
-  }
-
-
-  printAndDie("HERE?",$subfields);
-
-  $tag = $vars['tag'];
-  $tag['field_indc1'] = '';
-  $tag['field_ind2'] = '';
-
-  $wrapper = $vars['node_wrapper'];
-  $subfields = array();
-  $values = $wrapper->field_dc_creator->value();
-  foreach($values as $value) {
-    $subfields[] = array(
-      'value' => $value,
-      'subfields' => 'a',
-    );
-  }
-
-  $subfields[] = array(
-    'value' => "Kisly, Dave",
-    'subfields' => 'e',
-  );
-
-  return _cals_build_marc_subfield_array($tag, $subfields);
-  die;
-  $node = $vars['node'];
-  $tag = $vars['tag'];
-  $values = _cals_importer_exporter_field_value($node, 'title_field');
-  //field_view_field('node', $node, 'title_field', array('default'));
-  $safe_values = array();
-  if(is_array($values)) {
-    foreach($values['#items'] as $value) {
-      $subfields = array();
-      $safe_values[] = trim($value['value']);
-
-    }
-  }
-  $code = 245;
-  $subfield = 'a';
-  $ind2 = 0;
-
-  foreach($safe_values as $value) {
-    $value = trim($value);
-    $ind2 = _cals_importer_exporter_filing_characters($value);
-    $rec[245]['subfields'][] = array(
-      'value' => $value . '.', 'subfields' => 'a',
-    );
-  }
-  $rec[245]['ind1'] = $tag['field_ind1'];
-  $rec[245]['ind2'] = $ind2;
-  printAndDie($rec);
-  return $rec;
-
 }
 
 /**
@@ -291,11 +169,11 @@ function _cals_importer_exporter_callback_240($vars) {
     $subfield = 'a';
     $ind2 = 0;
     $ind2 = _cals_importer_exporter_filing_characters($value);
-    $arr[240]['subfields']['a'][] = $value;
+    $arr[240]['subfields'][]['a'] = $value;
     $arr[240]['ind1'] = 0;
     $arr[240]['ind2'] = $ind2;
+    return $arr;
   }
-  return $arr;
 
 }
 
@@ -324,7 +202,7 @@ function _cals_importer_exporter_callback_245($vars) {
   foreach($safe_values as $value) {
     normalize_title($value);
     $ind2 = _cals_importer_exporter_filing_characters($value);
-    $arr[245]['subfields']['a'][] = $value;
+    $arr[245]['subfields'][]['a'] = $value;
   }
   $arr[245]['ind1'] = 0;
   $arr[245]['ind2'] = $ind2;
@@ -348,6 +226,7 @@ function _cals_importer_exporter_callback_264($vars) {
     'ind1' => '',
     'ind2' => 2,
   );
+
   //field_view_field('node', $node, 'title_field', array('default'));
   $safe_values = array();
   if(is_array($values)) {
@@ -356,26 +235,37 @@ function _cals_importer_exporter_callback_264($vars) {
     }
   }
   foreach($safe_values as $k => $v) {
-    $s = ($k == 0) ? 'a' : 'b';
-    $v = trim($v);
-    //$ind2 = _cals_importer_exporter_filing_characters($value);
-    $arr[264]['subfields'][$s][] = $v;
-  }
 
-  $dateset = FALSE;
+    $subcode = ($k == 0) ? 'a' : 'b';
+    $v = trim($v);
+
+    //$ind2 = _cals_importer_exporter_filing_characters($value);
+    $arr[264]['subfields'][0][$subcode] = $v;
+  }
+  $pubdate = NULL;
   foreach($wrapper->field_date as $key => $date) {
     $q = strtolower($date->field_qualifier_date->value());
     if($q == 'created') {
-      $d = $date->field_dc_date->value();
-      //printPre("Q = $q | DATE = $d");
-      $dateset = TRUE;
+      $pubdate = $date->field_dc_date->value();
     }
   }
-  if($dateset) {
-    $arr[264]['subfields']['c'][] = $d;
-  }
+  if(!empty($pubdate))  $arr[264]['subfields'][0]['c'] = $pubdate;
   return $arr;
 
+}
+
+/**
+ * Returns restrictions tag: 0 = no restrictions, 1 = restrictions
+ * @param $vars
+ * @return mixed
+ */
+function _cals_importer_exporter_callback_300($vars) {
+  $arr[300] = array(
+    'ind1' => '',
+    'ind2' => '',
+    'subfields' => array(array('a' => 'online resource', 'b' => 'digital')),
+  );
+  return $arr;
 }
 
 /**
@@ -397,7 +287,7 @@ function _cals_importer_exporter_callback_506($vars) {
   $arr[506] = array(
     'ind1' => $ind1,
     'ind2' => '',
-    'subfields' => array('a' => array($label)),
+    'subfields' => array(array('a' => $label)),
   );
   return $arr;
 }
@@ -418,7 +308,7 @@ function _cals_importer_exporter_callback_506($vars) {
 function _cals_importer_exporter_callback_511($vars) {
   $node = $vars['node'];
   $tag = $vars['tag'];
-  $subfields['a'][] = 'Kisly, Dave';
+  $subfields[]['a'] = 'Kisly, Dave';
   $wrapper = $vars['node_wrapper'];
   $values = $wrapper->field_access_restrictions->value();
 
@@ -448,12 +338,12 @@ function _cals_importer_exporter_callback_520($vars) {
   }
   $values = $wrapper->body->value->value(array('decode' => TRUE));
 
-  if(is_string($values)) $subfields['a'][] = trim($values);
+  if(is_string($values)) $subfields[]['a'] = trim($values);
   if(is_array($values)) {
     foreach($values as $value) {
       $value = trim($value);
       if(!empty($value))
-        $subfields['a'][] = trim($value);
+        $subfields[]['a'] = trim($value);
     }
   }
   $arr =  _cals_build_marc_subfield_array($tag, $subfields);
@@ -475,9 +365,13 @@ function _cals_importer_exporter_callback_521($vars) {
   $def = field_info_field("field_audience");
   $enumerations = list_allowed_values($def);
   $subfields =  _cals_importer_exporter_get_subfield_array_from_drupal_fields('a', 'field_audience', $wrapper, $enumerations);
+
+
   $arr =  _cals_build_marc_subfield_array($tag, $subfields);
-  $arr[$tag]['ind1'] = '';
-  $arr[$tag]['ind2'] = '';
+  if(!empty($arr)) {
+    $arr[$tag]['ind1'] = '';
+    $arr[$tag]['ind2'] = '';
+  }
   return $arr;
 }
 
@@ -513,7 +407,7 @@ function _cals_importer_exporter_callback_653($vars) {
   $subfields = array();
   $values = $wrapper->field_subject->value();
   foreach($values as $value) {
-    $subfields['a'][] = $value->name;
+    $subfields[]['a'] = $value->name;
   }
   return _cals_build_marc_subfield_array($tag, $subfields);
 }
@@ -531,7 +425,7 @@ function _cals_importer_exporter_callback_655($vars) {
   $subfields = array();
   $values = $wrapper->field_genre->value();
   foreach($values as $value) {
-    $subfields['a'][] = $value->name;
+    $subfields[]['a'] = $value->name;
   }
   $arr[$tag] = array(
     'ind1' => '',
@@ -551,44 +445,20 @@ function _cals_importer_exporter_callback_655($vars) {
  * @param $vars
  * @return mixed
  */
-function _cals_importer_exporter_callback_7201($vars) {
+function _cals_importer_exporter_callback_720($vars) {
   $node = $vars['node'];
   $tag = $vars['tag'];
-  $tag['field_indc1'] = '';
-  $tag['field_ind2'] = '';
-
   $wrapper = $vars['node_wrapper'];
   $subfields = array();
   $values = $wrapper->field_dc_creator->value();
-  foreach($values as $value) {
-    $subfields['a'][] = $value;
+  foreach($values as $i => $value) {
+    $subfields[$i]['a'] = $value;
+    $subfields[$i]['e'] = 'author';
   }
 
-  $subfields['e'][] =  'Kisly, Dave';
 
   return _cals_build_marc_subfield_array($tag, $subfields);
 }
-
-
-function _cals_importer_exporter_callback_7201_e($vars) {
-  printAndDie($vars);
-  $node = $vars['node'];
-  $tag = $vars['tag'];
-  $tag['field_indc1'] = '';
-  $tag['field_ind2'] = '';
-
-  $wrapper = $vars['node_wrapper'];
-  $subfields = array();
-  $values = $wrapper->field_dc_creator->value();
-  foreach($values as $value) {
-    $subfields['a'][] = $value;
-  }
-
-  $subfields['e'][] =  'Kisly, Dave';
-
-  return _cals_build_marc_subfield_array($tag, $subfields);
-}
-
 
 /**
  * returns 856 subfield.
@@ -606,7 +476,7 @@ function _cals_importer_exporter_callback_856($vars) {
     'ind1' => 4,
     'ind2' => 0,
   );
-  $arr[856]['subfields']['u'][] = 'http://nnels.ca/node/' . $nid;
+  $arr[856]['subfields'][0]['u'] = 'http://nnels.ca/node/' . $nid;
 
   return $arr;
 }
