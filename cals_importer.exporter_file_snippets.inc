@@ -7,61 +7,100 @@
  *   the node passed to the parser
  */
 
-function _cals_importer_exporter_build_marcxml_file_node($node) {
-  _cals_importer_exporter_build_marcxml_file($node);
-  drupal_goto("node/{$node->nid}/TBA");
-}
+//function _cals_importer_exporter_build_marcxml_file_node($node) {
+//  _cals_importer_exporter_build_marcxml_file_action($node);
+//  drupal_goto("node/{$node->nid}/TBA");
+//}
 
 /**
- * VBO to add populate the stub marc-xml string
+ * Action to add populate the stub marc-xml string
  *
- * @param $entity
+ * @param $node
  *   the node passed to the parser
  */
-function _cals_importer_exporter_build_marcxml_file_vbo(&$entity, $context = array()) {
-  if (isset($entity->nid)) {
-    $node = node_load($entity->nid);
+function _cals_importer_exporter_build_marcxml_file_action(&$entity,
+                                                             $context =
+array()) {
+    $host_node = $entity->hostEntity(); //Repository item
+    $export_set = node_load($context['fields']['container_nid']);
+
     //safety check to make sure we're parsing repos items!!
     $content_types = array('repository_item');
-    if (in_array($node->type, $content_types)  ) {
-      _cals_importer_exporter_build_marcxml_file($node);
-    }
-    else{
-      drupal_set_message(t("Invalid selection: not a repos item"));
-    }
-  }//end main if
+    if (in_array($host_node->type, $content_types)) {
+      $record_collection =
+        _cals_importer_exporter_generate_record_export_collection
+      ($entity, $host_node);
 
-  return "";
+      //Placeholder filename
+      $date = new DateTime();
+      $filename = $date->getTimestamp() . '_test_marcxml_export.xml';
 
+      //Append raw collection to file temporarily
+      file_put_contents($filename, $record_collection, FILE_APPEND |
+        LOCK_EX);
+    }
+    else {
+      drupal_set_message(t("Invalid selection: not a repository item"));
+    }
+  }
+
+  if ($context['progress']['current'] == $context['progress']['total']) {
+    $uri = file_create_url($filename);
+    //Wrap in marc:collection tag upon retrieval
+    $content = MARC_HEADER . "\n" . file_get_contents($filename) .
+      "</marc:collection>";
+
+    $xml = simplexml_load_string($content);
+    $file = file_save_data($xml->asXml(), $filename, FILE_EXISTS_REPLACE);
+    $file->display = 1;
+    $export_set->field_marc_xml_output_file[LANGUAGE_NONE][0] = (array)$file;
+    node_save($export_set);
+    drupal_set_message(t("File saved: please download via <a href='@url'>@url</a>",
+          array("@url" => url("node/" . $export_set->nid) ) ) );
+  }
 }
 
 /**
  * The main workhorse
  *
- * @param $node
- *   the node passed to the parser
+ * @param $entity
+ *   the entity passed to the parser
+ * @return $record_collection
+ *
  *
  */
-function _cals_importer_exporter_build_marcxml_file($node) {
+function _cals_importer_exporter_generate_record_export_collection($entity,
+                                                                   $host_node) {
   $tags = _cals_importer_get_tag_array(); //tag mappings
   $lint = new File_MARC_Lint();
 
-  //not sure if you need this?
-  $xml_string = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
-  $xml_string = MARC_HEADER . $xml_string . '</marc:collection>';
+  //Proceed only with a stub existing
+  $stubfields = unserialize($host_node->field_xml_stub[LANGUAGE_NONE][0]['value']);
+  if ( ! empty($stubfields) && ! empty($host_node->field_nnels_856_tag) ){
 
-  $stubfields = unserialize($node->field_xml_stub[LANGUAGE_NONE][0]['value']);
+    $fc_wrapper = _cals_wrap_fc($entity);
 
-  /**
-   JS' logic to merge in data structure from snippet fields
+    //Only one per file format
+    if ( ! $fc_wrapper->field_marc_xml_snippet[0]->value() ) {
+      //Ensure there are snippets waiting
+      _cals_importer_create_marcxml_snippet_file_resource($host_node);
+    }
 
-   e.g., loop thru each field attachment to create file?
+    //TODO: This needs to be decoupled from sort and return array
+    //Generates one full array record per file entity
+    $full_array_record = _cals_get_set_xml_snippet($fc_wrapper,
+        $stubfields);
 
-   */
+    //TODO: use Dave's sort
 
+  } else {
+    //stub didnt exist or didnt have 856 tag - should we ask to generate them
+    // or just throw back message?
+    return;
+  }
 
+  return $full_array_record;
 }
-
 
 
 /**
@@ -77,6 +116,9 @@ function _cals_importer_create_marcxml_snippet_file_resource($node) {
            $field_collection) {
     //must now use each field_collection found
     $snippet = _cals_importer_exporter_add_gmd_per_format($field_collection);
+
+    //TODO: Pass off to 511 function
+
     $new_xml_snippet = $snippet->toXML("UTF-8", FALSE, FALSE);
     $dom = new DOMDocument();
     $dom->loadXML($new_xml_snippet);
@@ -93,6 +135,65 @@ function _cals_importer_create_marcxml_snippet_file_resource($node) {
   //this should show all of them on one display
   //drupal_goto("node/{$field_collection->id}/view-xml-snippet");
 }
+
+/**
+ * Given a wrapped FieldCollectionItemEntity, append each tag-value pair
+ * from its snippet to its stub, pass through Data_Field sorting
+ * function and return an XML string for writing to export file.
+ *
+ * @param \EntityMetadataWrapper $fc_wrapper
+ * @param string $str
+ * @return string $records
+ */
+
+function _cals_get_set_xml_snippet($fc_wrapper, $str) {
+
+  require_once 'File/MARCXML.php';
+  require_once 'File/MARC/Lint.php';
+
+  $records = '';
+  $stub_record = new File_MARCXML($str, File_MARC::SOURCE_STRING);
+  $record = $stub_record->next(); //File_MARC_Record instance
+  $this_snippet = $fc_wrapper->field_marc_xml_snippet[0]->value();
+
+  $snippets = new File_MARCXML($this_snippet, File_MARC::SOURCE_STRING);
+
+  if ($record) {
+    //there's only one record snippet per file resource so just advance once
+    $snippet_context = $snippets->next();
+
+    foreach ($snippet_context->getFields() as $tag => $value) {
+      $record->appendField($value);
+    }
+
+    //Adjust byte 6 of leader to reflect added format since ingest
+    $ldr_arr = str_split($record->getLeader());
+    $format = $fc_wrapper->field_file_format->value();
+
+    switch($format) {
+      case 4:
+        //Nonmusical Sound Recording (i) for MP3
+        $ldr_arr[6] = 'i';
+        break;
+      default:
+        //Language Material (a) for all other formats
+        $ldr_arr[6] = 'a';
+        break;
+    }
+
+    //Restore string and set
+    $ldr_arr = implode("", $ldr_arr);
+    $record->setLeader($ldr_arr);
+
+    //Stub + new fields to sorter, returns XML string
+    //TODO: Sort later
+    //$records .= _cals_importer_exporter_sort_record_datafields($record) .
+    // "\n";
+  }
+
+  return $records;
+}
+
 /**
  * Given a collection of formats and corresponding Data Field pattern, create
  * the Data Fields per format and append to the record.
