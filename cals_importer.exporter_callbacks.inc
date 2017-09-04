@@ -352,7 +352,7 @@ function _cals_importer_exporter_callback_534($vars) {
   $node = $vars['node'];
   $tag = $vars['tag'];
   $wrapper = $vars['node_wrapper'];
-
+  //loop thru the following to build up the 534 tag
   $tmp = array(
     'field_publisher_source' => 'c',
     'field_isbn' => 'z',
@@ -372,7 +372,6 @@ function _cals_importer_exporter_callback_534($vars) {
   $arr[$tag]['ind1'] = '';
   $arr[$tag]['ind2'] = '';
   return $arr;
-
 }
 /**
  * Subject
