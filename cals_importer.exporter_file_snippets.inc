@@ -109,6 +109,16 @@ function _cals_importer_create_marcxml_snippet_file_resource($node) {
  * distinguish between MP3 (value = 4) and all other formats recorded in the
  * field_file_format field.
  *
+ * If fi
+ *
+ * 008/18= use the fill character ( | )
+ * 008/19= use the fill character ( | )
+ * 008/20= use the fill character ( | )
+ * 008/21= use the fill character ( | )
+ *
+ *
+ * @see https://github.com/BCLibCoop/nnels/issues/131
+ *
  * @param $node
  * @return bool|string
  */
@@ -122,16 +132,52 @@ function _cals_importer_export_callback_008($node, $node_wrapper, $xml) {
   $val = $node->changed;
   $val = $node->created;
   //yyyymmddhhmmss.f
-  $val = date('dmy', $val);
+  //date + 3 blanks at position 14-17
+  $val = date('dmy', $val) . '   ';
 
+  //@todo - get audience value
+  $audience = '';
+  //MP3
+  if ($field_file_format) == 4 {
+    $val .= 'nnnn' . $audience . 'o';
+    //008/24-29 = use a blank for each of 6 positions
+    $val .= '      ';
+    //008/30-31 = use the fill character ( | ) for 2 positions
+    $val .= '||';
+    //008/32 = use the fill character ( | )
+    $val .= '|';
+    //008/33 = n
+  }
+  //if not mp3, 4 fill characters 18-21,
+  // append audience 008/22
+  // append 'o' 008/23
+  else {
+    $val .= '||||' . $audience . 'o';
+    //008/24-27 = |||| (use fill character for all 4 positions)
+    $val .= '||||';
+    //008/28-32
+    $val .= '||||';
 
-  $val =  str_pad($val, 35);
+    //008/33 = insert appropriate Literary Format code (from Literary Format
+    // field in Drupal), if no code then use the fill character ( | ).
+    // View codes:
+    //http://www.itsmarc.com/crs/mergedprojects/helptop1/helptop1/variable_control_fields/idh_008_33_bk_bib.htm
+    $val .= '|'; //using placeholder until we get this nailed down!
+
+  }
+  //008/34 = use the fill character ( | )
+  $val .= '|';
+
+  //008/35-37 (Language of the item) = use 3-digit MARC Code for Languages;
   $lgs = array();
   //$lgs = $node->field_iso_language[LANGUAGE_NONE];
   $lg = (!empty($node->field_iso_language)) ?
     $node->field_iso_language[LANGUAGE_NONE][0]['value']:
     'eng';
-  $val .= $lg . $source;
+  $val .= $lg;
+  //008/38 = use the fill character ( | );
+  // 008/39 (Cataloging source) = use the fill character ( | )
+  $val .= '||';
   return $val;
 }
 
