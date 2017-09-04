@@ -12,7 +12,7 @@ function _cals_importer_exporter_callback_005($vars) {
   $value = $wrapper->changed->value();
   //yyyymmddhhmmss.f
   $me = date('YmdHis.0', $value);
- // printAndDie(__FUNCTION__, $me, $value, $wrapper);
+  // printAndDie(__FUNCTION__, $me, $value, $wrapper);
 
   $arr['005'] = array(
     'ind1' => '',
@@ -67,42 +67,7 @@ function _cals_importer_exporter_callback_ldr($wrapper) {
 
   return $val;
 }
-/**
- * 00-05 (Date entered on file) = system generated;
- * this is the date MARC record was first created; format must be: ddmmyy
- *
- * 35-37 (Language of the item) = use 3-digit MARC Code for Languages;
- * usually will either be eng (for English) or fre (for French) but
- * could be any of the languages listed in Drupal under Language(s)
- *
- * 39 (Cataloging source) = either use the fill character ( | ) or the
- * code in field 040 subfield $a if it exists in the MarcXML.
- *
- * @param $node
- * @return bool|string
- */
-function _cals_importer_export_callback_008($node, $node_wrapper, $xml) {
 
-  $tmp = $xml->xpath("//marc:datafield[@tag='040']/marc:subfield[@code='a']");
-  $source = '|';
-  if (count($tmp) >= 1) {
-    $source = (string) $tmp[0];
-  }
-
-  //printAndDie($tmp, $node, $node_wrapper);
-  $val = $node->changed;
-  $val = $node->created;
-  //yyyymmddhhmmss.f
-  $val = date('dmy', $val);
-  $val =  str_pad($val, 35);
-  $lgs = array();
-  //$lgs = $node->field_iso_language[LANGUAGE_NONE];
-  $lg = (!empty($node->field_iso_language)) ?
-    $node->field_iso_language[LANGUAGE_NONE][0]['value']:
-    'eng';
-  $val .= $lg . $source;
-  return $val;
-}
 /**
  * $a = Original cataloguing agency (contains the code or name of the organization)
  * $b = language of cataloguing - include if present in MarcXML
@@ -143,8 +108,6 @@ function _cals_importer_exporter_callback_040($vars) {
     $b = (string) $tmp[0];
     $arr['040']['subfields'][0]['b'] = trim($b);
   }
-
-
   return $arr;
 }
 
@@ -436,8 +399,6 @@ function _cals_importer_exporter_callback_655($vars) {
   //return _cals_build_marc_subfield_array($tag, $subfields);
 }
 
-
-
 /**
  * Added Entry--Uncontrolled Name/Name
  * $a should be the Creator field in Drupal
@@ -455,8 +416,6 @@ function _cals_importer_exporter_callback_720($vars) {
     $subfields[$i]['a'] = $value;
     $subfields[$i]['e'] = 'author';
   }
-
-
   return _cals_build_marc_subfield_array($tag, $subfields);
 }
 

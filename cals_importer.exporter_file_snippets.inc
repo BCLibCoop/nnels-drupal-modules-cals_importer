@@ -93,6 +93,49 @@ function _cals_importer_create_marcxml_snippet_file_resource($node) {
   //this should show all of them on one display
   //drupal_goto("node/{$field_collection->id}/view-xml-snippet");
 }
+
+/**
+ * 00-05 (Date entered on file) = system generated;
+ * this is the date MARC record was first created; format must be: ddmmyy
+ *
+ * 35-37 (Language of the item) = use 3-digit MARC Code for Languages;
+ * usually will either be eng (for English) or fre (for French) but
+ * could be any of the languages listed in Drupal under Language(s)
+ *
+ * 39 (Cataloging source) = either use the fill character ( | ) or the
+ * code in field 040 subfield $a if it exists in the MarcXML.
+ *
+ * This code should be invoked at the file attachment level and will need to
+ * distinguish between MP3 (value = 4) and all other formats recorded in the
+ * field_file_format field.
+ *
+ * @param $node
+ * @return bool|string
+ */
+function _cals_importer_export_callback_008($node, $node_wrapper, $xml) {
+
+  $tmp = $xml->xpath("//marc:datafield[@tag='040']/marc:subfield[@code='a']");
+  $source = '|';
+  if (count($tmp) >= 1) {
+    $source = (string) $tmp[0];
+  }
+  $val = $node->changed;
+  $val = $node->created;
+  //yyyymmddhhmmss.f
+  $val = date('dmy', $val);
+
+
+  $val =  str_pad($val, 35);
+  $lgs = array();
+  //$lgs = $node->field_iso_language[LANGUAGE_NONE];
+  $lg = (!empty($node->field_iso_language)) ?
+    $node->field_iso_language[LANGUAGE_NONE][0]['value']:
+    'eng';
+  $val .= $lg . $source;
+  return $val;
+}
+
+
 /**
  * Given a collection of formats and corresponding Data Field pattern, create
  * the Data Fields per format and append to the record.
