@@ -57,13 +57,15 @@ function _cals_importer_exporter_callback_ldr($wrapper) {
   $vals['11'] = 2;
   $vals['12-16'] = 'XXXXX'; //not sure how to calculate this, either??
   $vals['17'] = 7;
+  //see https://github.com/BCLibCoop/nnels/issues/133
+  $vals['17'] = 2;
   $vals['18'] = 'u';
   $vals['19'] = ' ';
   $vals['20-23'] = '4500';
 
-  $val = implode('', $vals);
+  $val = trim(implode('', $vals));
 
-  //printAndDie($val, strlen($val), $vals); or dpm()
+  //printAndDie($val, strlen($val), $vals);
 
   return $val;
 }
