@@ -7,9 +7,9 @@
  *   the node passed to the parser
  */
 
-function _cals_importer_exporter_build_marcxml_file_node($node) {
-  _cals_importer_exporter_build_marcxml_file($node);
-  drupal_goto("node/{$node->nid}/TBA");
+function _cals_importer_exporter_build_marcxml_file_node($field_collection_item) {
+  _cals_importer_exporter_build_marcxml_file($field_collection_item);
+  //drupal_goto("node/{$field_collection_item->nid}/TBA");
 }
 
 /**
@@ -24,7 +24,7 @@ function _cals_importer_exporter_build_marcxml_file_vbo(&$entity, $context = arr
     //safety check to make sure we're parsing repos items!!
     $content_types = array('repository_item');
     if (in_array($node->type, $content_types)  ) {
-      _cals_importer_exporter_build_marcxml_file($node);
+      _cals_importer_exporter_build_marcxml_file($entity);
     }
     else{
       drupal_set_message(t("Invalid selection: not a repos item"));
@@ -38,19 +38,25 @@ function _cals_importer_exporter_build_marcxml_file_vbo(&$entity, $context = arr
 /**
  * The main workhorse
  *
- * @param $node
+ * @param $field_collection_item
  *   the node passed to the parser
  *
  */
-function _cals_importer_exporter_build_marcxml_file($node) {
+function _cals_importer_exporter_build_marcxml_file($field_collection_item) {
   $tags = _cals_importer_get_tag_array(); //tag mappings
   $lint = new File_MARC_Lint();
 
+  $wrapper = entity_metadata_wrapper('field_collection_item', $field_collection_item);
   //not sure if you need this?
+
+  $node = $wrapper->host_entity->value();
+
   $xml_string = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
   $xml_string = MARC_HEADER . $xml_string . '</marc:collection>';
 
   $stubfields = unserialize($node->field_xml_stub[LANGUAGE_NONE][0]['value']);
+
+  printAndDie("HEY, we made it this far", $stubfields);
 
   /**
    JS' logic to merge in data structure from snippet fields
@@ -109,14 +115,6 @@ function _cals_importer_create_marcxml_snippet_file_resource($node) {
  * distinguish between MP3 (value = 4) and all other formats recorded in the
  * field_file_format field.
  *
- * If fi
- *
- * 008/18= use the fill character ( | )
- * 008/19= use the fill character ( | )
- * 008/20= use the fill character ( | )
- * 008/21= use the fill character ( | )
- *
- *
  * @see https://github.com/BCLibCoop/nnels/issues/131
  *
  * @param $node
@@ -137,8 +135,8 @@ function _cals_importer_export_callback_008($node, $node_wrapper, $xml) {
 
   //@todo - get audience value
   $audience = '';
-  //MP3
-  if ($field_file_format) == 4 {
+  //@todo - get $field_file_format value
+  if ($field_file_format == 4) {
     $val .= 'nnnn' . $audience . 'o';
     //008/24-29 = use a blank for each of 6 positions
     $val .= '      ';
@@ -148,16 +146,12 @@ function _cals_importer_export_callback_008($node, $node_wrapper, $xml) {
     $val .= '|';
     //008/33 = n
   }
-  //if not mp3, 4 fill characters 18-21,
-  // append audience 008/22
-  // append 'o' 008/23
   else {
     $val .= '||||' . $audience . 'o';
     //008/24-27 = |||| (use fill character for all 4 positions)
     $val .= '||||';
     //008/28-32
     $val .= '||||';
-
     //008/33 = insert appropriate Literary Format code (from Literary Format
     // field in Drupal), if no code then use the fill character ( | ).
     // View codes:
