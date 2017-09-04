@@ -15,7 +15,9 @@ module_load_include('inc', 'cals_importer', 'cals_importer.exporter_file_snippet
 
 function _cals_importer_create_marc_stub_node($node) {
   _cals_importer_create_marc_stub($node);
-  drupal_goto("node/{$node->nid}/view-xml-stub");
+  drupal_goto("node/" . $node->nid);
+
+  //drupal_goto("node/{$node->nid}/view-xml-stub");
 
 }
 
@@ -369,6 +371,7 @@ function _cals_importer_exporter_get_marc_fields($node, &$record, $tags) {
       $fields = $fields + $tmp;
   }
   ksort($fields);
+  //printAndDie($fields);
   return $fields;
 }
 

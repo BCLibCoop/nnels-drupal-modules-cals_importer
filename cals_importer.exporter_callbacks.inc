@@ -352,7 +352,22 @@ function _cals_importer_exporter_callback_534($vars) {
   $node = $vars['node'];
   $tag = $vars['tag'];
   $wrapper = $vars['node_wrapper'];
-  $subfields = _cals_importer_exporter_get_subfield_array_from_drupal_fields('c', 'field_publisher_source', $wrapper);
+
+  $tmp = array(
+    'field_publisher_source' => 'c',
+    'field_isbn' => 'z',
+    'field_isbn_audio' => 'z',
+  );
+  $subfields = array();
+  $i = 0;
+  foreach($tmp as $fieldname => $code) {
+    //printAndDie($code, $fieldname, $wrapper);
+    $me = _cals_importer_exporter_get_subfield_array_from_drupal_fields($code, $fieldname, $wrapper);
+    if(!empty($me) && count($me) == 1) {
+      $subfields[$i] = $me[0];
+      $i++;
+    }
+  }
   $arr =  _cals_build_marc_subfield_array($tag, $subfields);
   $arr[$tag]['ind1'] = '';
   $arr[$tag]['ind2'] = '';
