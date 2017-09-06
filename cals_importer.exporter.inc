@@ -15,9 +15,8 @@ module_load_include('inc', 'cals_importer', 'cals_importer.exporter_file_snippet
 
 function _cals_importer_create_marc_stub_node($node) {
   _cals_importer_create_marc_stub($node);
-  drupal_goto("node/" . $node->nid);
-
-  //drupal_goto("node/{$node->nid}/view-xml-stub");
+  //drupal_goto("node/" . $node->nid);
+  drupal_goto("node/{$node->nid}/view-xml-stub");
 
 }
 
@@ -682,18 +681,43 @@ function _cals_importer_view_marcxml_stub($node) {
       'attributes' => array()
     );
     $html = theme('item_list', $vars);
-    /*
-    $xml = cals_importer_exporter_build_marcxml_from_array($node);
-    $xml->__toString();
-    //printAndDie($xml);
-    $xml = str_replace("\n", "<br/>", $xml);
-    */
+    if(!empty($node->field_xml_stub_xml)) {
+      $html .= t('<h2>New MARC XML</h2>') .
+        _cals_importer_exporter_formatted_marcxml(
+          $node->field_xml_stub_xml[LANGUAGE_NONE][0]['safe_value']
+        );
+    }
+    if(!empty($node->field_xml_string)) {
+      $html .= t('<h2>Original MARC XML</h2>') .
+        _cals_importer_exporter_formatted_marcxml(
+        $node->field_xml_string[LANGUAGE_NONE][0]['safe_value']
+      );
+    }
+    //printAndDie($node);
     return $html;
   }
   else{
 
     return t('Stub has not been defined. You can click on Create XML Stub entry to generate this');
   }
+}
+
+/**
+ * Pretties up the marc xml string
+ * @param $str
+ * @return mixed
+ */
+function _cals_importer_exporter_formatted_marcxml($str) {
+  $str = str_replace("marc:", "", $str);
+  $str = str_replace("&lt;leader", "<br/>&nbsp;&nbsp;" . "&lt;leader", $str);
+  $str = str_replace("&lt;controlfield", "<br/>&nbsp;&nbsp;" . "&lt;controlfield", $str);
+  $str = str_replace("&lt;datafield", "<br/>&nbsp;&nbsp;" . "&lt;datafield", $str);
+  $str = str_replace("&lt;/datafield", "<br/>&nbsp;&nbsp;" . "&lt;/datafield", $str);
+
+  $str = str_replace("&lt;subfield", "<br/>&nbsp;&nbsp;&nbsp;&nbsp;" . "&lt;subfield", $str);
+  $str = str_replace("&lt;record", "<br/>" . "&lt;record", $str);
+  $str = str_replace("&lt;/record", "<br/>" . "&lt;/record", $str);
+  return $str;
 }
 
 /**
