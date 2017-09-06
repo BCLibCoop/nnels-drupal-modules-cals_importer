@@ -359,15 +359,19 @@ function _cals_importer_exporter_callback_534($vars) {
     'field_isbn_audio' => 'z',
   );
   $subfields = array();
+
   $i = 0;
   foreach($tmp as $fieldname => $code) {
     //printAndDie($code, $fieldname, $wrapper);
     $me = _cals_importer_exporter_get_subfield_array_from_drupal_fields($code, $fieldname, $wrapper);
-    if(!empty($me) && count($me) == 1) {
-      $subfields[$i] = $me[0];
+
+    if(!empty($me) ) {
+      //if(count($me) == 1) $subfields[$i] = $me[0];
+      if(count($me) >= 1) $subfields = array_merge($subfields, $me);
       $i++;
     }
   }
+
   $arr =  _cals_build_marc_subfield_array($tag, $subfields);
   $arr[$tag]['ind1'] = '';
   $arr[$tag]['ind2'] = '';

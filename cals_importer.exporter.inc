@@ -271,6 +271,8 @@ function _cals_importer_exporter_get_subfield_array_from_drupal_fields($code, $f
     }
   }
 
+  //if($code == 'z' and $fieldname == 'field_isbn') printAndDie($arr);
+
   return $arr; // = array();
 }
 
