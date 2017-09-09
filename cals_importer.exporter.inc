@@ -378,6 +378,7 @@ function _cals_importer_exporter_get_marc_fields($node, &$record, $tags) {
 
 function _cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$record, $tags, $xml) {
   //$xml = _cals_get_marc_xml_string($node);
+  //printAndDie($tags);
   foreach($tags as $tag => $arr) {
 
     switch($tag) {
