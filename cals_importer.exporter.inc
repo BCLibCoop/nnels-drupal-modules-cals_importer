@@ -385,10 +385,7 @@ function _cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$rec
         $val = _cals_importer_exporter_callback_leader($node_wrapper);
         break;
       case '001':
-        if(!empty($node->field_system_control_number))
-          $val = $node->field_system_control_number[LANGUAGE_NONE][0]['value'];
-        else
-          $val = $node->field_isbn[LANGUAGE_NONE][0]['value'];
+        $val = 'BVNNELS' . $node->nid; //see https://github.com/BCLibCoop/nnels/issues/130
         break;
 
       case '003':
