@@ -46,7 +46,7 @@ function _cals_importer_exporter_callback_005($vars) {
  * @param $node
  * @return mixed
  */
-function _cals_importer_exporter_callback_ldr($wrapper) {
+function _cals_importer_exporter_callback_leader($wrapper) {
   $vals['00-04'] = 10000; //figure this out?
   $vals['05'] = 'n';
   $vals['06'] = 'i'; //Jonathan?
@@ -437,6 +437,15 @@ function _cals_importer_exporter_callback_720($vars) {
   foreach($values as $i => $value) {
     $subfields[$i]['a'] = $value;
     $subfields[$i]['e'] = 'author';
+
+  }
+  $n = $i;
+  $values = $wrapper->field_dc_contributor->value();
+  foreach($values as $i => $value) {
+    $n++;
+    $subfields[$n]['a'] = $value;
+    $subfields[$n]['e'] = 'contributor';
+
   }
   return _cals_build_marc_subfield_array($tag, $subfields);
 }
