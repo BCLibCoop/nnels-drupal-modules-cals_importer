@@ -188,8 +188,12 @@ function _cals_importer_normalize_indicators($str) {
  * @return int
  */
 
-function _cals_importer_exporter_filing_characters($value) {
+function _cals_importer_exporter_filing_characters($value, $start = 0, $count = 0) {
   $value = strtolower($value);
+  $count++;
+  $first = substr($value, 0, 1);
+  //increment start if first char = quote (")
+  if($count == 1 && $first == '"') $start++;
   /*$arr = array(
     "a ", "a'", "al ", "al- ", "am ", "an ", "an t- ", "ane ", "ang ", "ang mga ",
     "as ", "az ", "bat ", "bir ", "d'", "da ", "das ", "de ", "dei ", "dem ",
@@ -209,17 +213,27 @@ function _cals_importer_exporter_filing_characters($value) {
   $str = variable_get('cals_importer_non_filing_characters');
   $str = str_replace('\s', ' ', $str);
   $arr = explode("\r\n", $str);
+
   foreach($arr as $char) {
     $len = strlen($char);
-    $substr = substr($value, 0, $len);
-    if($substr == $char) return $len;
+    $substr = substr($value, $start, $len);
+    if($substr == $char) {
+      $new_start = $start + $len;
+      printPre("CHAR =  $char| SUBSTR = $substr| NEW Start = $new_start | LEN = $len | VALUE = $value");
+      return _cals_importer_exporter_filing_characters($value, $new_start, $count);
+    }
   }
-  return 0;
-
+  //if returns false on first iteration, then reset start to 0;
+  if($count == 1 && $start == 1 && $first == '"') $start = 0;
+  return $start;
 }
 
-
-
+/**
+ * Returns the $tid for a given term name + vid. Saves new terms if TID not found.
+ * @param $vid
+ * @param $name
+ * @return mixed
+ */
 function _cals_get_tid_by_name($vid, $name) {
   //$name = $v['value'];
   // Get the parent term's ID.
@@ -230,7 +244,7 @@ function _cals_get_tid_by_name($vid, $name) {
     ORDER BY tid DESC LIMIT 1", 
     array(':vid' => $vid, ':name' => $name)
   )->fetchField();
-  
+
   //if no tid, save current value
   if (!is_numeric($tid) ) {
     $term = (object) array(
@@ -241,7 +255,6 @@ function _cals_get_tid_by_name($vid, $name) {
     return $term->tid;
   
   }
-  
   return $tid;
 
 }

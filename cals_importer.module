@@ -204,6 +204,42 @@ function cals_importer_menu() {
     'file' => 'cals_importer.corsS3.inc',
     'type' => MENU_CALLBACK,
   );
+
+  //code to build file-snippet
+  if (module_exists('field_collection')) {
+    // Add menu paths for viewing/editing/deleting field collection items.
+    foreach (field_info_fields() as $field) {
+      if ($field['type'] == 'field_collection' &&
+        $field['field_name'] == 'field_file_resource' ) {
+        $path = field_collection_field_get_path($field);
+        $items[$path . '/%field_collection_item/build_snippet'] = array(
+          'page callback' => '_cals_importer_exporter_build_marcxml_file_node',
+          'title' => "Build Snippet",
+          'type' => MENU_LOCAL_TASK,
+          //'type' => MENU_CALLBACK,
+          //'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+          'page arguments' => array(2),
+          'weight' => 100,
+          'access arguments' => array('field_collection_item', 2),
+          'access arguments' => array('view marcxml stub'),
+          'file' => 'cals_importer.exporter_file_snippets.inc',
+        );
+
+      }
+    }
+  }
+
+
+  $items['_cals_importer_exporter_build_marcxml_file_node'] = array(
+    'title' => "Add MARC-ready file snippet",
+    'access arguments' => array('parse s3 paths'),
+    'page callback' => '_cals_importer_exporter_build_marcxml_file_node',
+    'file' => "cals_importer.exporter.inc",
+    'description' => 'Add MARC-ready file snippet',
+  );
+
+
+
   return $items;
 
 
@@ -519,6 +555,7 @@ function _cals_importer_get_block_items() {
     'title' => 'Add 856 tag',
     'description' => '856 tag added',
   );
+  //code to build stub marc xml output
   $items['_cals_importer_create_marc_stub_node'] = array(
     'access arguments' => array('parse s3 paths'),
     'page callback' => '_cals_importer_create_marc_stub_node',
@@ -526,6 +563,7 @@ function _cals_importer_get_block_items() {
     'title' => "Add MARC-ready stub entry",
     'description' => 'Add MARC-ready Stub',
   );
+
   $items['_cals_importer_exporter_build_marcxml_from_array'] = array(
     'access arguments' => array('parse s3 paths'),
     'page callback' => '_cals_importer_exporter_build_marcxml_from_array',

@@ -45,7 +45,7 @@ function _cals_importer_repo_field_callback($fieldname) {
     'field_urls_external' => array('function' => '_cals_importer_get_urls_from_marc',
       "patterns" => variable_get('cals_importer_url_patterns'),
       "exceptions" => variable_get('cals_importer_url_patterns_ignore'),
-      ),
+    ),
 
     "field_literary_format" => array("function" => '_cals_get_literary_form_from_marc'),
 
@@ -1050,29 +1050,29 @@ function _cals_importer_get_contributor_from_marc($xml, $k, &$map, $tags) {
   $tmp = array();
   $datafields = array( 700, 720 );
   foreach ( $datafields as $datafield ) {
-	  if(count(_cals_importer_xpath_value($xml, "datafield", $datafield, "a"))) {
-	    //find parent path
-	    $parent = $xml->xpath("//marc:datafield[@tag='$datafield']");
-	    foreach ($parent as $i => $child) {
-	      //$ind = (string) $parent[$i]->attributes()->ind1;
-	      $title = array(); //holds the title elements for this child
-	      foreach ($child->children(NAME_SPACE)->subfield as $subfield) {
-		$code = (string) $subfield->attributes()->code;
-		$tmp[$i][$code] = (string) trim($subfield[0]);
-	      }
-	    }
-	    foreach ($tmp as $v) {
+    if(count(_cals_importer_xpath_value($xml, "datafield", $datafield, "a"))) {
+      //find parent path
+      $parent = $xml->xpath("//marc:datafield[@tag='$datafield']");
+      foreach ($parent as $i => $child) {
+        //$ind = (string) $parent[$i]->attributes()->ind1;
+        $title = array(); //holds the title elements for this child
+        foreach ($child->children(NAME_SPACE)->subfield as $subfield) {
+          $code = (string) $subfield->attributes()->code;
+          $tmp[$i][$code] = (string) trim($subfield[0]);
+        }
+      }
+      foreach ($tmp as $v) {
 
-	      if (array_key_exists("e", $v) && stripos($v['e'], "author") !== FALSE ||
-		array_key_exists("4", $v) && stripos($v['4'], "aut") !== FALSE
-	      ) {
-		$map['field_dc_creator']['values'][] = $v['a'];
-	      }
-	      else {
-		$map[$k]['values'][] = $v['a'];
-	      }
-	    }
-	  }
+        if (array_key_exists("e", $v) && stripos($v['e'], "author") !== FALSE ||
+          array_key_exists("4", $v) && stripos($v['4'], "aut") !== FALSE
+        ) {
+          $map['field_dc_creator']['values'][] = $v['a'];
+        }
+        else {
+          $map[$k]['values'][] = $v['a'];
+        }
+      }
+    }
   }
 }
 /**

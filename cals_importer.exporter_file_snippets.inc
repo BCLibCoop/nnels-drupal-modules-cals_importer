@@ -7,10 +7,34 @@
  *   the node passed to the parser
  */
 
-//function _cals_importer_exporter_build_marcxml_file_node($node) {
-//  _cals_importer_exporter_build_marcxml_file_action($node);
-//  drupal_goto("node/{$node->nid}/TBA");
-//}
+function _cals_importer_exporter_build_marcxml_file_node($field_collection_item) {
+  _cals_importer_exporter_build_marcxml_file($field_collection_item);
+  //drupal_goto("node/{$field_collection_item->nid}/TBA");
+}
+
+/**
+ * VBO to add populate the stub marc-xml string
+ *
+ * @param $entity
+ *   the node passed to the parser
+ */
+function _cals_importer_exporter_build_marcxml_file_vbo(&$entity, $context = array()) {
+  if (isset($entity->nid)) {
+    $node = node_load($entity->nid);
+    //safety check to make sure we're parsing repos items!!
+    $content_types = array('repository_item');
+    if (in_array($node->type, $content_types)  ) {
+      -      _cals_importer_exporter_build_marcxml_file($node);
+      +      _cals_importer_exporter_build_marcxml_file($entity);
+    }
+    else{
+      drupal_set_message(t("Invalid selection: not a repos item"));
+    }
+  }//end main if
+
+  return "";
+
+}
 
 /**
  * Action to add populate the stub marc-xml string
@@ -26,6 +50,7 @@ array()) {
 
     //safety check to make sure we're parsing repos items!!
     $content_types = array('repository_item');
+
     if (in_array($host_node->type, $content_types)) {
       $record_collection =
         _cals_importer_exporter_generate_record_export_collection
@@ -38,6 +63,9 @@ array()) {
       //Append raw collection to file temporarily
       file_put_contents($filename, $record_collection, FILE_APPEND |
         LOCK_EX);
+
+    if (in_array($entity->type, $content_types)  ) {
+      _cals_importer_exporter_build_marcxml_file($entity);
     }
     else {
       drupal_set_message(t("Invalid selection: not a repository item"));
@@ -73,35 +101,50 @@ function _cals_importer_exporter_generate_record_export_collection($entity,
                                                                    $host_node) {
   $tags = _cals_importer_get_tag_array(); //tag mappings
   $lint = new File_MARC_Lint();
-
   //Proceed only with a stub existing
   $stubfields = unserialize($host_node->field_xml_stub[LANGUAGE_NONE][0]['value']);
   if ( ! empty($stubfields) && ! empty($host_node->field_nnels_856_tag) ){
-
     $fc_wrapper = _cals_wrap_fc($entity);
-
     //Only one per file format
     if ( ! $fc_wrapper->field_marc_xml_snippet[0]->value() ) {
       //Ensure there are snippets waiting
       _cals_importer_create_marcxml_snippet_file_resource($host_node);
     }
-
     //TODO: This needs to be decoupled from sort and return array
     //Generates one full array record per file entity
     $full_array_record = _cals_get_set_xml_snippet($fc_wrapper,
-        $stubfields);
-
+      $stubfields);
     //TODO: use Dave's sort
-
   } else {
     //stub didnt exist or didnt have 856 tag - should we ask to generate them
     // or just throw back message?
     return;
   }
-
   return $full_array_record;
 }
 
+/**
+ * Dave's main workhorse
+ *
+ * @param $field_collection_item
+ *   the node passed to the parser
+ *
+ */
+function _cals_importer_exporter_build_marcxml_file($field_collection_item) {
+  $tags = _cals_importer_get_tag_array(); //tag mappings
+  $lint = new File_MARC_Lint();
+  $wrapper = entity_metadata_wrapper('field_collection_item', $field_collection_item);
+  //not sure if you need this?
+  $node = $wrapper->host_entity->value();
+  $xml_string = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
+  $xml_string = MARC_HEADER . $xml_string . '</marc:collection>';
+  $stubfields = unserialize($node->field_xml_stub[LANGUAGE_NONE][0]['value']);
+  printAndDie("HEY, we made it this far", $stubfields);
+  /**
+  JS' logic to merge in data structure from snippet fields
+  e.g., loop thru each field attachment to create file?
+   */
+}
 
 /**
  * Calls for each format in field collections.
@@ -192,6 +235,81 @@ function _cals_get_set_xml_snippet($fc_wrapper, $str) {
   }
 
   return $records;
+}
+
+/**
+ * 00-05 (Date entered on file) = system generated;
+ * this is the date MARC record was first created; format must be: ddmmyy
+ *
+ * 35-37 (Language of the item) = use 3-digit MARC Code for Languages;
+ * usually will either be eng (for English) or fre (for French) but
+ * could be any of the languages listed in Drupal under Language(s)
+ *
+ * 39 (Cataloging source) = either use the fill character ( | ) or the
+ * code in field 040 subfield $a if it exists in the MarcXML.
+ *
+ * This code should be invoked at the file attachment level and will need to
+ * distinguish between MP3 (value = 4) and all other formats recorded in the
+ * field_file_format field.
+ *
+ * @see https://github.com/BCLibCoop/nnels/issues/131
+ *
+ * @param $node
+ * @return bool|string
+ */
+function _cals_importer_export_callback_008($node, $node_wrapper, $xml) {
+
+  $tmp = $xml->xpath("//marc:datafield[@tag='040']/marc:subfield[@code='a']");
+  $source = '|';
+  if (count($tmp) >= 1) {
+    $source = (string) $tmp[0];
+  }
+  $val = $node->changed;
+  $val = $node->created;
+  //yyyymmddhhmmss.f
+  //date + 3 blanks at position 14-17
+  $val = date('dmy', $val) . '   ';
+
+  //@todo - get audience value
+  $audience = '';
+  //@todo - get $field_file_format value
+  if ($field_file_format == 4) {
+    $val .= 'nnnn' . $audience . 'o';
+    //008/24-29 = use a blank for each of 6 positions
+    $val .= '      ';
+    //008/30-31 = use the fill character ( | ) for 2 positions
+    $val .= '||';
+    //008/32 = use the fill character ( | )
+    $val .= '|';
+    //008/33 = n
+  }
+  else {
+    $val .= '||||' . $audience . 'o';
+    //008/24-27 = |||| (use fill character for all 4 positions)
+    $val .= '||||';
+    //008/28-32
+    $val .= '||||';
+    //008/33 = insert appropriate Literary Format code (from Literary Format
+    // field in Drupal), if no code then use the fill character ( | ).
+    // View codes:
+    //http://www.itsmarc.com/crs/mergedprojects/helptop1/helptop1/variable_control_fields/idh_008_33_bk_bib.htm
+    $val .= '|'; //using placeholder until we get this nailed down!
+
+  }
+  //008/34 = use the fill character ( | )
+  $val .= '|';
+
+  //008/35-37 (Language of the item) = use 3-digit MARC Code for Languages;
+  $lgs = array();
+  //$lgs = $node->field_iso_language[LANGUAGE_NONE];
+  $lg = (!empty($node->field_iso_language)) ?
+    $node->field_iso_language[LANGUAGE_NONE][0]['value']:
+    'eng';
+  $val .= $lg;
+  //008/38 = use the fill character ( | );
+  // 008/39 (Cataloging source) = use the fill character ( | )
+  $val .= '||';
+  return $val;
 }
 
 /**
