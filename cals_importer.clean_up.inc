@@ -12,18 +12,78 @@
 
 
 /**
+ * update / add system control numbers
+ */
+function _cals_importer_exporter_update_date_created_entity_vbo(&$entity, $context = array()) {
+  if (isset($entity->item_id)) {
+    $wrapper = $entity->wrapper();
+    $fc = entity_load_single('field_collection_item', $entity->item_id);
+    $node = $fc->hostEntity();
+    if(!empty($node->field_date) && $node->type == 'repository_item') {
+      _cals_importer_exporter_update_fc_date_created($wrapper, $node);
+    }
+  }//end main if
+  return "";
+}
+
+
+/**
+ * @param $entity
+ */
+function _cals_importer_exporter_update_date_created_entity($entity) {
+  $wrapper = $entity->wrapper();
+  $fc = entity_load_single('field_collection_item', $entity->item_id);
+  $node = $fc->hostEntity();
+  if(!empty($node->field_date)) {
+    _cals_importer_exporter_update_fc_date_created($wrapper, $node);
+  }
+  drupal_goto("node/{$node->nid}");
+}
+
+/**
+ * @param $wrapper
+ * @param $dates
+ * @return string
+ */
+function _cals_importer_exporter_update_fc_date_created($wrapper, $node) {
+  $date = _cals_importer_exporter_get_date_created($node);
+  if(is_numeric($date)) {
+    $wrapper->field_date_created = $date;
+    $wrapper->save();
+  }
+}
+
+/**
+ * @param $dates
+ * @return null
+ */
+function _cals_importer_exporter_get_date_created($node) {
+  $dates = $node->field_date[LANGUAGE_NONE];
+  foreach($dates as $k => $v) {
+    $id = $v['value'];
+    $fc = entity_load_single('field_collection_item', $id);
+    $wrapper = $fc->wrapper();
+    $label = strtolower($wrapper->field_qualifier_date->value());
+    $value = $wrapper->field_dc_date->value();
+    if ($label == 'created' && is_numeric($value)) {
+      _cals_importer_delete_field_collection_by_id($id);
+      return strtotime($value);
+    }
+  }
+  return;
+}
+
+/**
  * Simple wrapper so we can invoke from main repo node page for testing purposes
  *
  * @param $node
  *   the node passed to the parser
  */
-
 function _cals_importer_add_856_tag($node) {
   _cals_add_856_tag($node);
   drupal_goto("node/" . $node->nid);
 
 }
-
 
 /**
  * VBO to add 856 tag to xml strings

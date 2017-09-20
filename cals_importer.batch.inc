@@ -5,7 +5,7 @@
  */
 
 /**
- * Implements hook_submit() for the biblio_import_form.
+ * Implements hook_submit()
  */
 function cals_importer_form_submit($form, & $form_state) {
   global $user;
@@ -13,12 +13,10 @@ function cals_importer_form_submit($form, & $form_state) {
   $extensions = 'xml bib enw mrc ris txt';
   $validators['file_validate_extensions'] = array();
   $validators['file_validate_extensions'][0] = $extensions;
-
   $userid = $user->uid;
   $filetype = $form_state['values']['filetype'];
   $filesize = sprintf("%01.1f", $import_file->filesize / 1000);
   $filesize = " ($filesize KB)";
-
   $session_id = microtime();
   $batch = array(
     'title' => t('Importing') . " ",
@@ -34,18 +32,15 @@ function cals_importer_form_submit($form, & $form_state) {
   return $batch;
   $base = variable_get('biblio_base', 'biblio');
   batch_process("$base/import");
-
-
-
 }
 
 
 function cals_import_batch_operations($session_id, $filename, $userid, &$context) {
- $limit = 10;
- $ns = "http://www.loc.gov/MARC21/slim";
+  $limit = 10;
+  $ns = "http://www.loc.gov/MARC21/slim";
 
- if (empty($context['sandbox'])) {
- 
+  if (empty($context['sandbox'])) {
+
     // Initiate multistep processing.
     $context['results']['session_id'] = $session_id;
     $context['results']['userid']     = $userid;
@@ -56,11 +51,11 @@ function cals_import_batch_operations($session_id, $filename, $userid, &$context
     $context['xml'] =  _cals_load_records($filename);
     $context['sandbox']['max'] = count($xml->children($ns));
 
-    
+
     $context['sandbox']['itters'] = $context['sandbox']['max'] / $limit;
     $context['sandbox']['eta'] = 0;
- 
- 
+
+
   }
   // Bail out if the cache is empty.
   if ($context['sandbox']['max'] == 0) {
@@ -71,7 +66,7 @@ function cals_import_batch_operations($session_id, $filename, $userid, &$context
 
   for ($i = $context['sandbox']['current_id']; $i < $context['sandbox']['current_id'] + $limit; ++$i) {
     drupal_set_message(t("processing record id: %i", array('%i' => $i));
-    
+
     /*
     if ($node = unserialize(base64_decode($row->data))) {
       cals_importer_save_node($node, $terms);
@@ -80,8 +75,8 @@ function cals_import_batch_operations($session_id, $filename, $userid, &$context
     */
     $context['sandbox']['progress']++;
     $context['sandbox']['current_id'] = $i;
-    
-    
+
+
   }
   // Multistep processing : report progress.
   if ($context['sandbox']['progress'] <= $context['sandbox']['max']) {
