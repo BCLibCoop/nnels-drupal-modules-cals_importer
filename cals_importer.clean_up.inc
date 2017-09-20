@@ -2,14 +2,9 @@
 /**
  * @file
  * CALS Importer Clean Up.
- */
- 
-/**
- * Invokes Drupal's batch api to normalize various fields (titles, authors, publishers, etc.) 
+ * Invokes Drupal's batch api to normalize various fields (titles, authors, publishers, etc.)
  * 
  */
-
-
 
 /**
  * update / add system control numbers
@@ -25,7 +20,6 @@ function _cals_importer_exporter_update_date_created_entity_vbo(&$entity, $conte
   }//end main if
   return "";
 }
-
 
 /**
  * @param $entity
