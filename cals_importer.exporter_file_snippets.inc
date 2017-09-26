@@ -8,7 +8,7 @@
  */
 
 function _cals_importer_exporter_build_marcxml_file_node($field_collection_item) {
-  _cals_importer_exporter_build_marcxml_file($field_collection_item);
+  _cals_importer_exporter_build_file_resource_snippet($field_collection_item);
   //drupal_goto("node/{$field_collection_item->nid}/TBA");
 }
 
@@ -38,39 +38,60 @@ function _cals_importer_exporter_build_marcxml_file_vbo(&$entity, $context = arr
 /**
  * The main workhorse
  *
- * @param $field_collection_item
- *   the node passed to the parser
+ * @param \FieldCollectionItemEntity $field_collection_item
+ *   the FC entity passed to VBO action
  *
  */
-function _cals_importer_exporter_build_marcxml_file($field_collection_item) {
+function _cals_importer_exporter_build_file_resource_snippet
+($field_collection_item) {
   $tags = _cals_importer_get_tag_array(); //tag mappings
   $lint = new File_MARC_Lint();
 
-  $wrapper = entity_metadata_wrapper('field_collection_item', $field_collection_item);
-  //not sure if you need this?
+//  $wrapper = entity_metadata_wrapper('field_collection_item', $field_collection_item);
+//  //not sure if you need this?
+//
+//  $node = $wrapper->host_entity->value();
+//
+//  $xml_string = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
+//  $xml_string = MARC_HEADER . $xml_string . '</marc:collection>';
+//
+//  $stubfields = unserialize($node->field_xml_stub[LANGUAGE_NONE][0]['value']);
 
-  $node = $wrapper->host_entity->value();
+  //printAndDie("HEY, we made it this far", $stubfields);
 
-  $xml_string = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
-  $xml_string = MARC_HEADER . $xml_string . '</marc:collection>';
+  //wrap
+  $fc_wrapper = _cals_wrap_fc($field_collection_item);
 
-  $stubfields = unserialize($node->field_xml_stub[LANGUAGE_NONE][0]['value']);
+  //Try _cals_importer_get_tag_array ?
+  $per_file_tags = array('008', 264, 300, 306, 'GMD', 511);
+  $buildable_snippet_array = array();
 
-  printAndDie("HEY, we made it this far", $stubfields);
+  //GMD handles 336-338
 
-  /**
-   JS' logic to merge in data structure from snippet fields
+  foreach ($per_file_tags as $tag) {
+    $callable = '_cals_importer_exporter_snippet_callback_' .
+      $tag;
+    if ( function_exists($callable) ) $result = call_user_func($callable,
+      $fc_wrapper);
+    //store callbacks in callbacks include eventually
 
-   e.g., loop thru each field attachment to create file?
+    $buildable_snippet_array[$tag] = $result;
+    unset($result);
+  }
 
-   */
+  //Serialize and overwrite existing stored snippet
+  $serialized_snippet = serialize($buildable_snippet_array);
+  $fc_wrapper->field_marc_xml_snippet->set( array(
+    $serialized_snippet) );
 
-
+  //Pass this off to Stub + Snippet record builder
+  return $buildable_snippet_array;
 }
 
 
 
 /**
+ * DEPRECATED
  * Calls for each format in field collections.
  * Gets back a File_MARC_Record, converts to XML snippet for storage
  *
@@ -175,17 +196,15 @@ function _cals_importer_export_callback_008($node, $node_wrapper, $xml) {
   return $val;
 }
 
-
 /**
  * Given a collection of formats and corresponding Data Field pattern, create
  * the Data Fields per format and append to the record.
  *
- * @param $node
- * @param $record
- * @return int|void
+ * @param \EntityDrupalWrapper $fc_wrapped
+ * @return array $result
  */
 
-function _cals_importer_exporter_add_gmd_per_format($field_collection) {
+function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
 
   $format_keys = array(
     'epub 2' => 'etext',
@@ -196,6 +215,7 @@ function _cals_importer_exporter_add_gmd_per_format($field_collection) {
     'mp3' => 'mp3',
     'daisy 202' => 'daisy',
     'daisy 3' => 'daisy',
+    'braille' => 'etext'
   );
 
   /**
@@ -204,27 +224,30 @@ function _cals_importer_exporter_add_gmd_per_format($field_collection) {
    *  =337 \\$a computer $2 rdamedia
    *  =338 \\$a online resource $2 rdacarrier
    **/
-
   $etext_pattern = array(
-    0 => array(
-      '336' => array (
-        'a' => 'txt',
+    336 => array(
+      0 => array(
+        'a' => 'text',
+        'b' => 'txt',
         2 => 'rdacontent',
       )
     ),
-    1 => array(
-      '337' => array(
+    337 => array(
+      0 => array(
         'a' => 'computer',
+        'b' => 'c',
         2 => 'rdamedia',
       )
     ),
-    2 => array(
-      '338' => array(
+    338 => array(
+      0 => array(
         'a' => 'online resource',
+        'b' => 'cr',
         2 => 'rdacarrier',
+        )
       )
-    ),
   );
+
 
   /**
    * MP3 books
@@ -236,36 +259,32 @@ function _cals_importer_exporter_add_gmd_per_format($field_collection) {
    **/
 
   $mp3_pattern = array(
-    0 => array(
-      '336' => array (
+    336 => array (
+      0 => array(
         'a' => 'spoken word',
         'b' => 'spw',
         2 => 'rdacontent',
-      )
+      ),
     ),
-    1 => array(
-      '337' => array(
+    337 => array(
+      0 => array(
         'a' => 'audio',
         'b' => 's',
         2 => 'rdamedia',
-      )
-    ),
-    2 => array(
-      '337' => array(
+      ),
+      1 => array(
         'a' => 'computer',
         'b' => 'c',
         2 => 'rdamedia',
-      )
+      ),
     ),
-    3 => array(
-      '338' => array(
+    338 => array(
+      0 => array(
         'a' => 'other',
         'b' => 'sz',
         2 => 'rdacarrier',
-      )
-    ),
-    4 => array(
-      '338' => array(
+      ),
+      1 => array(
         'a' => 'online-resource',
         'b' => 'cr',
         2 => 'rdacarrier',
@@ -284,50 +303,45 @@ function _cals_importer_exporter_add_gmd_per_format($field_collection) {
    **/
 
   $daisy_pattern = array(
-    0 => array(
-      '336' => array (
+    336 => array (
+      0 => array(
         'a' => 'spoken word',
         'b' => 'spw',
         2 => 'rdacontent',
-      )
-    ),
-    1 => array(
-      '336' => array(
-        'a' => 'txt',
+      ),
+      1 => array(
+        'a' => 'text',
+        'b' => 'txt',
         2 => 'rdacontent',
-      )
+      ),
     ),
-    2 => array(
-      '337' => array(
+    337 => array(
+      0 => array(
         'a' => 'audio',
         'b' => 's',
         2 => 'rdamedia',
-      )
-    ),
-    3 => array(
-      '337' => array(
+      ),
+      1 => array(
         'a' => 'computer',
         'b' => 'c',
         2 => 'rdamedia',
-      )
+      ),
     ),
-    4 => array(
-      '338' => array(
+    338 => array(
+      0 => array(
         'a' => 'other',
         'b' => 'sz',
         2 => 'rdacarrier',
       ),
-    ),
-    5 => array(
-      '338' => array(
+      1 => array(
         'a' => 'online-resource',
         'b' => 'cr',
         2 => 'rdacarrier',
-      )
+      ),
     ),
   );
 
-  $format = strtolower($field_collection->field_file_format->label());
+  $format = strtolower($fc_wrapped->field_file_format->label());
 
   $pattern = (string) $format_keys[$format] . '_pattern';
   $loaded_pattern = $$pattern;
@@ -337,26 +351,13 @@ function _cals_importer_exporter_add_gmd_per_format($field_collection) {
     return;
   }
 
-  $subfields = array();
-  $snippet = new File_MARC_Record();
+  $workable_array = array();
 
-  foreach ($loaded_pattern as $instance => $tags) { //0 => array of tags
-    foreach ($tags as $tag => $codes) { //336 => array of codes
-      foreach ($codes as $key => $value) { //code => entry
-        if (in_array($key, array('a', 'b', 1, 2, 3))) {
-          $subfields[] = new File_MARC_Subfield($key, $value);
-          unset($key);
-        }
-      }
-      //Roll up all subfields into a DataField array for each tag
-      $field = new File_MARC_Data_Field($tag, $subfields, 0, NULL);
-      //_cals_importer_exporter_insert_field($record, $field, $tag);
-      $snippet->appendField($field);
-      unset($subfields);
-      unset($field);
-    }
+  foreach ($loaded_pattern as $tag => $instance) {
+      $workable_array[$tag]['subfields'] = $instance;
   }
-  return $snippet;
+
+  return $workable_array;
 }
 
 /**
