@@ -227,6 +227,37 @@ function _cals_importer_export_callback_008($node, $node_wrapper, $xml) {
   return $val;
 }
 
+function _cals_importer_exporter_snippet_callback_264($fc_wrapped) {
+  //Use new Publisher fields from forthcoming VBO
+}
+
+/**
+ * @param \EntityDrupalWrapper $fc_wrapped
+ * @return array $workable_array
+ */
+function _cals_importer_exporter_snippet_callback_300($fc_wrapped) {
+
+  $key = $fc_wrapped->field_file_format->value();
+  $field = field_info_field('field_file_format');
+  $format_label = $field['settings']['allowed_values'][$key];
+
+  $size = format_size($fc_wrapped->field_s3_file_upload->file->size->value());
+
+  $workable_array = array(
+    '300' => array(
+      'ind1' => '',
+      'ind2' => '',
+    ),
+  );
+
+  $format_size_stanza = sprintf("1 %s file (%s)", $format_label,
+    $size );
+
+  $workable_array[300]['subfields'] = array( 'a' => $format_size_stanza);
+
+  return $workable_array;
+}
+
 /**
  * Given a collection of formats and corresponding Data Field pattern, create
  * the Data Fields per format and append to a workable array.
