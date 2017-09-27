@@ -40,49 +40,65 @@ function _cals_importer_exporter_build_marcxml_file_vbo(&$entity, $context = arr
  *
  * @param \FieldCollectionItemEntity $field_collection_item
  *   the FC entity passed to VBO action
- *
+ * @return array $buildable_snippet_array
  */
 function _cals_importer_exporter_build_file_resource_snippet
 ($field_collection_item) {
-  $tags = _cals_importer_get_tag_array(); //tag mappings
-  $lint = new File_MARC_Lint();
+  //$tags = _cals_importer_get_tag_array(); //tag mappings
+  //$lint = new File_MARC_Lint();
 
-//  $wrapper = entity_metadata_wrapper('field_collection_item', $field_collection_item);
-//  //not sure if you need this?
-//
-//  $node = $wrapper->host_entity->value();
-//
-//  $xml_string = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
-//  $xml_string = MARC_HEADER . $xml_string . '</marc:collection>';
-//
-//  $stubfields = unserialize($node->field_xml_stub[LANGUAGE_NONE][0]['value']);
-
-  //printAndDie("HEY, we made it this far", $stubfields);
-
-  //wrap
+  //Wrapper
   $fc_wrapper = _cals_wrap_fc($field_collection_item);
 
+  //Temporary access to stub if needed
+ /* $node = $fc_wrapper->host_entity->value();
+  $stubfields = unserialize($node->field_xml_stub[LANGUAGE_NONE][0]['value']);*/
+
   //Try _cals_importer_get_tag_array ?
-  $per_file_tags = array('008', 264, 300, 306, 'GMD', 511);
+  $per_file_tags = array(
+    '008',
+    '264',
+    '300',
+    '306',
+    'GMD',
+    '511',
+  );
+
   $buildable_snippet_array = array();
 
   //GMD handles 336-338
-
   foreach ($per_file_tags as $tag) {
     $callable = '_cals_importer_exporter_snippet_callback_' .
       $tag;
-    if ( function_exists($callable) ) $result = call_user_func($callable,
-      $fc_wrapper);
-    //store callbacks in callbacks include eventually
 
-    $buildable_snippet_array[$tag] = $result;
-    unset($result);
+    if ( function_exists($callable) )
+      $result = call_user_func($callable,
+        $fc_wrapper);
+
+      if ($result == FALSE) {
+        drupal_set_message(t("Something went wrong in $callable. Please check its field definitions."), 'error');
+        continue;
+      }
+        //store callbacks in callbacks include eventually
+        if ($tag != 'GMD') {
+          $buildable_snippet_array[$tag] = $result;
+        }
+        else { //GMD contains multiple
+          foreach ($result as $tags => $value) {
+            $buildable_snippet_array[$tags] = $value;
+          }
+        }
+        unset($result);
   }
 
   //Serialize and overwrite existing stored snippet
   $serialized_snippet = serialize($buildable_snippet_array);
-  $fc_wrapper->field_marc_xml_snippet->set( array(
-    $serialized_snippet) );
+  $fc_wrapper->field_marc_xml_snippet->set(
+    $serialized_snippet);
+  $fc_wrapper->save();
+
+  //$check_result = array_merge($stubfields, $buildable_snippet_array);
+  //printAndDie("HEY, we made it this far", $check_result);
 
   //Pass this off to Stub + Snippet record builder
   return $buildable_snippet_array;
@@ -198,12 +214,11 @@ function _cals_importer_export_callback_008($node, $node_wrapper, $xml) {
 
 /**
  * Given a collection of formats and corresponding Data Field pattern, create
- * the Data Fields per format and append to the record.
+ * the Data Fields per format and append to a workable array.
  *
  * @param \EntityDrupalWrapper $fc_wrapped
- * @return array $result
+ * @return mixed $workable_array
  */
-
 function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
 
   $format_keys = array(
@@ -341,21 +356,29 @@ function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
     ),
   );
 
-  $format = strtolower($fc_wrapped->field_file_format->label());
+  $format = $fc_wrapped->field_file_format->value();
+  $format_label = strtolower($fc_wrapped->field_file_format->label());
 
-  $pattern = (string) $format_keys[$format] . '_pattern';
+  $pattern = (string) $format_keys[$format_label] . '_pattern';
   $loaded_pattern = $$pattern;
 
   if (empty($loaded_pattern)) {
     drupal_set_message($loaded_pattern, "No pattern found: ");
-    return;
+    return FALSE;
   }
 
   $workable_array = array();
 
   foreach ($loaded_pattern as $tag => $instance) {
+      $workable_array[$tag]['ind1'] = '';
+      $workable_array[$tag]['ind2'] = '';
       $workable_array[$tag]['subfields'] = $instance;
   }
+
+  //Call small helper function for LDR byte 6
+  $workable_array['ldr']['06'] =
+    _cals_importer_exporter_snippet_callback_LDR
+  ($format);
 
   return $workable_array;
 }
