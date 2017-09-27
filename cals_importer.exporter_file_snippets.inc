@@ -259,6 +259,23 @@ function _cals_importer_exporter_snippet_callback_300($fc_wrapped) {
 }
 
 /**
+ * @param \EntityDrupalWrapper $fc_wrapped
+ * @return array $workable_array
+ */
+function _cals_importer_exporter_snippet_callback_306($fc_wrapped) {
+  $runtime = $fc_wrapped->field_running_time->value();
+  $snippet_306 = array(
+    'ind1' => '',
+    'ind2' => '',
+    'subfields' => array(
+      'a' => $runtime
+    ),
+  );
+
+  return $snippet_306;
+}
+
+/**
  * Given a collection of formats and corresponding Data Field pattern, create
  * the Data Fields per format and append to a workable array.
  *
