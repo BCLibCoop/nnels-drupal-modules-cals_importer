@@ -49,7 +49,7 @@ function _cals_importer_exporter_callback_005($vars) {
 function _cals_importer_exporter_callback_leader($wrapper) {
   $vals['00-04'] = 10000; //figure this out?
   $vals['05'] = 'n';
-  $vals['06'] = 'i'; //Jonathan?
+  //$vals['06'] = 'i'; //Jonathan?
   $vals['07'] = 'm';
   $vals['08'] = ' ';
   $vals['09'] = ' ';

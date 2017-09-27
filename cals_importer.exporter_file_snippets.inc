@@ -138,6 +138,21 @@ function _cals_importer_create_marcxml_snippet_file_resource($node) {
 }
 
 /**
+ * @param $format
+ * @return string $byte
+ */
+function _cals_importer_exporter_snippet_callback_LDR($format) {
+  switch($format) {
+    case 4:
+      //Nonmusical Sound Recording (i) for MP3
+      return $byte = 'i';
+    default:
+      //Language Material (a) for all other formats
+      return $byte = 'a';
+  }
+}
+
+/**
  * 00-05 (Date entered on file) = system generated;
  * this is the date MARC record was first created; format must be: ddmmyy
  *
