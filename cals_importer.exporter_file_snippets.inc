@@ -447,6 +447,25 @@ function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
 }
 
 /**
+ * @param \EntityDrupalWrapper $fc_wrapped
+ * @return array $workable_array
+ */
+function _cals_importer_exporter_snippet_callback_511($fc_wrapped) {
+  $workable_array = array(
+    '511' => array(
+      'ind1' => 0,
+      'ind2' => ''
+    )
+  );
+
+  $narrator = $fc_wrapped->field_performer[0]->value();
+
+  $workable_array[511]['subfields'] = array( 'a' => "Narrator: $narrator");
+
+  return $workable_array;
+}
+
+/**
  * @param File_MARC_Record $record
  */
 function _cals_importer_exporter_sort_record_datafields($stub) {
