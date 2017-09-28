@@ -51,7 +51,7 @@ function _cals_importer_exporter_build_file_resource_snippet
   $fc_wrapper = _cals_wrap_fc($field_collection_item);
 
   //Temporary access to stub if needed
- /* $node = $fc_wrapper->host_entity->value();
+  /* $node = $fc_wrapper->host_entity->value();
   $stubfields = unserialize($node->field_xml_stub[LANGUAGE_NONE][0]['value']);*/
 
   //Try _cals_importer_get_tag_array ?
@@ -244,16 +244,14 @@ function _cals_importer_exporter_snippet_callback_300($fc_wrapped) {
   $size = format_size($fc_wrapped->field_s3_file_upload->file->size->value());
 
   $workable_array = array(
-    '300' => array(
       'ind1' => '',
       'ind2' => '',
-    ),
   );
 
   $format_size_stanza = sprintf("1 %s file (%s)", $format_label,
     $size );
 
-  $workable_array[300]['subfields'] = array( 'a' => $format_size_stanza);
+  $workable_array['subfields'] = array( 'a' => $format_size_stanza);
 
   return $workable_array;
 }
