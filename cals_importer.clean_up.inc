@@ -71,13 +71,13 @@ function _cals_importer_exporter_update_publisher_datecreated($wrapper, $node) {
     $wrapper->field_date_created = $date;
     $save = 1;
   }
-
-  printAndDie("SAVE = $save", $arr,
-    $wrapper->field_publisher_format->value(),
-    $wrapper->field_place_of_publication->value(),
-    date("Y", $wrapper->field_date_created->value())
-  );
-  /**/
+  /*
+    printAndDie("SAVE = $save", $arr,
+      $wrapper->field_publisher_format->value(),
+      $wrapper->field_place_of_publication->value(),
+      date("Y", $wrapper->field_date_created->value())
+    );
+    */
   $id = $arr[1];
   //_cals_importer_delete_field_collection_by_id($id);
   if($save == 1) $wrapper->save();
@@ -132,7 +132,6 @@ function _cals_importer_exporter_update_fc_date_created($wrapper, $node) {
  */
 function _cals_importer_exporter_get_date_created($node) {
   $dates = $node->field_date[LANGUAGE_NONE];
-  printPre($dates);
   foreach($dates as $k => $v) {
     $id = $v['value'];
     $fc = entity_load_single('field_collection_item', $id);
@@ -141,7 +140,6 @@ function _cals_importer_exporter_get_date_created($node) {
     $value = $wrapper->field_dc_date->value();
     $value = date("Y", strtotime($value));
     if ($label == 'created' && is_numeric($value)) {
-      printPre("CREATED: " . $value);
       $arr = array(strtotime($value), $id);
       return $arr;
     }
