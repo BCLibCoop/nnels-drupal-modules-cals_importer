@@ -6,6 +6,85 @@
  * 
  */
 
+
+/**
+ * @param $entity
+ */
+function _cals_importer_exporter_update_publisher_entity($entity) {
+  $wrapper = $entity->wrapper();
+  $fc = entity_load_single('field_collection_item', $entity->item_id);
+  $node = $fc->hostEntity();
+
+  if(!empty($node->field_publisher)) {
+    _cals_importer_exporter_update_publisher_datecreated($wrapper, $node);
+  }
+  drupal_goto("node/{$node->nid}");
+}
+/**
+ * update / add system control numbers
+ */
+function _cals_importer_exporter_update_publisher_and_datecreated_vbo(&$entity, $context = array()) {
+  if (isset($entity->item_id)) {
+    $wrapper = $entity->wrapper();
+    $fc = entity_load_single('field_collection_item', $entity->item_id);
+    $node = $fc->hostEntity();
+    if($node->type == 'repository_item' &&
+      ( !empty($node->field_publisher) || !empty($node->field_date) )
+    ) {
+      _cals_importer_exporter_update_publisher_datecreated($wrapper, $node);
+    }
+  }//end main if
+  return "";
+}
+
+
+/**
+ * @param $dates
+ * @return null
+ */
+function _cals_importer_exporter_update_publisher_datecreated($wrapper, $node) {
+  $values = $node->field_publisher[LANGUAGE_NONE];
+  $pub = '';
+  $place = '';
+  foreach($values as $k => $v) {
+    $value = $v['value'];
+    if($k == 0)
+      $place = $value;
+    elseif($k == 1)
+      $pub = $value;
+  }
+  if(empty($pub) && !empty($place)) {
+    $pub = $place;
+    $place = '';
+  }
+  $save = 0;
+  //printAndDie($pub, $wrapper->field_publisher_format->value() );
+  if( !empty($pub) && empty($wrapper->field_publisher_format->value()) ) {
+    $wrapper->field_publisher_format = $pub;
+    $wrapper->field_place_of_publication = $place;
+    $save = 1;
+  }
+  $arr = _cals_importer_exporter_get_date_created($node);
+  //printAndDie($date);
+  $date  = $arr[0];
+  if( is_numeric($date) && empty($wrapper->field_date_created->value()) ) {
+    $wrapper->field_date_created = $date;
+    $save = 1;
+  }
+
+  printAndDie("SAVE = $save", $arr,
+    $wrapper->field_publisher_format->value(),
+    $wrapper->field_place_of_publication->value(),
+    date("Y", $wrapper->field_date_created->value())
+  );
+  /**/
+  $id = $arr[1];
+  //_cals_importer_delete_field_collection_by_id($id);
+  if($save == 1) $wrapper->save();
+
+  return;
+}
+
 /**
  * update / add system control numbers
  */
@@ -53,15 +132,18 @@ function _cals_importer_exporter_update_fc_date_created($wrapper, $node) {
  */
 function _cals_importer_exporter_get_date_created($node) {
   $dates = $node->field_date[LANGUAGE_NONE];
+  printPre($dates);
   foreach($dates as $k => $v) {
     $id = $v['value'];
     $fc = entity_load_single('field_collection_item', $id);
     $wrapper = $fc->wrapper();
     $label = strtolower($wrapper->field_qualifier_date->value());
     $value = $wrapper->field_dc_date->value();
+    $value = date("Y", strtotime($value));
     if ($label == 'created' && is_numeric($value)) {
-      _cals_importer_delete_field_collection_by_id($id);
-      return strtotime($value);
+      printPre("CREATED: " . $value);
+      $arr = array(strtotime($value), $id);
+      return $arr;
     }
   }
   return;

@@ -236,6 +236,18 @@ function cals_importer_menu() {
           'access arguments' => array('view marcxml stub'),
           'file' => 'cals_importer.clean_up.inc',
         );
+        $items[$path . '/%field_collection_item/tmp-test-copy-publisher'] = array(
+          'page callback' => '_cals_importer_exporter_update_publisher_entity',
+          'title' => "Update Publisher",
+          'type' => MENU_LOCAL_TASK,
+          //'type' => MENU_CALLBACK,
+          //'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+          'page arguments' => array(2),
+          'weight' => 100,
+          'access arguments' => array('field_collection_item', 2),
+          'access arguments' => array('view marcxml stub'),
+          'file' => 'cals_importer.clean_up.inc',
+        );
 
       }
     }
@@ -479,10 +491,15 @@ function cals_importer_action_info() {
       'configurable' => FALSE,
       'triggers' => array('any'),
     ),
-
     //copy date created values in node over to field collection
     '_cals_importer_exporter_update_date_created_entity_vbo' => array(
       'label' => t('CALS: Copy Date Created to Field Collection (FILE)'),
+      'type' => 'entity',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),
+    '_cals_importer_exporter_update_publisher_and_datecreated_vbo' => array(
+      'label' => t('CALS: Copy Date Created and Publisher to Field Collection (FILE)'),
       'type' => 'entity',
       'configurable' => FALSE,
       'triggers' => array('any'),
