@@ -119,9 +119,10 @@ function _cals_importer_exporter_update_date_created_entity($entity) {
  * @return string
  */
 function _cals_importer_exporter_update_fc_date_created($wrapper, $node) {
-  $date = _cals_importer_exporter_get_date_created($node);
-  if(is_numeric($date)) {
-    $wrapper->field_date_created = $date;
+  $arr = _cals_importer_exporter_get_date_created($node);
+  $value = $arr[0];
+  if(is_numeric($value)) {
+    $wrapper->field_date_created = $value;
     $wrapper->save();
   }
 }
@@ -137,10 +138,12 @@ function _cals_importer_exporter_get_date_created($node) {
     $fc = entity_load_single('field_collection_item', $id);
     $wrapper = $fc->wrapper();
     $label = strtolower($wrapper->field_qualifier_date->value());
-    $value = $wrapper->field_dc_date->value();
-    $value = date("Y", strtotime($value));
+    $value = trim($wrapper->field_dc_date->value());
     if ($label == 'created' && is_numeric($value)) {
-      $arr = array(strtotime($value), $id);
+      //sometimes the values are YYYY
+      if(strlen($value) == 4) $value .= '0101';
+      $value = strtotime($value);
+      $arr = array($value, $id);
       return $arr;
     }
   }
