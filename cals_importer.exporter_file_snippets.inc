@@ -9,7 +9,7 @@
 
 function _cals_importer_exporter_build_marcxml_file_node($field_collection_item) {
   _cals_importer_exporter_build_file_resource_snippet($field_collection_item);
-  //drupal_goto("node/{$field_collection_item->nid}/TBA");
+  drupal_goto("field-collection/field-file-resource/{$field_collection_item->item_id}/");
 }
 
 /**
@@ -51,8 +51,8 @@ function _cals_importer_exporter_build_file_resource_snippet
   $fc_wrapper = _cals_wrap_fc($field_collection_item);
 
   //Temporary access to stub if needed
-  /* $node = $fc_wrapper->host_entity->value();
-  $stubfields = unserialize($node->field_xml_stub[LANGUAGE_NONE][0]['value']);*/
+  $node = $fc_wrapper->host_entity->value();
+  $stubfields = unserialize($node->field_xml_stub[LANGUAGE_NONE][0]['value']);
 
   //Try _cals_importer_get_tag_array ?
   $per_file_tags = array(
@@ -81,11 +81,11 @@ function _cals_importer_exporter_build_file_resource_snippet
       }
         //store callbacks in callbacks include eventually
         if ($tag != 'GMD') {
-          $buildable_snippet_array[$tag] = $result;
+          $buildable_snippet_array['datafields'][$tag] = $result;
         }
         else { //GMD contains multiple
           foreach ($result as $tags => $value) {
-            $buildable_snippet_array[$tags] = $value;
+            $buildable_snippet_array['datafields'][$tags] = $value;
           }
         }
         unset($result);
@@ -97,8 +97,10 @@ function _cals_importer_exporter_build_file_resource_snippet
     $serialized_snippet);
   $fc_wrapper->save();
 
-  //$check_result = array_merge($stubfields, $buildable_snippet_array);
-  //printAndDie("HEY, we made it this far", $check_result);
+  $check_result = $stubfields + $buildable_snippet_array;
+  dpm($check_result);
+  dpm($buildable_snippet_array);
+
 
   //Pass this off to Stub + Snippet record builder
   return $buildable_snippet_array;
@@ -437,7 +439,7 @@ function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
   }
 
   //Call small helper function for LDR byte 6
-  $workable_array['ldr']['06'] =
+  $workable_array['controlfields']['ldr']['06'] =
     _cals_importer_exporter_snippet_callback_LDR
   ($format);
 
