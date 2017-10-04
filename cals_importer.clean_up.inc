@@ -33,7 +33,7 @@ function _cals_importer_exporter_update_publisher_and_datecreated_vbo(&$entity, 
     ) {
       _cals_importer_exporter_update_publisher_datecreated($wrapper, $node);
     }
-  }//end main if
+  }
   return "";
 }
 
@@ -114,9 +114,9 @@ function _cals_importer_exporter_update_date_created_entity($entity) {
 }
 
 /**
+ * Saves the wrapper
  * @param $wrapper
- * @param $dates
- * @return string
+ * @param $node
  */
 function _cals_importer_exporter_update_fc_date_created($wrapper, $node) {
   $arr = _cals_importer_exporter_get_date_created($node);
