@@ -16,12 +16,34 @@ function _cals_importer_exporter_update_publisher_entity($entity) {
   $node = $fc->hostEntity();
 
   if(!empty($node->field_publisher)) {
-    _cals_importer_exporter_update_publisher_datecreated($wrapper, $node);
+    _cals_importer_exporter_update_publisher($wrapper, $node);
   }
   drupal_goto("node/{$node->nid}");
 }
+
 /**
- * update / add system control numbers
+ * Copies Publisher from node to File Attachments (field collections).
+ *
+ * @param $entity
+ * @param array $context
+ * @return string
+ *
+ */
+function _cals_importer_exporter_update_publisher_vbo(&$entity, $context = array()) {
+  if (isset($entity->item_id)) {
+    $wrapper = $entity->wrapper();
+    $fc = entity_load_single('field_collection_item', $entity->item_id);
+    $node = $fc->hostEntity();
+    if($node->type == 'repository_item' &&
+      ( !empty($node->field_publisher) || !empty($node->field_date) )
+    ) {
+      _cals_importer_exporter_update_publisher($wrapper, $node);
+    }
+  }
+  return "";
+}
+/**
+ * Copies publisher and date created values from node to file collection
  */
 function _cals_importer_exporter_update_publisher_and_datecreated_vbo(&$entity, $context = array()) {
   if (isset($entity->item_id)) {
@@ -31,7 +53,7 @@ function _cals_importer_exporter_update_publisher_and_datecreated_vbo(&$entity, 
     if($node->type == 'repository_item' &&
       ( !empty($node->field_publisher) || !empty($node->field_date) )
     ) {
-      _cals_importer_exporter_update_publisher_datecreated($wrapper, $node);
+      _cals_importer_exporter_update_publisher($wrapper, $node);
     }
   }
   return "";
@@ -42,47 +64,64 @@ function _cals_importer_exporter_update_publisher_and_datecreated_vbo(&$entity, 
  * @param $dates
  * @return null
  */
-function _cals_importer_exporter_update_publisher_datecreated($wrapper, $node) {
+function _cals_importer_exporter_update_publisher($wrapper, $node) {
   $values = $node->field_publisher[LANGUAGE_NONE];
+  $count = count($values);
   $pub = '';
   $place = '';
-  foreach($values as $k => $v) {
-    $value = $v['value'];
-    if($k == 0)
-      $place = $value;
-    elseif($k == 1)
-      $pub = $value;
-  }
-  if(empty($pub) && !empty($place)) {
-    $pub = $place;
-    $place = '';
-  }
-  $save = 0;
-  //printAndDie($pub, $wrapper->field_publisher_format->value() );
-  if( !empty($pub) && empty($wrapper->field_publisher_format->value()) ) {
-    $wrapper->field_publisher_format = $pub;
-    $wrapper->field_place_of_publication = $place;
-    $save = 1;
-  }
-  $arr = _cals_importer_exporter_get_date_created($node);
-  //printAndDie($date);
-  $date  = $arr[0];
-  if( is_numeric($date) && empty($wrapper->field_date_created->value()) ) {
-    $wrapper->field_date_created = $date;
-    $save = 1;
-  }
-  /*
-    printAndDie("SAVE = $save", $arr,
-      $wrapper->field_publisher_format->value(),
-      $wrapper->field_place_of_publication->value(),
-      date("Y", $wrapper->field_date_created->value())
-    );
-    */
-  $id = $arr[1];
-  //_cals_importer_delete_field_collection_by_id($id);
-  if($save == 1) $wrapper->save();
+  if($count == 1){
+    if(strpos($values[0]['value'], ":")) {
+      $tmp = explode(":", $values[0]['value']);
+      $place = trim($tmp[0]);
+      $pub = trim($tmp[1]);
+    }
+    else{
+      $pub = trim($values[0]['value']);
+    }
 
+  }
+  elseif($count > 1) {
+    foreach($values as $k => $v) {
+      $value = $v['value'];
+      if($k == 0)
+        $place = $value;
+      elseif($k == 1)
+        $pub = $value;
+    }
+    if(empty($pub) && !empty($place)) {
+      $pub = $place;
+      $place = '';
+    }
+
+  }
+  else {
+    return;
+  }
+  //printAndDie($pub, $place);
+
+  //[field_path]/[item_id]/tmp-test-copy-publisher?destination=[host_entity_path]
+  //field-collection/field-file-resource/477327/tmp-test-copy-publisher
+  $save = 0;
+  //&& empty($wrapper->field_publisher_format->value())
+  //printAndDie($pub, $wrapper->field_publisher_format->value() );
+  if( !empty($pub)  ) {
+    $wrapper->field_publisher_format = $pub;
+    if(!empty($place)) $wrapper->field_place_of_publication = $place;
+    $wrapper->save();
+    //$url = url(drupal_get_path_alias('node/' . $node->nid));
+    _cals_importer_set_message($node, t('Publisher updated'));
+    //drupal_set_message(t('Publisher updated for <a href="@url">@title</a>@title', array('@url' => $url, '@title' => $node->title)));
+  }
   return;
+}
+
+function _cals_importer_set_message($node, $message = NULL) {
+  $url = url(drupal_get_path_alias('node/' . $node->nid));
+  if($message)
+    $msg = $message . ": " . t('<a href="@url">@title</a>', array('@url' => $url, '@title' => $node->title));
+  else
+    $msg = t('Title updated: <a href="@url">@title</a>', array('@url' => $url, '@title' => $node->title));
+  drupal_set_message($msg);
 }
 
 /**
@@ -124,6 +163,7 @@ function _cals_importer_exporter_update_fc_date_created($wrapper, $node) {
   if(is_numeric($value)) {
     $wrapper->field_date_created = $value;
     $wrapper->save();
+    _cals_importer_set_message($node, t('Date Created updated'));
   }
 }
 

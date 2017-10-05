@@ -504,6 +504,12 @@ function cals_importer_action_info() {
       'configurable' => FALSE,
       'triggers' => array('any'),
     ),
+    '_cals_importer_exporter_update_publisher_vbo' => array(
+      'label' => t('CALS: Copy Publisher to Field Collection (FILE)'),
+      'type' => 'entity',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),
   );
 }
 
