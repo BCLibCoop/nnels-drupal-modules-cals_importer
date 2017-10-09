@@ -159,29 +159,22 @@ function _cals_wrap_fc($entity) {
  * @return string $records
  */
 function _cals_get_set_xml_snippet($fc_wrapper, $str) {
-
   require_once 'File/MARCXML.php';
   require_once 'File/MARC/Lint.php';
-
   $records = '';
   $stub_record = new File_MARCXML($str, File_MARC::SOURCE_STRING);
   $record = $stub_record->next(); //File_MARC_Record instance
   $this_snippet = $fc_wrapper->field_marc_xml_snippet[0]->value();
-
   $snippets = new File_MARCXML($this_snippet, File_MARC::SOURCE_STRING);
-
   if ($record) {
       //there's only one record snippet per file resource so just advance once
       $snippet_context = $snippets->next();
-
       foreach ($snippet_context->getFields() as $tag => $value) {
         $record->appendField($value);
       }
-
       //Adjust byte 6 of leader to reflect added format since ingest
       $ldr_arr = str_split($record->getLeader());
       $format = $fc_wrapper->field_file_format->value();
-
       switch($format) {
         case 4:
           //Nonmusical Sound Recording (i) for MP3
@@ -196,11 +189,9 @@ function _cals_get_set_xml_snippet($fc_wrapper, $str) {
       //Restore string and set
       $ldr_arr = implode("", $ldr_arr);
       $record->setLeader($ldr_arr);
-
       //Stub + new fields to sorter, returns XML string
       $records .= _cals_importer_exporter_sort_record_datafields($record) . "\n";
   }
-
   return $records;
 }
 
@@ -329,7 +320,6 @@ function _cals_get_iso_year($value) {
         if (strlen($newvalue) == 4) return _cals_assert_numstring($newvalue);
       }
     }
-
     //Must be dashes as in 2013-01-01
     $tmp = explode("-", $value);
     if (count($tmp) == 3){

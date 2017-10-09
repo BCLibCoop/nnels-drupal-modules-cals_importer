@@ -14,7 +14,7 @@ function _cals_importer_generate_marcxml_files(&$entity, $context = array() ) {
 
   if (isset($entity->nid)) {
     $node = node_load($entity->nid);
-    //safety check to make sure we're parsing repos items!!    
+    //safety check to make sure we're parsing repos items!!
     $content_types = array('repository_item');
     if (!in_array($node->type, $content_types)  ) {
       drupal_set_message(t("Invalid selection: not a repos item"));
@@ -60,8 +60,8 @@ function _cals_importer_generate_marcxml_files(&$entity, $context = array() ) {
 function _cals_importer_get_marcxml_wrapper($string) {
   $string = str_replace("</marc:collection>", "", $string);
   $header = '<marc:collection
-          xmlns:marc="http://www.loc.gov/MARC21/slim" 
-          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+          xmlns:marc="http://www.loc.gov/MARC21/slim"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd"
         >';
   $content = $header . $string . '</marc:collection>';
@@ -81,7 +81,7 @@ function _cals_importer_generate_marcxml_files_all_records(&$entity, $context = 
 
   if (isset($entity->nid)) {
     $node = node_load($entity->nid);
-    //safety check to make sure we're parsing repos items!!    
+    //safety check to make sure we're parsing repos items!!
     $content_types = array('repository_item');
     if (!in_array($node->type, $content_types)  ) {
       drupal_set_message(t("Invalid selection: not a repos item"));
@@ -147,17 +147,13 @@ function _cals_importer_generate_marcxml_files_search_interface_submit($form, $f
   $return = array();
   $title = $form_state['values']['title'];
   $body = $form_state['values']['body'];
-
-
   $node = new StdClass();
   $node->type = 'marc_export_set';
   $node->language = LANGUAGE_NONE;
   node_object_prepare($node);
-
   $node->title = $title;
   $node->body[LANGUAGE_NONE][0]['value'] = $form_state['values']['body'];
   node_save($node);
-
   //Prepare folder
   $dir = 'public://marc_exports';
   file_prepare_directory($dir, FILE_CREATE_DIRECTORY);
@@ -191,19 +187,18 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
     $xml = _cals_get_marc_xml_string($host);
     //stub not string this doesn't matter
     if($xml !== 0) {
-          $str = $host->field_xml_stub[LANGUAGE_NONE][0]['value'];
-
-          $fc_wrapper = _cals_wrap_fc($entity);
-          //Build the new records from stub + snippet, sorted as XML string
-          $full_format_record = _cals_get_set_xml_snippet($fc_wrapper,
-            $str);
-          //Append raw collection to file temporarily
-          file_put_contents($filename, $full_format_record, FILE_APPEND |
-            LOCK_EX);
-      }
-      //Save export set node with ref back to marc_xml_string source for this run
-      $pnode->field_nid_entry[LANGUAGE_NONE][] = array("nid" => $nid);
-      node_save($pnode);
+      $str = $host->field_xml_stub[LANGUAGE_NONE][0]['value'];
+      $fc_wrapper = _cals_wrap_fc($entity);
+      //Build the new records from stub + snippet, sorted as XML string
+      $full_format_record = _cals_get_set_xml_snippet($fc_wrapper,
+        $str);
+      //Append raw collection to file temporarily
+      file_put_contents($filename, $full_format_record, FILE_APPEND |
+        LOCK_EX);
+    }
+    //Save export set node with ref back to marc_xml_string source for this run
+    $pnode->field_nid_entry[LANGUAGE_NONE][] = array("nid" => $nid);
+    node_save($pnode);
   }
 
   if ($context['progress']['current'] == $context['progress']['total']) {
@@ -263,14 +258,8 @@ function _cals_importer_build_marcxml($node) {
     if(empty($node->field_nnels_856_tag) || $node->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] != 1)
       drupal_set_message("No 856 Tag");
     return;
-
   }
-
-
 }
-
-
-
 
 class MarcXmlFileBuilder {
 
@@ -293,9 +282,9 @@ class MarcXmlFileBuilder {
     //$dom->loadXML($cmr->asXML());
 
     $xml_string =
-      '<marc:collection 
-          xmlns:marc="http://www.loc.gov/MARC21/slim" 
-          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+      '<marc:collection
+          xmlns:marc="http://www.loc.gov/MARC21/slim"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd"
         >' . $this->xml . '</marc:collection>';
     $xml = simplexml_load_string($xml_string);
