@@ -180,7 +180,6 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
   $filename = $context['fields']['filename'];
   $pnid = $context['fields']['pnid'];
   $pnode = node_load($pnid); //get updated parent node
-
   if (!empty($host->field_xml_stub) &&
     !empty($host->field_nnels_856_tag) &&
     $host->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] == 1 ) {
