@@ -179,12 +179,17 @@ function _cals_importer_exporter_get_date_created($node) {
     $wrapper = $fc->wrapper();
     $label = strtolower($wrapper->field_qualifier_date->value());
     $value = trim($wrapper->field_dc_date->value());
-    if ($label == 'created' && is_numeric($value)) {
+    //if ($label == 'created')       printAndDie($value);
+    if ($label == 'created') {
       //sometimes the values are YYYY
       if(strlen($value) == 4) $value .= '0101';
-      $value = strtotime($value);
-      $arr = array($value, $id);
-      return $arr;
+      if(strlen($value) == 6) $value .= '01';
+      if(strlen($value) == 7) $value .= '-01';
+      if(strlen($value) == 8 || strlen($value) == 10) {
+        $value = strtotime($value);
+        $arr = array($value, $id);
+        return $arr;
+      }
     }
   }
   return;
