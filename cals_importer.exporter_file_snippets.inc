@@ -243,6 +243,31 @@ function _cals_importer_export_callback_008($node, $node_wrapper, $xml) {
 }
 
 function _cals_importer_exporter_snippet_callback_264($fc_wrapped) {
+
+  //Machine name is confusing... format_publisher ?
+  $pub_form = $fc_wrapped->field_publisher_format->value();
+  $pub_place = $fc_wrapped->field_place_of_publication->value();
+  $pub_date = (! empty($fc_wrapped->field_date_created->value()) ? 'DC Date Created ' . $fc_wrapped->field_date_created->value() : FALSE);
+
+  if ($pub_date == FALSE) {
+    //$node = $fc_wrapped->host_entity->id;
+    //get node's date arrays, check for Copyrighted or Issued, use that value
+    //$date = DC Date Issued 2015
+  }
+
+  $workable_array = array(
+    'ind1' => '',
+    'ind2' => '1',
+  );
+
+
+  $workable_array['subfields'][] = array (
+    'a' => $pub_place,
+    'b' => $pub_form,
+    'c' => $pub_date,
+  );
+
+  return $workable_array;
 }
 
 /**
