@@ -158,12 +158,15 @@ function _cals_importer_exporter_update_date_created_entity($entity) {
  * @param $node
  */
 function _cals_importer_exporter_update_fc_date_created($wrapper, $node) {
-  $arr = _cals_importer_exporter_get_date_created($node);
+  $arr = _cals_importer_exporter_get_date_created($wrapper, $node);
   $value = $arr[0];
-  if(is_numeric($value)) {
+  if(is_array($arr) && is_numeric($value)) {
+    $id = $arr[1];
     $wrapper->field_date_created = $value;
     $wrapper->save();
-    _cals_importer_set_message($node, t('Date Created updated'));
+    $date = date("Y", $value);
+    $msg = ($id == 0) ? t("Date Updated via File Timestamp") : t("Date Updated via Date Created value");
+    _cals_importer_set_message($node, $msg);
   }
 }
 
@@ -171,8 +174,9 @@ function _cals_importer_exporter_update_fc_date_created($wrapper, $node) {
  * @param $dates
  * @return null
  */
-function _cals_importer_exporter_get_date_created($node) {
+function _cals_importer_exporter_get_date_created($wrapper, $node) {
   $dates = $node->field_date[LANGUAGE_NONE];
+  $timestamp = $wrapper->field_s3_file_upload->file->timestamp->value();
   foreach($dates as $k => $v) {
     $id = $v['value'];
     $fc = entity_load_single('field_collection_item', $id);
@@ -191,6 +195,9 @@ function _cals_importer_exporter_get_date_created($node) {
         return $arr;
       }
     }
+  }
+  if(!empty($timestamp)) {
+    return array($timestamp, 0);
   }
   return;
 }
