@@ -135,9 +135,9 @@ function _cals_importer_create_marcxml_snippet_file_resource($node) {
 
         $record = new File_MARC_Record(NULL);
         _cals_importer_exporter_build_new_record($record, $snippet);
+        $output[] = $record->toXML();
       }
 
-      $output[] = $record->toXML();
       $filename = "public://" . $node->nid . "_file_attach_fields_test.xml";
       $data = '';
 
