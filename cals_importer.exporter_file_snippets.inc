@@ -44,7 +44,7 @@ function _cals_importer_exporter_build_marcxml_file_vbo(&$entity, $context = arr
  */
 function _cals_importer_exporter_build_file_resource_snippet
 ($field_collection_item) {
-  //$tags = _cals_importer_get_tag_array(); //tag mappings
+  $tags = _cals_importer_get_tag_array(); //tag mappings
   //$lint = new File_MARC_Lint();
 
   //Wrapper
@@ -91,15 +91,21 @@ function _cals_importer_exporter_build_file_resource_snippet
         unset($result);
   }
 
+  if (array_key_exists('controlfields', $buildable_snippet_array['datafields'])) {
+    $ctrl = $buildable_snippet_array['datafields']['controlfields'];
+    unset($buildable_snippet_array['datafields']['controlfields']);
+    $buildable_snippet_array['controlfields'] = $ctrl;
+}
+
   //Serialize and overwrite existing stored snippet
   $serialized_snippet = serialize($buildable_snippet_array);
   $fc_wrapper->field_marc_xml_snippet->set(
     $serialized_snippet);
   $fc_wrapper->save();
 
-  $check_result = $stubfields + $buildable_snippet_array;
-  dpm($check_result);
-  dpm($buildable_snippet_array);
+  //$check_result = $stubfields + $buildable_snippet_array;
+  //dpm($check_result);
+  //dpm($buildable_snippet_array);
 
 
   //Pass this off to Stub + Snippet record builder
@@ -118,25 +124,32 @@ function _cals_importer_exporter_build_file_resource_snippet
  */
 function _cals_importer_create_marcxml_snippet_file_resource($node) {
   $node_wrapper = entity_metadata_wrapper('node', $node);
-  foreach ($node_wrapper->field_file_resource->getIterator() as $delta =>
-           $field_collection) {
-    //must now use each field_collection found
-    $snippet = _cals_importer_exporter_add_gmd_per_format($field_collection);
-    $new_xml_snippet = $snippet->toXML("UTF-8", FALSE, FALSE);
-    $dom = new DOMDocument();
-    $dom->loadXML($new_xml_snippet);
-    $xml_out = $dom->saveXML($dom->documentElement);
-    //need to remove prologue here
-    $fc_wrapper = entity_metadata_wrapper('field_collection_item',
-      $field_collection);
-    $fc_wrapper->field_marc_xml_snippet->set( array(
-      $new_xml_snippet) );
-    $fc_wrapper->save();
-  }
-  $node_wrapper->save();
 
-  //this should show all of them on one display
-  //drupal_goto("node/{$field_collection->id}/view-xml-snippet");
+    foreach ($node_wrapper->field_file_resource->getIterator() as $delta =>
+               $collection) {
+        //must now use each field_collection found
+        $collect_id = $collection->getIdentifier();
+        $fc_entity = entity_load('field_collection_item', array($collect_id));
+        $snippet = _cals_importer_exporter_build_file_resource_snippet
+        ($fc_entity[$collect_id]);
+
+        $record = new File_MARC_Record(NULL);
+        _cals_importer_exporter_build_new_record($record, $snippet);
+      }
+
+      $output[] = $record->toXML();
+      $filename = "public://" . $node->nid . "_file_attach_fields_test.xml";
+      $data = '';
+
+      foreach ($output as $file => $rec) {
+        $data .= $rec;
+      }
+      $check = file_unmanaged_save_data($data, $filename);
+    $uri = file_create_url($check);
+
+    drupal_set_message(t("File saved: please download via <a href='@url'>@url</a>",
+      array("@url" => url($uri) ) ) );
+
 }
 
 /**
@@ -230,7 +243,6 @@ function _cals_importer_export_callback_008($node, $node_wrapper, $xml) {
 }
 
 function _cals_importer_exporter_snippet_callback_264($fc_wrapped) {
-  //Use new Publisher fields from forthcoming VBO
 }
 
 /**
@@ -253,7 +265,7 @@ function _cals_importer_exporter_snippet_callback_300($fc_wrapped) {
   $format_size_stanza = sprintf("1 %s file (%s)", $format_label,
     $size );
 
-  $workable_array['subfields'] = array( 'a' => $format_size_stanza);
+  $workable_array['subfields'][] = array( 'a' => $format_size_stanza);
 
   return $workable_array;
 }
@@ -268,8 +280,10 @@ function _cals_importer_exporter_snippet_callback_306($fc_wrapped) {
     'ind1' => '',
     'ind2' => '',
     'subfields' => array(
-      'a' => $runtime
-    ),
+      0 => array(
+        'a' => $runtime
+      )
+    )
   );
 
   return $snippet_306;
@@ -452,15 +466,13 @@ function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
  */
 function _cals_importer_exporter_snippet_callback_511($fc_wrapped) {
   $workable_array = array(
-    '511' => array(
       'ind1' => 0,
       'ind2' => ''
-    )
   );
 
   $narrator = $fc_wrapped->field_performer[0]->value();
 
-  $workable_array[511]['subfields'] = array( 'a' => "Narrator: $narrator");
+  $workable_array['subfields'][] = array( 'a' => "Narrator: $narrator" );
 
   return $workable_array;
 }
