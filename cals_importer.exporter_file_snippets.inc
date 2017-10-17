@@ -402,7 +402,7 @@ function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
         2 => 'rdacarrier',
       ),
       1 => array(
-        'a' => 'online-resource',
+        'a' => 'online resource',
         'b' => 'cr',
         2 => 'rdacarrier',
       ),
@@ -451,7 +451,7 @@ function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
         2 => 'rdacarrier',
       ),
       1 => array(
-        'a' => 'online-resource',
+        'a' => 'online resource',
         'b' => 'cr',
         2 => 'rdacarrier',
       ),
