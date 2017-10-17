@@ -629,8 +629,8 @@ function _cals_importer_get_block_items() {
     'access arguments' => array('parse s3 paths'),
     'page callback' => '_cals_importer_create_marcxml_snippet_file_resource',
     'file' => "cals_importer.exporter.inc",
-    'title' => "Create MARC XML snippet entry",
-    'description' => 'Added MARC-XML snippets per file resource',
+    'title' => "Test MARC XML Snippets",
+    'description' => 'Test MARC-XML snippets per file resource',
   );
 
   /**
