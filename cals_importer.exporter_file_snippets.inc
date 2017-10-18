@@ -264,17 +264,12 @@ function _cals_importer_export_callback_008($node, $node_wrapper, $xml) {
 }
 
 function _cals_importer_exporter_snippet_callback_264($fc_wrapped) {
-
   //Machine name is confusing... format_publisher ?
-  $pub_form = $fc_wrapped->field_publisher_format->value();
-  $pub_place = $fc_wrapped->field_place_of_publication->value();
-  $pub_date = (! empty($fc_wrapped->field_date_created->value()) ? 'DC Date Created ' . $fc_wrapped->field_date_created->value() : FALSE);
-
-  if ($pub_date == FALSE) {
-    //$node = $fc_wrapped->host_entity->id;
-    //get node's date arrays, check for Copyrighted or Issued, use that value
-    //$date = DC Date Issued 2015
-  }
+  $pub_form = _cals_get_extant_drupal_fc_val('field_publisher_format',
+    $fc_wrapped);
+  $pub_place = _cals_get_extant_drupal_fc_val('field_place_of_publication',
+    $fc_wrapped);
+  $pub_date = _cals_get_extant_drupal_fc_val('field_date_created', $fc_wrapped);
 
   $workable_array = array(
     'ind1' => '',
@@ -284,8 +279,27 @@ function _cals_importer_exporter_snippet_callback_264($fc_wrapped) {
   $workable_array['subfields'][] = array (
     'a' => $pub_place,
     'b' => $pub_form,
-    'c' => $pub_date,
+    //'c' => $pub_date,
   );
+
+  if ($pub_date == FALSE) {
+    foreach ($fc_wrapped->host_entity->field_date->value() as $instance =>
+             $ent) {
+      //Attempt for Issued or Copyrighted year
+      $date_wrapped = _cals_wrap_fc($ent);
+      $qualifier = $date_wrapped->field_qualifier_date->value();
+      if (in_array($qualifier, array('Issued', 'Copyrighted'))) $years[] =
+        $date_wrapped->field_dc_date->value();
+    }
+
+    //Take earliest year
+    sort($years);
+    $pub_date = $years[0];
+
+  }
+
+  if ($pub_date) $workable_array['subfields'][0]['c'] =
+    $pub_date;
 
   return $workable_array;
 }
