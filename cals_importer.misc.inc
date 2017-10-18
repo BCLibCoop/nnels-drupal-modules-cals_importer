@@ -150,6 +150,32 @@ function _cals_wrap_fc($entity) {
 }
 
 /**
+ * Check set and emptiness of entity metadata, otherwise return FALSE for
+ * later filtering
+ * @param string $field
+ * @param \EntityDrupalWrapper $fc_wrapped
+ * @return mixed
+ */
+function _cals_get_extant_drupal_fc_val($field, $fc_wrapped) {
+  if ($fc_wrapped->__isset($field)) return ! empty($fc_wrapped->{$field}->value()) ?
+  $fc_wrapped->{$field}->value() : FALSE;
+}
+
+/**
+ * Recursively filter arrays where a given value is FALSE
+ * @param $array
+ * @return array
+ */
+function _cals_recurse_filter_array($array) {
+  foreach ($array as &$value) {
+    if (is_array($value)) {
+      $value = _cals_recurse_filter_array($value);
+    }
+  }
+  return array_filter($array);
+}
+
+/**
  * Given a wrapped FieldCollectionItemEntity, append each tag-value pair
  * from its snippet to its stub, pass through Data_Field sorting
  * function and return an XML string for writing to export file.

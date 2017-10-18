@@ -82,6 +82,14 @@ function _cals_importer_exporter_build_file_resource_snippet
         //store callbacks in callbacks include eventually
         if ($tag != 'GMD') {
           $buildable_snippet_array['datafields'][$tag] = $result;
+
+          //Filter out empty subfields via FALSE
+          $buildable_snippet_array['datafields'][$tag]['subfields'] = _cals_recurse_filter_array
+          ($buildable_snippet_array['datafields'][$tag]['subfields']);
+
+          //If we lost all our subfields, remove the tag
+          if ( empty($buildable_snippet_array['datafields'][$tag]['subfields']
+          )) unset($buildable_snippet_array['datafields'][$tag]);
         }
         else { //GMD contains multiple
           foreach ($result as $tags => $value) {
@@ -89,8 +97,21 @@ function _cals_importer_exporter_build_file_resource_snippet
           }
         }
         unset($result);
-  }
 
+//        foreach ($buildable_snippet_array['datafields'][$tag]['subfields'] as
+//                 $instance => $data) {
+//          foreach ($data as $subfield => $value) {
+//            if ($value == FALSE || $value == null) unset
+//            ($buildable_snippet_array['datafields'][$tag]['subfields'][$instance][$subfield]);
+//          }
+//          if(empty($data)) unset
+//          ($buildable_snippet_array['datafields'][$tag]['subfields
+//            '][$instance]);
+//          if(empty($buildable_snippet_array['datafields'][$tag]['subfields'])
+//          ) unset($buildable_snippet_array['datafields'][$tag]);
+//        }
+  }
+  //Bump up controlfields that got set deeper inside array based on GMD
   if (array_key_exists('controlfields', $buildable_snippet_array['datafields'])) {
     $ctrl = $buildable_snippet_array['datafields']['controlfields'];
     unset($buildable_snippet_array['datafields']['controlfields']);
@@ -259,7 +280,6 @@ function _cals_importer_exporter_snippet_callback_264($fc_wrapped) {
     'ind1' => '',
     'ind2' => '1',
   );
-
 
   $workable_array['subfields'][] = array (
     'a' => $pub_place,
@@ -495,9 +515,11 @@ function _cals_importer_exporter_snippet_callback_511($fc_wrapped) {
       'ind2' => ''
   );
 
-  $narrator = $fc_wrapped->field_performer[0]->value();
-
-  $workable_array['subfields'][] = array( 'a' => "Narrator: $narrator" );
+  $narrator = _cals_get_extant_drupal_fc_val('field_performer', $fc_wrapped);
+  //Narrator is NOT false, exists
+  if ($narrator) $workable_array['subfields'][] = array( 'a' => "Narrator: $narrator" );
+  //Narrator was not found, will be purged
+  else $workable_array['subfields'][] = $narrator;
 
   return $workable_array;
 }
