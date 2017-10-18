@@ -97,19 +97,6 @@ function _cals_importer_exporter_build_file_resource_snippet
           }
         }
         unset($result);
-
-//        foreach ($buildable_snippet_array['datafields'][$tag]['subfields'] as
-//                 $instance => $data) {
-//          foreach ($data as $subfield => $value) {
-//            if ($value == FALSE || $value == null) unset
-//            ($buildable_snippet_array['datafields'][$tag]['subfields'][$instance][$subfield]);
-//          }
-//          if(empty($data)) unset
-//          ($buildable_snippet_array['datafields'][$tag]['subfields
-//            '][$instance]);
-//          if(empty($buildable_snippet_array['datafields'][$tag]['subfields'])
-//          ) unset($buildable_snippet_array['datafields'][$tag]);
-//        }
   }
   //Bump up controlfields that got set deeper inside array based on GMD
   if (array_key_exists('controlfields', $buildable_snippet_array['datafields'])) {
