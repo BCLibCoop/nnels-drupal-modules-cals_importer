@@ -82,6 +82,14 @@ function _cals_importer_exporter_build_file_resource_snippet
         //store callbacks in callbacks include eventually
         if ($tag != 'GMD') {
           $buildable_snippet_array['datafields'][$tag] = $result;
+
+          //Filter out empty subfields via FALSE
+          $buildable_snippet_array['datafields'][$tag]['subfields'] = _cals_recurse_filter_array
+          ($buildable_snippet_array['datafields'][$tag]['subfields']);
+
+          //If we lost all our subfields, remove the tag
+          if ( empty($buildable_snippet_array['datafields'][$tag]['subfields']
+          )) unset($buildable_snippet_array['datafields'][$tag]);
         }
         else { //GMD contains multiple
           foreach ($result as $tags => $value) {
@@ -90,7 +98,7 @@ function _cals_importer_exporter_build_file_resource_snippet
         }
         unset($result);
   }
-
+  //Bump up controlfields that got set deeper inside array based on GMD
   if (array_key_exists('controlfields', $buildable_snippet_array['datafields'])) {
     $ctrl = $buildable_snippet_array['datafields']['controlfields'];
     unset($buildable_snippet_array['datafields']['controlfields']);
@@ -243,29 +251,42 @@ function _cals_importer_export_callback_008($node, $node_wrapper, $xml) {
 }
 
 function _cals_importer_exporter_snippet_callback_264($fc_wrapped) {
-
   //Machine name is confusing... format_publisher ?
-  $pub_form = $fc_wrapped->field_publisher_format->value();
-  $pub_place = $fc_wrapped->field_place_of_publication->value();
-  $pub_date = (! empty($fc_wrapped->field_date_created->value()) ? 'DC Date Created ' . $fc_wrapped->field_date_created->value() : FALSE);
-
-  if ($pub_date == FALSE) {
-    //$node = $fc_wrapped->host_entity->id;
-    //get node's date arrays, check for Copyrighted or Issued, use that value
-    //$date = DC Date Issued 2015
-  }
+  $pub_form = _cals_get_extant_drupal_fc_val('field_publisher_format',
+    $fc_wrapped);
+  $pub_place = _cals_get_extant_drupal_fc_val('field_place_of_publication',
+    $fc_wrapped);
+  $pub_date = _cals_get_extant_drupal_fc_val('field_date_created', $fc_wrapped);
 
   $workable_array = array(
     'ind1' => '',
     'ind2' => '1',
   );
 
-
   $workable_array['subfields'][] = array (
     'a' => $pub_place,
     'b' => $pub_form,
-    'c' => $pub_date,
+    //'c' => $pub_date,
   );
+
+  if ($pub_date == FALSE) {
+    foreach ($fc_wrapped->host_entity->field_date->value() as $instance =>
+             $ent) {
+      //Attempt for Issued or Copyrighted year
+      $date_wrapped = _cals_wrap_fc($ent);
+      $qualifier = $date_wrapped->field_qualifier_date->value();
+      if (in_array($qualifier, array('Issued', 'Copyrighted'))) $years[] =
+        $date_wrapped->field_dc_date->value();
+    }
+
+    //Take earliest year
+    sort($years);
+    $pub_date = $years[0];
+
+  }
+
+  if ($pub_date) $workable_array['subfields'][0]['c'] =
+    $pub_date;
 
   return $workable_array;
 }
@@ -402,7 +423,7 @@ function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
         2 => 'rdacarrier',
       ),
       1 => array(
-        'a' => 'online-resource',
+        'a' => 'online resource',
         'b' => 'cr',
         2 => 'rdacarrier',
       ),
@@ -451,7 +472,7 @@ function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
         2 => 'rdacarrier',
       ),
       1 => array(
-        'a' => 'online-resource',
+        'a' => 'online resource',
         'b' => 'cr',
         2 => 'rdacarrier',
       ),
@@ -495,9 +516,11 @@ function _cals_importer_exporter_snippet_callback_511($fc_wrapped) {
       'ind2' => ''
   );
 
-  $narrator = $fc_wrapped->field_performer[0]->value();
-
-  $workable_array['subfields'][] = array( 'a' => "Narrator: $narrator" );
+  $narrator = _cals_get_extant_drupal_fc_val('field_performer', $fc_wrapped);
+  //Narrator is NOT false, exists
+  if ($narrator) $workable_array['subfields'][] = array( 'a' => "Narrator: $narrator" );
+  //Narrator was not found, will be purged
+  else $workable_array['subfields'][] = $narrator;
 
   return $workable_array;
 }
