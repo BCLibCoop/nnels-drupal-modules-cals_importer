@@ -507,6 +507,8 @@ function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
 }
 
 /**
+ * Populate Narrator from Performer in Drupal.
+ * Multiple values supported.
  * @param \EntityDrupalWrapper $fc_wrapped
  * @return array $workable_array
  */
@@ -516,11 +518,16 @@ function _cals_importer_exporter_snippet_callback_511($fc_wrapped) {
       'ind2' => ''
   );
 
-  $narrator = _cals_get_extant_drupal_fc_val('field_performer', $fc_wrapped);
-  //Narrator is NOT false, exists
-  if ($narrator) $workable_array['subfields'][] = array( 'a' => "Narrator: $narrator" );
+  $narrators = _cals_get_extant_drupal_fc_val('field_performer', $fc_wrapped);
+
+  if ($narrators){
+    $narrator = implode(',' , $narrators);
+    $narrators_string = "Narrator: ";
+    $workable_array['subfields'][] = array('a' => $narrators_string .
+      $narrator . '.');
+  }
   //Narrator was not found, will be purged
-  else $workable_array['subfields'][] = $narrator;
+  else $workable_array['subfields'][] = $narrators;
 
   return $workable_array;
 }
