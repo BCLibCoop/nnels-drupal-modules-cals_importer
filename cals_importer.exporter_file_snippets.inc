@@ -521,7 +521,7 @@ function _cals_importer_exporter_snippet_callback_511($fc_wrapped) {
   $narrators = _cals_get_extant_drupal_fc_val('field_performer', $fc_wrapped);
 
   if ($narrators){
-    $narrator = implode(',' , $narrators);
+    $narrator = implode(', ' , $narrators);
     $narrators_string = "Narrator: ";
     $workable_array['subfields'][] = array('a' => $narrators_string .
       $narrator . '.');
