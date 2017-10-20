@@ -60,6 +60,7 @@ function _cals_importer_exporter_build_file_resource_snippet
     '300',
     '306',
     'GMD',
+    '008',
     '511',
   );
 
@@ -190,61 +191,107 @@ function _cals_importer_exporter_snippet_callback_LDR($format) {
  * @see https://github.com/BCLibCoop/nnels/issues/131
  *
  * @param $node
+ * @param $node_wrapper
  * @return bool|string
  */
-function _cals_importer_export_callback_008($node, $node_wrapper, $xml) {
+function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
 
-  $tmp = $xml->xpath("//marc:datafield[@tag='040']/marc:subfield[@code='a']");
-  $source = '|';
-  if (count($tmp) >= 1) {
-    $source = (string) $tmp[0];
+  define("MARC_SPACE", ' ');
+  define("MARC_FILL", '|');
+
+  $final_008 = '';
+
+  $xml = simplexml_load_string($fc_wrapped->host_entity->field_xml_stub_xml
+    ->value());
+  $original_008 = (string) $xml->{'marc:controlfield'}[3];
+
+  //Keep 00-05 if exists
+  //ddmmyy format
+
+  $date_entered = substr($original_008, 6);
+  if (strlen($date_entered) == 6) $final_008 .= $date_entered;
+  else $final_008 .= date('dmy'); //Generate
+
+  //Set 06 to p
+  $final_008[6] = 'p';
+
+  //07-10 Date Issued
+  foreach ($fc_wrapped->host_entity->field_date->value() as $instance =>
+           $ent) {
+    $date_wrapped = _cals_wrap_fc($ent);
+
+    if ($date_wrapped->field_qualifier_date->value() == 'Issued') {
+      $issued = $date_wrapped->field_dc_date->value();
+    } else {
+      $issued = MARC_SPACE . MARC_SPACE . MARC_SPACE . MARC_SPACE;
+    }
   }
-  $val = $node->changed;
-  $val = $node->created;
-  //yyyymmddhhmmss.f
-  //date + 3 blanks at position 14-17
-  $val = date('dmy', $val) . '   ';
+  $final_008 .= $issued;
 
-  //@todo - get audience value
-  $audience = '';
-  //@todo - get $field_file_format value
-  if ($field_file_format == 4) {
-    $val .= 'nnnn' . $audience . 'o';
-    //008/24-29 = use a blank for each of 6 positions
-    $val .= '      ';
-    //008/30-31 = use the fill character ( | ) for 2 positions
-    $val .= '||';
-    //008/32 = use the fill character ( | )
-    $val .= '|';
-    //008/33 = n
+  //11-14 Date Created
+  $created = _cals_get_extant_drupal_fc_val('field_date_created', $fc_wrapped);
+  $date = date('yyyy', $created ? $created :
+    $fc_wrapped->host_entity->created->value());
+
+  $final_008 .= $date;
+
+  //15-17 three fill chars
+  $final_008 = MARC_SPACE . MARC_SPACE . MARC_SPACE;
+
+  //Get format, audience, lang and branch
+  $format = $fc_wrapped->field_file_format->label();
+  $audience = $fc_wrapped->host_entity->field_audience->value();
+  $lang = $fc_wrapped->host_entity->field_iso_language->value()[0];
+
+  if ($format == 'MP3') {
+    //18-21 nnnn
+    $final_008[18] = 'nnnn';
+
+    //22 audience
+    if (strlen($audience, 1)) $final_008[22] = $audience;
+    else $final_008[22] = MARC_SPACE;
+
+    $final_008[23] = 'o';
+
+    //24-29 six whitespace chars
+    $final_008[24] = MARC_SPACE . MARC_SPACE . MARC_SPACE . MARC_SPACE .
+      MARC_SPACE . MARC_SPACE;
+
+    //30-32 three fill chars
+    $final_008[30] = MARC_FILL . MARC_FILL . MARC_FILL;
+
+    $final_008[33] = 'n';
+
+  } else { //Non-MP3
+
+    //18-21 four fill chars
+    $final_008[18] = MARC_FILL . MARC_FILL . MARC_FILL . MARC_FILL;
+
+    //22 audience
+    if (strlen($audience, 1)) $final_008[22] = $audience;
+    else $final_008[22] = MARC_SPACE;
+
+    $final_008[23] = 'o';
+
+    //24-27 four fill chars
+    $final_008[24] = MARC_FILL . MARC_FILL . MARC_FILL . MARC_FILL;
+
+    //28-32 five fill chars
+    $final_008[28] = MARC_FILL . MARC_FILL . MARC_FILL . MARC_FILL . MARC_FILL;
+
+    //33 literary format
+    $litform = $fc_wrapped->host_entity->field_literary_format->value();
+    $final_008[33] = $litform ? $litform : MARC_FILL;
   }
-  else {
-    $val .= '||||' . $audience . 'o';
-    //008/24-27 = |||| (use fill character for all 4 positions)
-    $val .= '||||';
-    //008/28-32
-    $val .= '||||';
-    //008/33 = insert appropriate Literary Format code (from Literary Format
-    // field in Drupal), if no code then use the fill character ( | ).
-    // View codes:
-    //http://www.itsmarc.com/crs/mergedprojects/helptop1/helptop1/variable_control_fields/idh_008_33_bk_bib.htm
-    $val .= '|'; //using placeholder until we get this nailed down!
 
-  }
-  //008/34 = use the fill character ( | )
-  $val .= '|';
+  //34 one fill char
+  $final_008[34] = MARC_FILL;
 
-  //008/35-37 (Language of the item) = use 3-digit MARC Code for Languages;
-  $lgs = array();
-  //$lgs = $node->field_iso_language[LANGUAGE_NONE];
-  $lg = (!empty($node->field_iso_language)) ?
-    $node->field_iso_language[LANGUAGE_NONE][0]['value']:
-    'eng';
-  $val .= $lg;
-  //008/38 = use the fill character ( | );
-  // 008/39 (Cataloging source) = use the fill character ( | )
-  $val .= '||';
-  return $val;
+  //35-37 language of item
+  $final_008[35] = strlen($lang, 3) ? $lang : 'eng';
+
+  //38-39 two fill chars
+  $final_008[38] = MARC_FILL . MARC_FILL;
 }
 
 function _cals_importer_exporter_snippet_callback_264($fc_wrapped) {
