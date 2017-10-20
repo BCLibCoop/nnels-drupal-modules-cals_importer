@@ -505,15 +505,17 @@ function cals_importer_action_info() {
     ),
     //copy date created values in node over to field collection
     '_cals_importer_exporter_update_date_created_entity_vbo' => array(
-      'label' => t('CALS: Copy Date Created to Field Collection (FILE)'),
+      'label' => t('CALS: Copy Node Date (Created / Issued) to Field Collection (FILE)'),
       'type' => 'entity',
       'configurable' => FALSE,
+      'configurable' => TRUE,
+
       'triggers' => array('any'),
     ),
     '_cals_importer_exporter_update_publisher_and_datecreated_vbo' => array(
       'label' => t('CALS: Copy Date Created and Publisher to Field Collection (FILE)'),
       'type' => 'entity',
-      'configurable' => FALSE,
+      'configurable' => TRUE,
       'triggers' => array('any'),
     ),
     '_cals_importer_exporter_update_publisher_vbo' => array(
@@ -761,11 +763,7 @@ function _cals_importer_update_publisher_and_source_form($options) {
       '#default_value' => '',
       '#options' => $options,
     );
-
-
     return $form;
-
-
   }
 
 }
