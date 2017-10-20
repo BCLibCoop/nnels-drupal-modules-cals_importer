@@ -36,7 +36,7 @@ function _cals_importer_exporter_build_marcxml_file_vbo(&$entity, $context = arr
 }
 
 /**
- * The main workhorse
+ * The main workhorse for building file attachment XML snippet
  *
  * @param \FieldCollectionItemEntity $field_collection_item
  *   the FC entity passed to VBO action
@@ -44,8 +44,8 @@ function _cals_importer_exporter_build_marcxml_file_vbo(&$entity, $context = arr
  */
 function _cals_importer_exporter_build_file_resource_snippet
 ($field_collection_item) {
-  $tags = _cals_importer_get_tag_array(); //tag mappings
-  //$lint = new File_MARC_Lint();
+  //$tags = _cals_importer_get_tag_array_file_attach(); //tag mappings
+
 
   //Wrapper
   $fc_wrapper = _cals_wrap_fc($field_collection_item);
@@ -56,7 +56,6 @@ function _cals_importer_exporter_build_file_resource_snippet
 
   //Try _cals_importer_get_tag_array ?
   $per_file_tags = array(
-    '008',
     '264',
     '300',
     '306',
@@ -72,49 +71,47 @@ function _cals_importer_exporter_build_file_resource_snippet
       $tag;
 
     if ( function_exists($callable) )
-      $result = call_user_func($callable,
-        $fc_wrapper);
+      $result = call_user_func($callable, $fc_wrapper);
 
-      if ($result == FALSE) {
-        drupal_set_message(t("Something went wrong in $callable. Please check its field definitions."), 'error');
-        continue;
+    //@todo log bad callbacks instead
+    if ($result == FALSE) {
+      drupal_set_message(t("Something went wrong in $callable. Please check its field definitions."), 'error');
+      continue;
+    }
+
+    if ($tag == '008') {
+      $buildable_snippet_array['controlfields'][$tag] = $result;
+    }
+    elseif ($tag != 'GMD') {
+      $buildable_snippet_array['datafields'][$tag] = $result;
+
+      //Filter out empty subfields via FALSE
+      $buildable_snippet_array['datafields'][$tag]['subfields'] = _cals_recurse_filter_array
+      ($buildable_snippet_array['datafields'][$tag]['subfields']);
+
+      //If we lost all our subfields, remove the tag
+      if ( empty($buildable_snippet_array['datafields'][$tag]['subfields']
+      )) unset($buildable_snippet_array['datafields'][$tag]);
+    }
+    else { //GMD contains multiple
+      foreach ($result as $tags => $value) {
+        $buildable_snippet_array['datafields'][$tags] = $value;
       }
-        //store callbacks in callbacks include eventually
-        if ($tag != 'GMD') {
-          $buildable_snippet_array['datafields'][$tag] = $result;
-
-          //Filter out empty subfields via FALSE
-          $buildable_snippet_array['datafields'][$tag]['subfields'] = _cals_recurse_filter_array
-          ($buildable_snippet_array['datafields'][$tag]['subfields']);
-
-          //If we lost all our subfields, remove the tag
-          if ( empty($buildable_snippet_array['datafields'][$tag]['subfields']
-          )) unset($buildable_snippet_array['datafields'][$tag]);
-        }
-        else { //GMD contains multiple
-          foreach ($result as $tags => $value) {
-            $buildable_snippet_array['datafields'][$tags] = $value;
-          }
-        }
-        unset($result);
-  }
-  //Bump up controlfields that got set deeper inside array based on GMD
-  if (array_key_exists('controlfields', $buildable_snippet_array['datafields'])) {
-    $ctrl = $buildable_snippet_array['datafields']['controlfields'];
-    unset($buildable_snippet_array['datafields']['controlfields']);
-    $buildable_snippet_array['controlfields'] = $ctrl;
-}
+      //Bump up controlfields that got set deeper inside array based on GMD
+      if (array_key_exists('controlfields', $buildable_snippet_array['datafields'])) {
+        $ctrl = $buildable_snippet_array['datafields']['controlfields'];
+        unset($buildable_snippet_array['datafields']['controlfields']);
+        $buildable_snippet_array['controlfields'] = $ctrl;
+      }
+    }
+    unset($result); //clear for next tag in case of bad return
+  } //end per_file_tags foreach
 
   //Serialize and overwrite existing stored snippet
   $serialized_snippet = serialize($buildable_snippet_array);
   $fc_wrapper->field_marc_xml_snippet->set(
     $serialized_snippet);
   $fc_wrapper->save();
-
-  //$check_result = $stubfields + $buildable_snippet_array;
-  //dpm($check_result);
-  //dpm($buildable_snippet_array);
-
 
   //Pass this off to Stub + Snippet record builder
   return $buildable_snippet_array;
@@ -282,7 +279,6 @@ function _cals_importer_exporter_snippet_callback_264($fc_wrapped) {
     //Take earliest year
     sort($years);
     $pub_date = $years[0];
-
   }
 
   if ($pub_date) $workable_array['subfields'][0]['c'] =
