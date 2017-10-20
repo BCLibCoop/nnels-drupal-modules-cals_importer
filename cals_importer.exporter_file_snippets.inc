@@ -253,7 +253,8 @@ function _cals_importer_exporter_snippet_callback_264($fc_wrapped) {
     $fc_wrapped);
   $pub_place = _cals_get_extant_drupal_fc_val('field_place_of_publication',
     $fc_wrapped);
-  $pub_date = _cals_get_extant_drupal_fc_val('field_date_created', $fc_wrapped);
+  $pub_date = _cals_get_extant_drupal_fc_val('field_date_created',
+    $fc_wrapped);
 
   $workable_array = array(
     'ind1' => '',
@@ -266,10 +267,11 @@ function _cals_importer_exporter_snippet_callback_264($fc_wrapped) {
     //'c' => $pub_date,
   );
 
+  //Was not available in field collection with Created qualifier
   if ($pub_date == FALSE) {
     foreach ($fc_wrapped->host_entity->field_date->value() as $instance =>
              $ent) {
-      //Attempt for Issued or Copyrighted year
+      //Attempt to grab Issued or Copyrighted year
       $date_wrapped = _cals_wrap_fc($ent);
       $qualifier = $date_wrapped->field_qualifier_date->value();
       if (in_array($qualifier, array('Issued', 'Copyrighted'))) $years[] =
@@ -280,9 +282,12 @@ function _cals_importer_exporter_snippet_callback_264($fc_wrapped) {
     sort($years);
     $pub_date = $years[0];
   }
-
-  if ($pub_date) $workable_array['subfields'][0]['c'] =
-    $pub_date;
+  //We got a value but it was a timestamp, extract year
+  elseif ($pub_date) {
+    $pub_date = date('Y', $pub_date);
+    $workable_array['subfields'][0]['c'] =
+      $pub_date;
+  }
 
   return $workable_array;
 }
