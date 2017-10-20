@@ -132,12 +132,59 @@ function _cals_importer_exporter_update_date_created_entity_vbo(&$entity, $conte
     $wrapper = $entity->wrapper();
     $fc = entity_load_single('field_collection_item', $entity->item_id);
     $node = $fc->hostEntity();
-    if(!empty($node->field_date) && $node->type == 'repository_item') {
-      _cals_importer_exporter_update_fc_date_created($wrapper, $node);
-    }
+    $qualifier = $context['date_type'];
+    if(!empty($node->field_date) && $node->type == 'repository_item')
+      _cals_importer_exporter_update_fc_date($wrapper, $node, $qualifier);
   }//end main if
   return "";
 }
+
+/**
+ * @param $settings
+ * @param $form_state
+ * @return mixed
+ */
+function _cals_importer_exporter_update_date_created_entity_vbo_form($settings, &$form_state) {
+  $form['fieldset'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Select Date Type to Copy'),
+    '#collapsible' => TRUE, // Added
+    '#collapsed' => FALSE,  // Added
+  );
+  $form['fieldset']['date_type'] = array(
+    '#type' => 'radios',
+    '#title' => t('Date Qualifier'),
+    '#required' => TRUE,
+    '#size' => 20,
+    '#options' => array('copyrighted' => 'copyrighted', 'created' => 'created', 'issued' => 'issued'),
+    '#default_value' => isset($settings['settings']['date_type']) ? $settings['settings']['date_type'] : 'created',
+  );
+
+  return $form;
+}
+
+/**
+ * update / add system control numbers
+ */
+function _cals_importer_exporter_update_date_created_entity_vbo_submit($form, $form_state) {
+  $return['date_type'] = $form_state['values']['date_type'];
+  return $return; //Note, return value here must be an array.
+}
+
+
+/**
+ * @param $entity
+ */
+function _cals_importer_exporter_update_date_issued_entity($entity) {
+  $wrapper = $entity->wrapper();
+  $fc = entity_load_single('field_collection_item', $entity->item_id);
+  $node = $fc->hostEntity();
+  if(!empty($node->field_date)) {
+    _cals_importer_exporter_update_fc_date($wrapper, $node, "issued");
+  }
+  drupal_goto("node/{$node->nid}");
+}
+
 
 /**
  * @param $entity
@@ -147,7 +194,7 @@ function _cals_importer_exporter_update_date_created_entity($entity) {
   $fc = entity_load_single('field_collection_item', $entity->item_id);
   $node = $fc->hostEntity();
   if(!empty($node->field_date)) {
-    _cals_importer_exporter_update_fc_date_created($wrapper, $node);
+    _cals_importer_exporter_update_fc_date($wrapper, $node, 'created');
   }
   drupal_goto("node/{$node->nid}");
 }
@@ -157,8 +204,8 @@ function _cals_importer_exporter_update_date_created_entity($entity) {
  * @param $wrapper
  * @param $node
  */
-function _cals_importer_exporter_update_fc_date_created($wrapper, $node) {
-  $arr = _cals_importer_exporter_get_date_created($wrapper, $node);
+function _cals_importer_exporter_update_fc_date($wrapper, $node, $date_qualifier) {
+  $arr = _cals_importer_exporter_get_date_by_type($wrapper, $node, $date_qualifier);
   $value = $arr[0];
   if(is_array($arr) && is_numeric($value)) {
     $id = $arr[1];
@@ -174,7 +221,7 @@ function _cals_importer_exporter_update_fc_date_created($wrapper, $node) {
  * @param $dates
  * @return null
  */
-function _cals_importer_exporter_get_date_created($wrapper, $node) {
+function _cals_importer_exporter_get_date_by_type($wrapper, $node, $date_qualifier) {
   $dates = $node->field_date[LANGUAGE_NONE];
   $timestamp = $wrapper->field_s3_file_upload->file->timestamp->value();
   foreach($dates as $k => $v) {
@@ -184,7 +231,7 @@ function _cals_importer_exporter_get_date_created($wrapper, $node) {
     $label = strtolower($wrapper->field_qualifier_date->value());
     $value = trim($wrapper->field_dc_date->value());
     //if ($label == 'created')       printAndDie($value);
-    if ($label == 'created') {
+    if ($label == $date_qualifier) {
       //sometimes the values are YYYY
       if(strlen($value) == 4) $value .= '0101';
       if(strlen($value) == 6) $value .= '01';
@@ -211,7 +258,6 @@ function _cals_importer_exporter_get_date_created($wrapper, $node) {
 function _cals_importer_add_856_tag($node) {
   _cals_add_856_tag($node);
   drupal_goto("node/" . $node->nid);
-
 }
 
 /**
