@@ -201,14 +201,18 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
 
   $final_008 = '';
 
-  $xml = simplexml_load_string($fc_wrapped->host_entity->field_xml_stub_xml
-    ->value());
-  $original_008 = (string) $xml->{'marc:controlfield'}[3];
+  //Get a well-formed XML string from hostEntity
+  $node = node_load($fc_wrapped->host_entity->getIdentifier());
+  $xml = _cals_get_marc_xml_string($node);
+
+  //Obtain original 008
+  $original_008 = $xml->xpath("//marc:controlfield[@tag='008']")
+  [0]->__toString();
 
   //Keep 00-05 if exists
   //ddmmyy format
 
-  $date_entered = substr($original_008, 6);
+  $date_entered = substr($original_008, 0, 6);
   if (strlen($date_entered) == 6) $final_008 .= $date_entered;
   else $final_008 .= date('dmy'); //Generate
 
@@ -220,23 +224,26 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
            $ent) {
     $date_wrapped = _cals_wrap_fc($ent);
 
+    //default
+    $issued = MARC_SPACE . MARC_SPACE . MARC_SPACE . MARC_SPACE;
+
     if ($date_wrapped->field_qualifier_date->value() == 'Issued') {
       $issued = $date_wrapped->field_dc_date->value();
-    } else {
-      $issued = MARC_SPACE . MARC_SPACE . MARC_SPACE . MARC_SPACE;
+      break;
     }
   }
+
   $final_008 .= $issued;
 
   //11-14 Date Created
   $created = _cals_get_extant_drupal_fc_val('field_date_created', $fc_wrapped);
-  $date = date('yyyy', $created ? $created :
+  $date = date('Y', $created ? $created :
     $fc_wrapped->host_entity->created->value());
 
   $final_008 .= $date;
 
   //15-17 three fill chars
-  $final_008 = MARC_SPACE . MARC_SPACE . MARC_SPACE;
+  $final_008 .= MARC_SPACE . MARC_SPACE . MARC_SPACE;
 
   //Get format, audience, lang and branch
   $format = $fc_wrapped->field_file_format->label();
@@ -245,7 +252,9 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
 
   if ($format == 'MP3') {
     //18-21 nnnn
-    $final_008[18] = 'nnnn';
+    foreach (range(18,21) as $key ) {
+      $final_008[$key] = 'n';
+    }
 
     //22 audience
     if (strlen($audience, 1)) $final_008[22] = $audience;
@@ -254,18 +263,23 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
     $final_008[23] = 'o';
 
     //24-29 six whitespace chars
-    $final_008[24] = MARC_SPACE . MARC_SPACE . MARC_SPACE . MARC_SPACE .
-      MARC_SPACE . MARC_SPACE;
+    foreach (range(24,29) as $key ) {
+      $final_008[$key] = MARC_SPACE;
+    }
 
     //30-32 three fill chars
-    $final_008[30] = MARC_FILL . MARC_FILL . MARC_FILL;
+    foreach (range(30,32) as $key ) {
+      $final_008[$key] = MARC_FILL;
+    }
 
     $final_008[33] = 'n';
 
   } else { //Non-MP3
 
     //18-21 four fill chars
-    $final_008[18] = MARC_FILL . MARC_FILL . MARC_FILL . MARC_FILL;
+    foreach (range(18,21) as $key ) {
+      $final_008[$key] = MARC_FILL;
+    }
 
     //22 audience
     if (strlen($audience, 1)) $final_008[22] = $audience;
@@ -273,11 +287,10 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
 
     $final_008[23] = 'o';
 
-    //24-27 four fill chars
-    $final_008[24] = MARC_FILL . MARC_FILL . MARC_FILL . MARC_FILL;
-
-    //28-32 five fill chars
-    $final_008[28] = MARC_FILL . MARC_FILL . MARC_FILL . MARC_FILL . MARC_FILL;
+    //24-32 four fill chars
+    foreach (range(24,32) as $key ) {
+      $final_008[$key] = MARC_FILL;
+    }
 
     //33 literary format
     $litform = $fc_wrapped->host_entity->field_literary_format->value();
@@ -287,11 +300,15 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   //34 one fill char
   $final_008[34] = MARC_FILL;
 
-  //35-37 language of item
-  $final_008[35] = strlen($lang, 3) ? $lang : 'eng';
+  //35-37 three chars for language of item
+  $final_008 .= strlen($lang, 3) ? $lang : 'eng'; //default eng
 
   //38-39 two fill chars
-  $final_008[38] = MARC_FILL . MARC_FILL;
+  foreach (range(38,39) as $key ) {
+    $final_008[$key] = MARC_FILL;
+  }
+
+  return $final_008;
 }
 
 function _cals_importer_exporter_snippet_callback_264($fc_wrapped) {
