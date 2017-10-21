@@ -257,7 +257,7 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
     }
 
     //22 audience
-    if (strlen($audience, 1)) $final_008[22] = $audience;
+    if (strlen($audience) == 1) $final_008[22] = $audience;
     else $final_008[22] = MARC_SPACE;
 
     $final_008[23] = 'o';
@@ -282,7 +282,7 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
     }
 
     //22 audience
-    if (strlen($audience, 1)) $final_008[22] = $audience;
+    if (strlen($audience) == 1) $final_008[22] = $audience;
     else $final_008[22] = MARC_SPACE;
 
     $final_008[23] = 'o';
@@ -308,7 +308,7 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
     $final_008[$key] = MARC_FILL;
   }
 
-  return $final_008;
+  return array( 'value' => $final_008);
 }
 
 function _cals_importer_exporter_snippet_callback_264($fc_wrapped) {
