@@ -192,7 +192,7 @@ function _cals_importer_exporter_snippet_callback_LDR($format) {
  *
  * @param $node
  * @param $node_wrapper
- * @return bool|string
+ * @return array
  */
 function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
 
@@ -206,8 +206,10 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   $xml = _cals_get_marc_xml_string($node);
 
   //Obtain original 008
-  $original_008 = $xml->xpath("//marc:controlfield[@tag='008']")
-  [0]->__toString();
+  if ($xml) {
+    $original_008 = $xml->xpath("//marc:controlfield[@tag='008']")
+    [0]->__toString();
+  } else $original_008 = '';
 
   //Keep 00-05 if exists
   //ddmmyy format
@@ -301,7 +303,7 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   $final_008[34] = MARC_FILL;
 
   //35-37 three chars for language of item
-  $final_008 .= strlen($lang, 3) ? $lang : 'eng'; //default eng
+  $final_008 .= strlen($lang) == 3 ? $lang : 'eng'; //default eng
 
   //38-39 two fill chars
   foreach (range(38,39) as $key ) {
