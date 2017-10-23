@@ -189,7 +189,9 @@ function _cals_reparse_record_details(&$node, $context) {
  *
  */
 function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
-
+  variable_set('error_level', 1);
+  dpm(ddebug_backtrace(TRUE));
+  variable_set('error_level', 1);
   $fc_fields = array(); // container for field collection array
   foreach($map as $k => $v) {
     $type = $v['type'];
@@ -198,7 +200,6 @@ function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
       if(!isset($v['parser']['function'])) printAndDie("???", $v);
       $function = $v['parser']['function'];
       if(is_array($function)) {
-        //printAndDie($map);
         foreach($function as $f) {
           $function($xml, $k, $map);
         }
@@ -220,14 +221,13 @@ function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
             $node->{$k}[LANGUAGE_NONE][] = $value;
           }
           else{
-            $value = trim($value);
-            if(strlen($value)) {
+            if(is_string($value)) $value = trim($value);
+            if(!empty($value)) {
               if($k == 'field_contents') {
                 $node->{$k}[LANGUAGE_NONE][] = array(
                   $key => $value,
                   "format" => 'filtered_html',
                 );
-
               }
               else //otherwise, just set the value
                 $node->{$k}[LANGUAGE_NONE][][$key] = $value;

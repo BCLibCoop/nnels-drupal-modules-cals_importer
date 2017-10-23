@@ -378,7 +378,7 @@ function _cals_normalize_taxonomy_terms(&$entity, $context = array()) {
   if (isset($entity->tid)) {
     //$term = entity_load($entity->tid);
     $term = taxonomy_term_load($entity->tid);
-    $name = _cals_importer_strip_trailing_periods_value($term->name);
+    $name = _cals_importer_strip_trailing_periods_value($term->name, 'n/a');
     if($name !== $term->name) {
       $term->name = $name;
       taxonomy_term_save($term);
@@ -501,7 +501,7 @@ function _cals_update_publisher_264_tag(&$node) {
   if(!empty($node->field_publisher_source)) {
     foreach($node->field_publisher[LANGUAGE_NONE] as $k => $publisher) {
       //$tmp = _cals_importer_normalize_publisher_entry($publisher['value']);
-      $tmp = _cals_importer_strip_trailing_periods_value($publisher['value']);
+      $tmp = _cals_importer_strip_trailing_periods_value($publisher['value'], 'field_publisher_source');
       if($tmp != $publisher['value']) {
         $node->field_publisher[LANGUAGE_NONE][$k]['value'] = $tmp;
       }
@@ -634,7 +634,7 @@ function _cals_importer_strip_trailing_periods(&$node, $field) {
  * Strips trailing punctuation, except abbreviations, etc.  
  * e.g. a.b., A.B., A. B., Dave B.
  */
-function _cals_importer_strip_trailing_periods_value($str, $field) {
+function _cals_importer_strip_trailing_periods_value($str, $field = NULL) {
   $tmp = str_replace("  ", " ", rtrim($str)); //trim various ascii chars
   $tmp = (string) trim($tmp, "  ");
 

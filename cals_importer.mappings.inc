@@ -46,10 +46,7 @@ function _cals_importer_repo_field_callback($fieldname) {
       "patterns" => variable_get('cals_importer_url_patterns'),
       "exceptions" => variable_get('cals_importer_url_patterns_ignore'),
     ),
-
-    "field_literary_format" => array("function" => '_cals_get_literary_form_from_marc'),
-
-
+    'field_literary_format' => array('function' => '_cals_get_literary_form_from_marc'),
     'field_access_rights' => array('function' => '_cals_importer_get_basic_values_from_marc',
       "tags" => array(
         array('tag' => 506, 'code' => 'a'),
@@ -699,16 +696,18 @@ function _cals_get_literary_form_from_marc($xml, $k, &$map) {
   $allowed_values = $map[$k]['allowed_values'];
   $litform = ''; //holds the value; blank if none
   //$tmp = _cals_importer_xpath_control_field_value($xml, "006", $code = NULL);
-  $tmp = _cals_importer_xpath_value($xml, "controlfield", "006", $code = NULL);
+  //$tmp = _cals_importer_xpath_value($xml, "controlfield", "006", $code = NULL);
   $arr = array("006" => 16, "008" => 33);
   foreach($arr as $tag => $pos) {
     //$tmp = _cals_importer_xpath_control_field_value($xml, $tag, $code = NULL);
     $tmp = _cals_importer_xpath_value($xml, "controlfield", $tag, $code = NULL);
-    foreach($tmp as $val) {
-      $str = substr($val, $pos, 1);
-      if(array_key_exists($str, $allowed_values)) {
-        $litform = $str;
-        break;
+    if(is_array($tmp) && count($tmp)) {
+      foreach($tmp as $val) {
+        $str = substr($val, $pos, 1);
+        if(!empty($str) && array_key_exists($str, $allowed_values)) {
+          $litform = $str;
+          break;
+        }
       }
     }
     if($litform != '') {
@@ -716,6 +715,7 @@ function _cals_get_literary_form_from_marc($xml, $k, &$map) {
       break;
     };
   }
+  //if(empty($litform)) $map[$k]['values'][] = 'u';
 }
 
 function _cals_get_subject_from_marc($xml, $k, &$map){
