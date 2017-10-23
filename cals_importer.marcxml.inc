@@ -189,9 +189,11 @@ function _cals_reparse_record_details(&$node, $context) {
  *
  */
 function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
+  /*
   variable_set('error_level', 1);
   dpm(ddebug_backtrace(TRUE));
   variable_set('error_level', 1);
+  */
   $fc_fields = array(); // container for field collection array
   foreach($map as $k => $v) {
     $type = $v['type'];
