@@ -47,15 +47,20 @@ function _cals_importer_exporter_callback_005($vars) {
  * @return mixed
  */
 function _cals_importer_exporter_callback_leader($wrapper) {
-  $vals['00-04'] = 10000; //figure this out?
+  $vals['00-04'] = 10000; //handled by File_MARC_Record::toRaw() once record
+  // is built
   $vals['05'] = 'n';
-  //$vals['06'] = 'i'; //Jonathan?
+  //$vals['06'] = 'i'; //Provisioned by GMD callback per file entity, just
+  // need to merge in. It's returned pre-keyed for byte 6
   $vals['07'] = 'm';
   $vals['08'] = ' ';
   $vals['09'] = ' ';
   $vals['10'] = 2;
   $vals['11'] = 2;
-  $vals['12-16'] = 'XXXXX'; //not sure how to calculate this, either??
+  $vals['12-16'] = 'XXXXX'; //Base address of data
+  // - leader + directory +
+  // field terminator (␞), 5 bytes
+  // handled by File_MARC_Record::toRaw()
   $vals['17'] = 7;
   //see https://github.com/BCLibCoop/nnels/issues/133
   $vals['17'] = 2;
