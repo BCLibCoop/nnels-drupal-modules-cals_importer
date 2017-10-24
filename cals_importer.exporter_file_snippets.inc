@@ -206,9 +206,9 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   $xml = _cals_get_marc_xml_string($node);
 
   //Obtain original 008
-  if ($xml) {
-    $original_008 = $xml->xpath("//marc:controlfield[@tag='008']")
-    [0]->__toString();
+  if (! empty($xml)) {
+    $element_008 = $xml->xpath("//marc:controlfield[@tag='008']");
+    if ($element_008) $original_008 = $element_008[0]->__toString();
   } else $original_008 = '';
 
   //Keep 00-05 if exists
