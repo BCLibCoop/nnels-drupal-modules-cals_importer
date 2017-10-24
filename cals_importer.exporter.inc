@@ -398,7 +398,7 @@ function _cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$rec
         $val = date('YmdHis.0', $val);
         break;
       case '008':
-        $val = _cals_importer_export_callback_008($node, $node_wrapper, $xml);
+       // $val = _cals_importer_export_callback_008($node, $node_wrapper, $xml);
         break;
 
     }
