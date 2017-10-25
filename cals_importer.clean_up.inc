@@ -229,7 +229,8 @@ function _cals_importer_exporter_update_fc_date($wrapper, $node, $date_qualifier
     $wrapper->field_date_created = $value;
     $wrapper->save();
     $date = date("Y", $value);
-    $msg = ($id == 0) ? t("Date Updated via File Timestamp") : t("Date Updated via Date Created value");
+    $msg = ($id == 0) ? t("Date Updated via File Timestamp") : t("Date Updated via @dq value",
+      array('@dq' => $date_qualifier));
     _cals_importer_set_message($node, $msg);
   }
 }
