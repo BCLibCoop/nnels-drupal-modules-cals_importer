@@ -246,7 +246,9 @@ function _cals_importer_exporter_get_date_by_type($wrapper, $node, $date_qualifi
     $fc = entity_load_single('field_collection_item', $id);
     $wrapper = $fc->wrapper();
     $label = strtolower($wrapper->field_qualifier_date->value());
+    if($label == 'copyright') $label = 'copyrighted';
     $value = trim($wrapper->field_dc_date->value());
+    //printPre($label, $value);
     //if ($label == 'created')       printAndDie($value);
     if ($label == $date_qualifier) {
       //sometimes the values are YYYY
