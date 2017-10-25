@@ -125,7 +125,11 @@ function _cals_importer_set_message($node, $message = NULL) {
 }
 
 /**
- * update / add system control numbers
+ * Updates Date Created
+ *
+ * @param $entity
+ * @param array $context
+ * @return string
  */
 function _cals_importer_exporter_update_date_created_entity_vbo(&$entity, $context = array()) {
   if (isset($entity->item_id)) {
@@ -181,6 +185,19 @@ function _cals_importer_exporter_update_date_issued_entity($entity) {
   $node = $fc->hostEntity();
   if(!empty($node->field_date)) {
     _cals_importer_exporter_update_fc_date($wrapper, $node, "issued");
+  }
+  drupal_goto("node/{$node->nid}");
+}
+
+/**
+ * @param $entity
+ */
+function _cals_importer_exporter_update_date_copyrighted_entity($entity) {
+  $wrapper = $entity->wrapper();
+  $fc = entity_load_single('field_collection_item', $entity->item_id);
+  $node = $fc->hostEntity();
+  if(!empty($node->field_date)) {
+    _cals_importer_exporter_update_fc_date($wrapper, $node, 'copyrighted');
   }
   drupal_goto("node/{$node->nid}");
 }
