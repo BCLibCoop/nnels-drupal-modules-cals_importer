@@ -34,14 +34,55 @@ function _cals_importer_exporter_update_publisher_vbo(&$entity, $context = array
     $wrapper = $entity->wrapper();
     $fc = entity_load_single('field_collection_item', $entity->item_id);
     $node = $fc->hostEntity();
-    if($node->type == 'repository_item' &&
-      ( !empty($node->field_publisher) || !empty($node->field_date) )
-    ) {
-      _cals_importer_exporter_update_publisher($wrapper, $node);
+    $fieldname = $context['fieldname'];
+    if( $node->type == 'repository_item' && !empty($node->$fieldname) ) {
+      _cals_importer_exporter_update_publisher($wrapper, $node, $fieldname);
     }
   }
   return "";
 }
+
+
+/**
+ * @param $settings
+ * @param $form_state
+ * @return mixed
+ */
+function _cals_importer_exporter_update_publisher_vbo_form($settings, &$form_state) {
+  $form['fieldset'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Select Publisher Field to Copy'),
+    '#collapsible' => TRUE, // Added
+    '#collapsed' => FALSE,  // Added
+  );
+  $form['fieldset']['fieldname'] = array(
+    '#type' => 'radios',
+    '#title' => t('Date Qualifier'),
+    '#required' => TRUE,
+    '#size' => 20,
+    '#options' => array(
+      'field_publisher' => 'Publisher (Node)',
+      'field_publisher_source' => 'Publisher Source (Node)'
+    ),
+    '#default_value' => isset($settings['settings']['publisher_field']) ?
+      $settings['settings']['publisher_field'] : 'field_publisher',
+  );
+
+  return $form;
+}
+
+/**
+ * @param $form
+ * @param $form_state
+ * @return mixed
+ */
+function _cals_importer_exporter_update_publisher_vbo_submit($form, $form_state) {
+  $return['fieldname'] = $form_state['values']['fieldname'];
+  return $return; //Note, return value here must be an array.
+}
+
+
+
 /**
  * Copies publisher and date created values from node to file collection
  */
@@ -64,8 +105,26 @@ function _cals_importer_exporter_update_publisher_and_datecreated_vbo(&$entity, 
  * @param $dates
  * @return null
  */
-function _cals_importer_exporter_update_publisher($wrapper, $node) {
-  $values = $node->field_publisher[LANGUAGE_NONE];
+function _cals_importer_exporter_update_publisher($wrapper, $node, $fieldname = NULL) {
+  $values = $node->{$fieldname}[LANGUAGE_NONE];
+  if(empty($values)) return;
+  if(!($fieldname)) $fieldname = 'field_publisher';
+  if($fieldname == 'field_publisher') {
+    _cals_importer_exporter_update_publisher_field_publisher($values, $wrapper);
+  }
+  else {
+    $wrapper->field_publisher_format = $values[0]['value'];
+    $wrapper->save();
+    _cals_importer_set_message($node, t('Publisher updated from Publisher Source (Node)'));
+  }
+  return;
+}
+
+/**
+ * @param $values
+ * @param $wrapper
+ */
+function _cals_importer_exporter_update_publisher_field_publisher($values, $wrapper) {
   $count = count($values);
   $pub = '';
   $place = '';
@@ -78,7 +137,6 @@ function _cals_importer_exporter_update_publisher($wrapper, $node) {
     else{
       $pub = trim($values[0]['value']);
     }
-
   }
   elseif($count > 1) {
     foreach($values as $k => $v) {
@@ -97,13 +155,6 @@ function _cals_importer_exporter_update_publisher($wrapper, $node) {
   else {
     return;
   }
-  //printAndDie($pub, $place);
-
-  //[field_path]/[item_id]/tmp-test-copy-publisher?destination=[host_entity_path]
-  //field-collection/field-file-resource/477327/tmp-test-copy-publisher
-  $save = 0;
-  //&& empty($wrapper->field_publisher_format->value())
-  //printAndDie($pub, $wrapper->field_publisher_format->value() );
   if( !empty($pub)  ) {
     $wrapper->field_publisher_format = $pub;
     if(!empty($place)) $wrapper->field_place_of_publication = $place;
@@ -112,7 +163,7 @@ function _cals_importer_exporter_update_publisher($wrapper, $node) {
     _cals_importer_set_message($node, t('Publisher updated'));
     //drupal_set_message(t('Publisher updated for <a href="@url">@title</a>@title', array('@url' => $url, '@title' => $node->title)));
   }
-  return;
+
 }
 
 function _cals_importer_set_message($node, $message = NULL) {
