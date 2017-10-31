@@ -211,7 +211,7 @@ function _cals_importer_exporter_update_date_created_entity_vbo_form($settings, 
     '#title' => t('Date Qualifier'),
     '#required' => TRUE,
     '#size' => 20,
-    '#options' => array('copyrighted' => 'copyrighted', 'created' => 'created', 'issued' => 'issued'),
+    '#options' => array('_none' => 'No value set', 'copyrighted' => 'copyrighted', 'created' => 'created', 'issued' => 'issued'),
     '#default_value' => isset($settings['settings']['date_type']) ? $settings['settings']['date_type'] : 'created',
   );
 
@@ -263,6 +263,18 @@ function _cals_importer_exporter_update_date_created_entity($entity) {
   $node = $fc->hostEntity();
   if(!empty($node->field_date)) {
     _cals_importer_exporter_update_fc_date($wrapper, $node, 'created');
+  }
+  drupal_goto("node/{$node->nid}");
+}
+/**
+ * @param $entity
+ */
+function _cals_importer_exporter_update_date_noqualifier_entity($entity) {
+  $wrapper = $entity->wrapper();
+  $fc = entity_load_single('field_collection_item', $entity->item_id);
+  $node = $fc->hostEntity();
+  if(!empty($node->field_date)) {
+    _cals_importer_exporter_update_fc_date($wrapper, $node, '_none');
   }
   drupal_goto("node/{$node->nid}");
 }

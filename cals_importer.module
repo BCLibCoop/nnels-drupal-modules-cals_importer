@@ -260,6 +260,20 @@ function cals_importer_menu() {
           'access arguments' => array('view marcxml stub'),
           'file' => 'cals_importer.clean_up.inc',
         );
+        $items[$path . '/%field_collection_item/tmp-test-date-noqualifier'] = array(
+          'page callback' => '_cals_importer_exporter_update_date_noqualifier_entity',
+          'title' => "Copy Date No Qualifier (node) to Date Created (file)",
+          'type' => MENU_LOCAL_TASK,
+          //'type' => MENU_CALLBACK,
+          //'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+          'page arguments' => array(2),
+          'weight' => 100,
+          'access arguments' => array('field_collection_item', 2),
+          'access arguments' => array('view marcxml stub'),
+          'file' => 'cals_importer.clean_up.inc',
+        );
+
+
         $items[$path . '/%field_collection_item/tmp-test-copy-publisher'] = array(
           'page callback' => '_cals_importer_exporter_update_publisher_entity',
           'title' => "Update Publisher",
