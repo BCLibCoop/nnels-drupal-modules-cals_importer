@@ -187,7 +187,7 @@ function _cals_importer_exporter_update_date_created_entity_vbo(&$entity, $conte
     $wrapper = $entity->wrapper();
     $fc = entity_load_single('field_collection_item', $entity->item_id);
     $node = $fc->hostEntity();
-    $qualifier = $context['date_type'];
+    $qualifier = ($context['date_type'] == '_none') ? '' : $context['date_type'];
     if(!empty($node->field_date) && $node->type == 'repository_item')
       _cals_importer_exporter_update_fc_date($wrapper, $node, $qualifier);
   }//end main if
@@ -211,7 +211,7 @@ function _cals_importer_exporter_update_date_created_entity_vbo_form($settings, 
     '#title' => t('Date Qualifier'),
     '#required' => TRUE,
     '#size' => 20,
-    '#options' => array('copyrighted' => 'copyrighted', 'created' => 'created', 'issued' => 'issued'),
+    '#options' => array('_none' => 'No Dublin Core Qualifier', 'copyrighted' => 'copyrighted', 'created' => 'created', 'issued' => 'issued'),
     '#default_value' => isset($settings['settings']['date_type']) ? $settings['settings']['date_type'] : 'created',
   );
 
@@ -266,6 +266,18 @@ function _cals_importer_exporter_update_date_created_entity($entity) {
   }
   drupal_goto("node/{$node->nid}");
 }
+/**
+ * @param $entity
+ */
+function _cals_importer_exporter_update_date_noqualifier_entity($entity) {
+  $wrapper = $entity->wrapper();
+  $fc = entity_load_single('field_collection_item', $entity->item_id);
+  $node = $fc->hostEntity();
+  if(!empty($node->field_date)) {
+    _cals_importer_exporter_update_fc_date($wrapper, $node, '');
+  }
+  drupal_goto("node/{$node->nid}");
+}
 
 /**
  * Saves the wrapper
@@ -293,11 +305,13 @@ function _cals_importer_exporter_update_fc_date($wrapper, $node, $date_qualifier
 function _cals_importer_exporter_get_date_by_type($wrapper, $node, $date_qualifier) {
   $dates = $node->field_date[LANGUAGE_NONE];
   $timestamp = $wrapper->field_s3_file_upload->file->timestamp->value();
+  if($date_qualifier == '_none') $date_qualifier = '';
   foreach($dates as $k => $v) {
     $id = $v['value'];
     $fc = entity_load_single('field_collection_item', $id);
     $wrapper = $fc->wrapper();
     $label = strtolower($wrapper->field_qualifier_date->value());
+
     if($label == 'copyright') $label = 'copyrighted';
     $value = trim($wrapper->field_dc_date->value());
     //printPre($label, $value);
