@@ -47,7 +47,7 @@ function _cals_importer_exporter_callback_005($vars) {
  * @return mixed
  */
 function _cals_importer_exporter_callback_leader($wrapper) {
-  $vals['00-04'] = 10000; //handled by File_MARC_Record::toRaw() once record
+  $vals['00-04'] = 00000; //handled by File_MARC_Record::toRaw() once record
   // is built
   $vals['05'] = 'n';
   //$vals['06'] = 'i'; //Provisioned by GMD callback per file entity, just
@@ -61,7 +61,6 @@ function _cals_importer_exporter_callback_leader($wrapper) {
   // - leader + directory +
   // field terminator (␞), 5 bytes
   // handled by File_MARC_Record::toRaw()
-  $vals['17'] = 7;
   //see https://github.com/BCLibCoop/nnels/issues/133
   $vals['17'] = 2;
   $vals['18'] = 'u';
@@ -73,6 +72,56 @@ function _cals_importer_exporter_callback_leader($wrapper) {
   //printAndDie($val, strlen($val), $vals);
 
   return $val;
+}
+
+/**
+ * @param $record
+ */
+//function _cals_importer_exporter_calc_base_address($record) {
+//
+//  $base = sprintf('%08d', strlen($dirLength) + 24 + 1);
+//  return array( 'base' => $base);
+//}
+
+function _cals_importer_exporter_calc_dir_length($raw_record) {
+  //Where that directory at?
+  preg_match('/4500(\d+)\x1E[\D\w]/', $raw_record, $matches);
+  //24 (ldr) + dir + 1
+  return strlen($matches[1]) + 24 + 1;
+}
+
+function _cals_importer_exporter_calc_ldr_length($raw_record) {
+  //Number of bytes of record + 24-byte leader + 1 record terminator byte
+  return strlen($raw_record) + 24 + 1;
+}
+
+/**
+ * @param array $supplied_bytes Should be array of byte positions + values
+ * @param string $raw_record
+ * @return mixed
+ */
+function _cals_importer_exporter_build_final_leader($supplied_bytes,
+                                                       $raw_record) {
+//  $base_address = $supplied_bytes['base'];
+//  unset($supplied_bytes['base']);
+  $ldr = (string) '';
+  foreach ($supplied_bytes as $byte => $value) {
+    $ldr[$byte] = $value;
+  }
+
+  $ldr[5] = 'n';
+  $ldr[7] = 'm';
+  $ldr[8] = MARC_SPACE;
+  $ldr[9] = MARC_SPACE;
+  $ldr[10] = 2;
+  $ldr[11] = 2;
+  $ldr[17] = 2;
+  $ldr[18] = 'u';
+  $ldr[19] = MARC_SPACE;
+
+  //Byte positions 00-04, 06, 12-16 and 20-23 handled by
+  //_cals_importer_exporter_calc_{ldr_length/dir_length}
+  return $ldr;
 }
 
 /**

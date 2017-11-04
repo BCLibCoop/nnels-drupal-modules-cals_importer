@@ -289,7 +289,7 @@ function _cals_build_marc_subfield_array($tag, $subfields) {
       'subfields' => $subfields,
     ));
   }
-  return '';
+  return array();
 }
 
 /**

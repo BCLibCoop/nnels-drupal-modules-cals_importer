@@ -186,13 +186,49 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
     $xml = _cals_get_marc_xml_string($host);
     //stub not string this doesn't matter
     if($xml !== 0) {
-      $str = $host->field_xml_stub[LANGUAGE_NONE][0]['value'];
-      $fc_wrapper = _cals_wrap_fc($entity);
-      //Build the new records from stub + snippet, sorted as XML string
-      $full_format_record = _cals_get_set_xml_snippet($fc_wrapper,
-        $str);
+
+      //Get arrays for stub and snippet
+      $stub = unserialize($host->field_xml_stub[LANGUAGE_NONE][0]['value']);
+      $snippet = _cals_importer_exporter_build_file_resource_snippet
+      ($entity);
+
+      //Need leader for each record merge?
+      //_cals_importer_exporter_callback_leader()
+      //merge LDR with leader ?
+
+      $merged = array();
+
+      foreach($stub as $field_key => $data) {
+        $merged[$field_key] = $stub[$field_key] + $snippet[$field_key];
+        ksort($merged[$field_key]);
+      }
+
+      //File_MARC_Record?
+      $record = new File_MARC_Record(NULL);
+      _cals_importer_exporter_build_new_record($record, $merged);
+
+      //Calculate the final variable byte regions of LDR
+      $raw = $record->toRaw();
+      $fixed_leader = _cals_importer_exporter_build_final_leader
+      ($merged['controlfields']['ldr'], $raw);
+      $record_length = _cals_importer_exporter_calc_ldr_length($raw);
+      $base_address = _cals_importer_exporter_calc_dir_length($raw);
+
+      $record->setLeader($fixed_leader);
+      $record->setLeaderLengths($record_length, $base_address);
+
+      //@todo now merge and persist in file
+      /*$testMARCXML = new File_MARCXML($record,
+        File_MARC_Record::SOURCE_STRING);
+
+      $records = array();
+      $records[] = $raw;*/
+
+      printAndDie("Missing merge sequence.
+      Record was $record->toXML()");
+
       //Append raw collection to file temporarily
-      file_put_contents($filename, $full_format_record, FILE_APPEND |
+      file_put_contents($filename, $raw, FILE_APPEND |
         LOCK_EX);
     }
     //Save export set node with ref back to marc_xml_string source for this run
@@ -207,6 +243,11 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
       "</marc:collection>";
 
     $xml = simplexml_load_string($content);
+
+    $marcxml = new File_MARCXML($xml, File_MARC::SOURCE_STRING);
+
+    //LINT
+
     $file = file_save_data($xml->asXml(), $filename, FILE_EXISTS_REPLACE);
     $file->display = 1;
     $pnode->field_marc_xml_output_file[LANGUAGE_NONE][0] = (array)$file;
