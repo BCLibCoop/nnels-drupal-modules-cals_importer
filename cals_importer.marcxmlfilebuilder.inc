@@ -192,10 +192,6 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
       $snippet = _cals_importer_exporter_build_file_resource_snippet
       ($entity);
 
-      //Need leader for each record merge?
-      //_cals_importer_exporter_callback_leader()
-      //merge LDR with leader ?
-
       $merged = array();
 
       foreach($stub as $field_key => $data) {
@@ -217,18 +213,30 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
       $record->setLeader($fixed_leader);
       $record->setLeaderLengths($record_length, $base_address);
 
+      //Lint
+      $linter = new File_MARC_Lint();
+      try {
+        $valid = $linter->checkRecord($record);
+        if(count($valid)) {
+          $vars = array("items" => $valid , "title" => "Record has errors",
+          "type" => "ol",
+          "attributes" => array());
+          drupal_set_message(theme_item_list($vars));
+        }
+      }
+      catch (Exception $e) {
+      }
+
       //@todo now merge and persist in file
-      /*$testMARCXML = new File_MARCXML($record,
-        File_MARC_Record::SOURCE_STRING);
-
-      $records = array();
-      $records[] = $raw;*/
-
-      printAndDie("Missing merge sequence.
-      Record was $record->toXML()");
+      //Single record XML string outside of collection, namespace
+      $out_xml = simplexml_load_string(
+        $record
+          ->toXML())
+        ->children(NAME_SPACE)
+        ->asXML();
 
       //Append raw collection to file temporarily
-      file_put_contents($filename, $raw, FILE_APPEND |
+      file_put_contents($filename, $out_xml, FILE_APPEND |
         LOCK_EX);
     }
     //Save export set node with ref back to marc_xml_string source for this run
@@ -242,19 +250,14 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
     $content = MARC_HEADER . "\n" . file_get_contents($filename) .
       "</marc:collection>";
 
-    $xml = simplexml_load_string($content);
-
-    $marcxml = new File_MARCXML($xml, File_MARC::SOURCE_STRING);
-
-    //LINT
-
-    $file = file_save_data($xml->asXml(), $filename, FILE_EXISTS_REPLACE);
+    $file = file_save_data( simplexml_load_string($content)->asXml(),
+      $filename,
+      FILE_EXISTS_REPLACE);
     $file->display = 1;
     $pnode->field_marc_xml_output_file[LANGUAGE_NONE][0] = (array)$file;
     node_save($pnode);
     drupal_set_message(t("File saved: please download via <a href='@url'>@url</a>",
       array("@url" => url("node/" . $pnode->nid) ) ) );
-
   }
 }
 
