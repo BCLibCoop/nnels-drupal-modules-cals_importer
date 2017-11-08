@@ -239,7 +239,7 @@ function _cals_importer_exporter_field_value($node, $fieldname) {
  * @return mixed
  */
 function _cals_importer_exporter_field_value_taxonomy_term($node, $fieldname) {
-  printAndDie($values);
+  //printAndDie($values);
 
   $values = field_view_field('taxonomy_term', $node, $fieldname, array('default'));
   return $values;
