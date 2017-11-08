@@ -197,7 +197,7 @@ function _cals_importer_get_subfields_collection_fields($wrapper) {
  */
 function _cals_importer_get_tag_array() {
   //$rs = db_query("select * from {eck_marc_tag} ");
-  $es = entity_load("marc_tag", FALSE);
+  $es = entity_load("marc_tag", FALSE, array(), TRUE);
   $me = array();
   foreach($es as $id => $e) {
     if(!empty($e->field_marc_tag_type) && !empty($e->field_export_type) &&
