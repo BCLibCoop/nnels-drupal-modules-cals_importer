@@ -183,12 +183,16 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
   if (!empty($host->field_xml_stub) &&
     !empty($host->field_nnels_856_tag) &&
     $host->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] == 1 ) {
-    $xml = _cals_get_marc_xml_string($host);
-    //stub not string this doesn't matter
-    if($xml !== 0) {
+    $xml_string = _cals_get_marc_xml_string($host);
 
-      //Get arrays for stub and snippet
+    //$xml_string indicates this repo item has at least been parsed
+    if($xml_string !== 0) {
+
+      //Build stub if it doesn't exist during this context
       $stub = unserialize($host->field_xml_stub[LANGUAGE_NONE][0]['value']);
+      if ( ! $stub ) _cals_importer_create_marc_stub($host);
+
+      //Always build snippet for each context
       $snippet = _cals_importer_exporter_build_file_resource_snippet
       ($entity);
 
@@ -239,6 +243,9 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
       file_put_contents($filename, $out_xml, FILE_APPEND |
         LOCK_EX);
     }
+
+    //@todo determine if non-parsed items can appear in this view to begin with
+
     //Save export set node with ref back to marc_xml_string source for this run
     $pnode->field_nid_entry[LANGUAGE_NONE][] = array("nid" => $nid);
     node_save($pnode);
