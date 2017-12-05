@@ -331,8 +331,6 @@ function _cals_importer_exporter_callback_511($vars) {
   $wrapper = $vars['node_wrapper'];
   $values = $wrapper->field_access_restrictions->value();
 
-  printAndDie($values);
-
   $arr =  _cals_build_marc_subfield_array($tag, $subfields);
   $arr[$tag]['ind1'] = 0;
   $arr[$tag]['ind2'] = '';
@@ -384,9 +382,6 @@ function _cals_importer_exporter_callback_521($vars) {
   $def = field_info_field("field_audience");
   $enumerations = list_allowed_values($def);
   $subfields =  _cals_importer_exporter_get_subfield_array_from_drupal_fields('a', 'field_audience', $wrapper, $enumerations);
-
-  printAndDie($subfields);
-
 
   $arr =  _cals_build_marc_subfield_array($tag, $subfields);
   if(!empty($arr)) {
