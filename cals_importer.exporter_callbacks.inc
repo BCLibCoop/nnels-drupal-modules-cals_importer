@@ -87,12 +87,16 @@ function _cals_importer_exporter_calc_dir_length($raw_record) {
   //Where that directory at?
   preg_match('/4500(\d+)\x1E[\D\w]/', $raw_record, $matches);
   //24 (ldr) + dir + 1
-  return strlen($matches[1]) + 24 + 1;
+  $dirLength = strlen($matches[1]) + 24 + 1;
+  //Zero-pad base address for 5 bytes (12-16)
+  return str_pad($dirLength, 5, '0', STR_PAD_LEFT);
 }
 
 function _cals_importer_exporter_calc_ldr_length($raw_record) {
   //Number of bytes of record + 24-byte leader + 1 record terminator byte
-  return strlen($raw_record) + 24 + 1;
+  $ldrLength = strlen($raw_record) + 24 + 1;
+  //Zero-pad base address for 5 bytes (00-04)
+  return str_pad($ldrLength, 5, '0', STR_PAD_LEFT);
 }
 
 /**
