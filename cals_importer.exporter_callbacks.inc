@@ -101,14 +101,15 @@ function _cals_importer_exporter_calc_ldr_length($raw_record) {
 
 /**
  * @param array $supplied_bytes Should be array of byte positions + values
- * @param string $raw_record
- * @return mixed
+ * @return array
  */
-function _cals_importer_exporter_build_final_leader($supplied_bytes,
-                                                       $raw_record) {
-//  $base_address = $supplied_bytes['base'];
-//  unset($supplied_bytes['base']);
+function _cals_importer_exporter_build_final_leader($supplied_bytes) {
+
+  //Initialize with string type
   $ldr = (string) '';
+
+  //In case there are new format-dependent bytes in future
+  //Currently only byte 6
   foreach ($supplied_bytes as $byte => $value) {
     $ldr[$byte] = $value;
   }
@@ -125,7 +126,8 @@ function _cals_importer_exporter_build_final_leader($supplied_bytes,
 
   //Byte positions 00-04, 06, 12-16 and 20-23 handled by
   //_cals_importer_exporter_calc_{ldr_length/dir_length}
-  return $ldr;
+  $returned['value'] = $ldr;
+  return $returned;
 }
 
 /**

@@ -209,14 +209,19 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
       $record = new File_MARC_Record(NULL);
       _cals_importer_exporter_build_new_record($record, $merged);
 
-      //Calculate the final variable byte regions of LDR
-      $raw = $record->toRaw();
+      //Build new leader
       $fixed_leader = _cals_importer_exporter_build_final_leader
-      ($merged['controlfields']['ldr'], $raw);
+      ($merged['controlfields']['ldr']);
+      $record->setLeader($fixed_leader['value']);
+
+      //Dump raw record
+      $raw = $record->toRaw();
+
+      //Calculate the final variable byte regions of LDR
       $record_length = _cals_importer_exporter_calc_ldr_length($raw);
       $base_address = _cals_importer_exporter_calc_dir_length($raw);
 
-      $record->setLeader($fixed_leader);
+      //Set full leader
       $record->setLeaderLengths($record_length, $base_address);
 
       //Lint
