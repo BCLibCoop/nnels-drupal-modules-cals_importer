@@ -120,7 +120,7 @@ function _cals_importer_exporter_build_final_leader($supplied_bytes) {
   $ldr[9] = MARC_SPACE;
   $ldr[10] = 2;
   $ldr[11] = 2;
-  $ldr[17] = 2;
+  $ldr[17] = 'u';
   $ldr[18] = 'u';
   $ldr[19] = MARC_SPACE;
 
