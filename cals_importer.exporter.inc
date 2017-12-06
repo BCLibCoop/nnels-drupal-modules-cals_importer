@@ -546,6 +546,9 @@ function _cals_importer_exporter_build_new_record(&$record, $marcfields) {
  */
 function _cals_importer_exporter_iterate_controlfields(&$record, $controlfields) {
   foreach($controlfields as $tag => $arr) {
+    //Skip ldr, we handle it specially after initial record build,
+    //see *_build_final_leader called from *_generate_marcxml_files_search_interface
+    if ($tag == 'ldr') break;
     $data = $arr['value'];
     $field = new File_MARC_Control_Field($tag, $data, null, null);
     if($arr['required'] == 1 && empty($data)) {

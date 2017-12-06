@@ -566,9 +566,12 @@ function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
   }
 
   //Call small helper function for LDR byte 6
-  $workable_array['controlfields']['ldr'][6] =
-    _cals_importer_exporter_snippet_callback_LDR
-  ($format);
+  $workable_array['controlfields']['ldr'] = array(
+    'value' => array(
+        6 => _cals_importer_exporter_snippet_callback_LDR($format),
+      ),
+    'required' => 1
+  );
 
   return $workable_array;
 }

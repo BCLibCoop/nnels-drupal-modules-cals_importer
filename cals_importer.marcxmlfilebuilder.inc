@@ -201,7 +201,10 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
       $merged = array();
 
       foreach($stub as $field_key => $data) {
-        $merged[$field_key] = $stub[$field_key] + $snippet[$field_key];
+        //order here is important, we want leader from snippet to prevail.
+        //In all others there should be no collisions between control,
+        //datafields in snippet vs stub
+        $merged[$field_key] =  $snippet[$field_key] + $stub[$field_key];
         ksort($merged[$field_key]);
       }
 

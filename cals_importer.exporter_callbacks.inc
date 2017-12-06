@@ -110,7 +110,7 @@ function _cals_importer_exporter_build_final_leader($supplied_bytes) {
 
   //In case there are new format-dependent bytes in future
   //Currently only byte 6
-  foreach ($supplied_bytes as $byte => $value) {
+  foreach ($supplied_bytes['value'] as $byte => $value) {
     $ldr[$byte] = $value;
   }
 
