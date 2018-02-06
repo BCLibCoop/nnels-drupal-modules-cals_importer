@@ -77,11 +77,14 @@ function _cals_importer_create_marc_stub($node) {
 
     $valid = $lint->checkRecord($record);
     if(count($valid)) {
-      $vars = array("items" => $valid , "title" => "XML Stub Created with following errors", "type" => "ol", "attributes" => array());
-      drupal_set_message(theme_item_list($vars));
-    }
-    else {
-      drupal_set_message(t("XML Stub Created"));
+      //NO - error log these, do not spam the message for each record
+      $message = "XML Stub Created with following errors: @errors";
+      $variables = array('@errors' => $valid);
+      watchdog('cals_importer_filemarc_lint',
+        $message,
+        $variables,
+        $severity = WATCHDOG_NOTICE,
+        $link = NULL);
     }
 
     $new_xml_stub = $record->toXML("UTF-8", FALSE, FALSE);
@@ -734,8 +737,13 @@ function _cals_importer_exporter_build_marcxml_from_array($node) {
 
   $valid = $lint->checkRecord($record);
   if(count($valid)) {
-    $vars = array("items" => $valid , "title" => "XML Stub Created with following errors", "type" => "ol", "attributes" => array());
-    drupal_set_message(theme_item_list($vars));
+    $message = "XML Stub Created with following errors: @errors";
+    $variables = array('@errors' => $valid);
+    watchdog('cals_importer_filemarc_lint',
+      $message,
+      $variables,
+      $severity = WATCHDOG_NOTICE,
+      $link = NULL);
   }
   return $record->__toString();
   //drupal_goto("node/{$node->nid}/build-validate-marcxml-output");

@@ -120,7 +120,7 @@ function _cals_importer_generate_marcxml_files_all_records(&$entity, $context = 
 
 function _cals_importer_generate_marcxml_files_search_interface_form($settings, &$form_state) {
   $form = array();
-  dpm($form_state['values']);
+  //dpm($form_state['values']);
   //printAndDie($form_state['values']);
 
   $form['title'] = array(
