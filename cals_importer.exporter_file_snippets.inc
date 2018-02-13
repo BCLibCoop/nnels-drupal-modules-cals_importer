@@ -196,8 +196,8 @@ function _cals_importer_exporter_snippet_callback_LDR($format) {
  */
 function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
 
-  define("MARC_SPACE", ' ');
-  define("MARC_FILL", '|');
+  define("MARC_SPACE", chr(32) );
+  define("MARC_FILL", chr(124) );
 
   $final_008 = '';
 
@@ -212,24 +212,47 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   } else $original_008 = '';
 
   //Keep 00-05 if exists
-  //ddmmyy format
+  //yymmdd format
 
   $date_entered = substr($original_008, 0, 6);
   if (strlen($date_entered) == 6) $final_008 .= $date_entered;
-  else $final_008 .= date('dmy'); //Generate
+  else $final_008 .= date('ymd'); //Generate
 
   //Set 06 to p
   $final_008[6] = 'p';
 
-  //07-10 Date Issued
+  //07-10 Date Created
+
+  //default to timestamp of file creation
+  $created= date("Y", $fc_wrapped->field_s3_file_upload->value()
+  ['timestamp']);
+
+  //Loop through all field_date instances and find an Created year
   foreach ($fc_wrapped->host_entity->field_date->value() as $instance =>
            $ent) {
     $date_wrapped = _cals_wrap_fc($ent);
 
-    //default
-    $issued = MARC_SPACE . MARC_SPACE . MARC_SPACE . MARC_SPACE;
+    if ($date_wrapped->field_qualifier_date->value() == 'Created') {
+      //Replace default if we found a Created qualifier
+      $created = $date_wrapped->field_dc_date->value();
+      break;
+    }
+  }
+
+  $final_008 .= $created;
+
+  //11-14 Date Issued
+
+  //Default value
+  $issued = 'uuuu';
+
+  //Loop through all field_date instances and find an Issued year
+  foreach ($fc_wrapped->host_entity->field_date->value() as $instance =>
+           $ent) {
+    $date_wrapped = _cals_wrap_fc($ent);
 
     if ($date_wrapped->field_qualifier_date->value() == 'Issued') {
+      //Replace default if we found an Issued qualifier
       $issued = $date_wrapped->field_dc_date->value();
       break;
     }
@@ -237,15 +260,8 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
 
   $final_008 .= $issued;
 
-  //11-14 Date Created
-  $created = _cals_get_extant_drupal_fc_val('field_date_created', $fc_wrapped);
-  $date = date('Y', $created ? $created :
-    $fc_wrapped->host_entity->created->value());
-
-  $final_008 .= $date;
-
   //15-17 three fill chars
-  $final_008 .= MARC_SPACE . MARC_SPACE . MARC_SPACE;
+  $final_008 .= 'xx' . MARC_SPACE;
 
   //Get format, audience, lang and branch
   $format = $fc_wrapped->field_file_format->label();
@@ -262,18 +278,28 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
     if (strlen($audience) == 1) $final_008[22] = $audience;
     else $final_008[22] = MARC_SPACE;
 
-    $final_008[23] = 'o';
+    $final_008[23] = 's';
 
-    //24-29 six whitespace chars
+    //24-29 six space chars
     foreach (range(24,29) as $key ) {
       $final_008[$key] = MARC_SPACE;
     }
 
-    //30-32 three fill chars
-    foreach (range(30,32) as $key ) {
-      $final_008[$key] = MARC_FILL;
-    }
+    //30-31 literary format
+    $label = strtolower($fc_wrapped->host_entity->field_literary_format
+      ->label());
+    $lit_forms = array(
+      'drama' => 'd',
+      'fiction' => 'f',
+      'poetry' => 'p',
+      'speeches' => 'l',
+    );
 
+    if ( $label ) $final_008[30] = $lit_forms[$label];
+    else $final_008[30] = 'z';
+
+    $final_008[31] = MARC_SPACE;
+    $final_008[32] = MARC_FILL;
     $final_008[33] = 'n';
 
   } else { //Non-MP3
@@ -305,10 +331,10 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   //35-37 three chars for language of item
   $final_008 .= strlen($lang) == 3 ? $lang : 'eng'; //default eng
 
-  //38-39 two fill chars
-  foreach (range(38,39) as $key ) {
-    $final_008[$key] = MARC_FILL;
-  }
+  $final_008[38] = MARC_FILL;
+
+  //Cataloguing source
+  $final_008[39] = 'd';
 
   return array( 'value' => $final_008);
 }
