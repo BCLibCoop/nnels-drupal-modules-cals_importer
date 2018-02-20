@@ -164,6 +164,11 @@ function _cals_importer_exporter_callback_040($vars) {
     $a = (string) $tmp[0];
     $arr['040']['subfields'][0]['a'] = trim($a);
   }
+  else { //Required default for subfield a
+    $a = 'BVNNELS';
+  }
+  //Add found subfield or default
+  $arr['040']['subfields'][0]['a'] = trim($a);
 
   $tmp = $xml->xpath("//marc:datafield[@tag='040']/marc:subfield[@code='b']");
   if (count($tmp) >= 1) {
