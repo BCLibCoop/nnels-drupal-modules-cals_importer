@@ -160,9 +160,8 @@ function _cals_importer_exporter_callback_040($vars) {
   );
 
   $tmp = $xml->xpath("//marc:datafield[@tag='040']/marc:subfield[@code='a']");
-  if (count($tmp) >= 1) {
+  if ( !empty ( (string) $tmp[0] ) ) {
     $a = (string) $tmp[0];
-    $arr['040']['subfields'][0]['a'] = trim($a);
   }
   else { //Required default for subfield a
     $a = 'BVNNELS';
@@ -171,7 +170,7 @@ function _cals_importer_exporter_callback_040($vars) {
   $arr['040']['subfields'][0]['a'] = trim($a);
 
   $tmp = $xml->xpath("//marc:datafield[@tag='040']/marc:subfield[@code='b']");
-  if (count($tmp) >= 1) {
+  if ( !empty ( (string) $tmp[0] ) ) {
     $b = (string) $tmp[0];
     $arr['040']['subfields'][0]['b'] = trim($b);
   }
