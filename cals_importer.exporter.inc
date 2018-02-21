@@ -554,7 +554,7 @@ function _cals_importer_exporter_iterate_controlfields(&$record, $controlfields)
     if ($tag == 'ldr') break;
     $data = $arr['value'];
     $field = new File_MARC_Control_Field($tag, $data, null, null);
-    if($arr['required'] == 1 && empty($data)) {
+    if (isset($arr['required']) && $arr['required'] == 1 && empty($data)) {
       drupal_set_message("Missing value for tag $tag. Invalid XML Record Stub.");
       return;
     }
@@ -572,7 +572,7 @@ function _cals_importer_exporter_iterate_datafields(&$record, $datafields) {
     if(empty($subfields)) {
       if($arr['required'] == 1)
         //throw error msg
-        drupal_set_message("Missing subfields for tag $code. Invalid XML Record Stub.");
+        drupal_set_message("Missing subfields for tag $tag. Invalid XML Record Stub.");
     }
     else {
       //if($code == 720) printAndDie($marc_subfields);
@@ -583,8 +583,8 @@ function _cals_importer_exporter_iterate_datafields(&$record, $datafields) {
 
           $marc_subfields = _cals_importer_exporter_get_marc_subfield($subfield);
           $field = new File_MARC_Data_Field($tag, $marc_subfields, 0, null);
-          $field->setIndicator(1, "{$arr['ind1']}");
-          $field->setIndicator(2, "{$arr['ind2']}");
+          if ( isset( $arr['ind1'] ) ) $field->setIndicator(1, "{$arr['ind1']}");
+          if ( isset( $arr['ind2'] ) ) $field->setIndicator(2, "{$arr['ind2']}");
           _cals_importer_exporter_insert_field($record, $field, $tag);
 
           //printAndDie($field);

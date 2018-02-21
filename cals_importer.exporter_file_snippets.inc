@@ -196,8 +196,8 @@ function _cals_importer_exporter_snippet_callback_LDR($format) {
  */
 function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
 
-  define("MARC_SPACE", chr(32) );
-  define("MARC_FILL", chr(124) );
+  defined("MARC_SPACE") or define("MARC_SPACE", chr(32) );
+  defined("MARC_FILL") or define("MARC_FILL", chr(124) );
 
   $final_008 = '';
 
