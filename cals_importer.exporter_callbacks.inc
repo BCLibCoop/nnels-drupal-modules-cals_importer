@@ -146,17 +146,11 @@ function _cals_importer_exporter_callback_040($vars) {
   $value = $wrapper->field_dc_creator->value();
   //$label = ($value == 0) ? "no restrictions" : "restrictions";
 
+  //initialize
   $arr['040'] = array(
     'ind1' => '',
     'ind2' => '',
-    'subfields' => array(
-      array(
-        'c' => 'BVNNELS',
-        'd' => 'BVNNELS',
-      ),
-      //array('value' => $label, 'subfield' => 'a'),
-      //array('value' => 'BVNNELS', 'subfield' => 'b'),
-    ),
+    'subfields' => array()
   );
 
   $tmp = $xml->xpath("//marc:datafield[@tag='040']/marc:subfield[@code='a']");
@@ -174,6 +168,10 @@ function _cals_importer_exporter_callback_040($vars) {
     $b = (string) $tmp[0];
     $arr['040']['subfields'][0]['b'] = trim($b);
   }
+  //Remaining non-variable identifiers for subfields c, d
+  $arr['040']['subfields'][0]['c'] = 'BVNNELS';
+  $arr['040']['subfields'][0]['d'] = 'BVNNELS';
+
   return $arr;
 }
 
