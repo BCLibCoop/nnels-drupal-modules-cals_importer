@@ -557,6 +557,8 @@ function _cals_map_date_qualifiers($str, $tag, &$dates, $is_present) {
     $str = substr($str, 7, 4); // 008/07-10 should be numeric
   }
   else {
+    //Matches against c1999 or p1999 (UTF-8 for Ⓟ, sound recording copyright
+    // symbol)
     $check_copyright = _cals_parse_date_issue_copyright($str);
   }
   $date_value = _cals_get_iso_year($str);
@@ -584,8 +586,10 @@ function _cals_map_date_qualifiers($str, $tag, &$dates, $is_present) {
  */
 function _cals_parse_date_issue_copyright ($raw_date_value) {
   //$copyright = "/^c\\d{4}/"; - original pattern
-  $copyright = "/c\d{4}/"; //new pattern, modified 2016-06-30 - see: https://github.com/BCLibCoop/nnels/issues/104#issuecomment-229709076
-  preg_match($copyright, $raw_date_value, $matches);
+  $pattern = "/[cp]\d{4}/"; //new pattern, modified
+  // 2016-06-30 - see:
+  // https://github.com/BCLibCoop/nnels/issues/104#issuecomment-229709076
+  preg_match($pattern, $raw_date_value, $matches);
   if (count($matches))
     return TRUE;
 
