@@ -477,38 +477,58 @@ function _cals_importer_get_coverage_marc($xml, $k, &$map){
 }
 
 
-//function _cals_get_date_issued($xml) {
 function _cals_get_date_issued_from_marc($xml, $k, &$map) {
 
   $dates_dupes = array();
   $dates = array();
-  //$me = array(264 => 'c', 260 => 'c', )
-  //see: https://github.com/BCLibCoop/nnels/issues/104#issuecomment-229739259
-  $tmp = _cals_importer_xpath_value($xml, "datafield", 534, "c");
-  if (count($tmp)) {
-    foreach ($tmp as $str) _cals_map_date_qualifiers($str, 534, $dates, TRUE);
-    $tmp1 = _cals_importer_xpath_value($xml, "datafield", 264, "c");
-    $tmp2 = _cals_importer_xpath_value($xml, "datafield", 260, "c");
-    $tmp3 = _cals_importer_xpath_value($xml, "datafield", 533, "d");
-    if (count($tmp1))
-      foreach ($tmp1 as $str) _cals_map_date_qualifiers($str, 264, $dates, TRUE);
-    else if (count($tmp2))
-      foreach ($tmp2 as $str) _cals_map_date_qualifiers($str, 260, $dates, TRUE);
-    else if (count($tmp3))
-      foreach ($tmp3 as $str) _cals_map_date_qualifiers($str, 533, $dates, TRUE);
+
+  //Background: https://github.com/BCLibCoop/nnels/issues/104#issuecomment-229739259
+  //Get common subfields for this section
+
+  $orig_pub_date_534c = _cals_importer_xpath_value($xml, "datafield", 534, "c");
+  $date_pub_264c = _cals_importer_xpath_value($xml, "datafield", 264, "c");
+  $date_pub_260c = _cals_importer_xpath_value($xml, "datafield", 260, "c");
+
+  if ( count ( $orig_pub_date_534c ) ) {
+
+    foreach ($orig_pub_date_534c as $orig_pub_date_part) {
+
+      //There can be more comma-separated parts in
+      //array returned from _cals_importer_xpath_value
+      $orig_pub_date_part = explode(',', $orig_pub_date_part);
+      _cals_map_date_qualifiers
+      ($orig_pub_date_part, 534, $dates, TRUE);
+    }
+
+    $reprod_tag = '533';
+    $reprod_date_533d = _cals_importer_xpath_value($xml, "datafield",
+      $reprod_tag, "d");
+
+  } else {
+    //No 533-4 so fallback is 008
+    $reprod_tag = '008';
+    $reprod_date_008c = _cals_importer_xpath_value($xml, "controlfield",
+      $reprod_tag,
+      NULL);
   }
-  else {
-    //008
-    $tmp1 = _cals_importer_xpath_value($xml, "datafield", 264, "c");
-    $tmp2 = _cals_importer_xpath_value($xml, "datafield", 260, "c");
-    $tmp3 = _cals_importer_xpath_value($xml, "controlfield", "008", NULL);
-    if (count($tmp1))
-      foreach ($tmp1 as $str) _cals_map_date_qualifiers($str, 264, $dates, FALSE);
-    else if (count($tmp2))
-      foreach ($tmp2 as $str) _cals_map_date_qualifiers($str, 260, $dates, FALSE);
-    else if (count($tmp3))
-      foreach ($tmp3 as $str) _cals_map_date_qualifiers($str, '008', $dates, FALSE);
-  }
+
+  $reprod_date_shared = $reprod_date_533d ? $reprod_date_533d :
+    $reprod_date_008c;
+
+  if ( count( $date_pub_264c ) )
+    foreach ( $date_pub_264c as $pub_date_part ) {
+      $pub_date_parts = explode(',', $pub_date_part);
+      foreach ( $pub_date_parts as $part ) _cals_map_date_qualifiers($part, 264, $dates, TRUE);
+    }
+  else if (count($date_pub_260c))
+    foreach ($date_pub_260c as $pub_date_part)
+      _cals_map_date_qualifiers($pub_date_part, 260, $dates, TRUE);
+
+  //Whatever was found for reproduction date
+  else if (count($reprod_date_shared))
+    foreach ($reprod_date_shared as $reprod_date_part)
+      _cals_map_date_qualifiers($reprod_date_part, $reprod_tag, $dates, TRUE);
+
   foreach($dates as $qualifier => $date)
     $map[$k]['values'][] = array(
       'field_name' =>  "field_date",
