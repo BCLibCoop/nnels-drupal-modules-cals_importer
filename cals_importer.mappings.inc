@@ -1248,13 +1248,59 @@ function _cals_importer_get_normalized_performer($string) {
  * see: http://www.loc.gov/marc/bibliographic/bd306.html
  */
 function _cals_importer_get_runningtime_from_marcxml(&$arr, $xml) {
-  if(!isset($arr['fc_files'])) $arr['fc_files'] = array();
+
+  if (!isset($arr['fc_files'])) {
+    $arr['fc_files'] = array();
+  }
+
   //look for 306 tag code a
-  $tmp = _cals_importer_xpath_value($xml, "datafield", 306, 'a');
-  foreach ($tmp as $val){
-    $val = trim($val);
-    if(is_numeric(trim($val)))
-      $arr['fc_files']['field_running_time'][]['value'] = trim($val);
+  $runtime_306a = _cals_importer_xpath_value($xml, "datafield", 306, 'a');
+
+  if (!empty($runtime_306a)) { //empty array from xpath_value if not found
+    foreach ($runtime_306a as $val) {
+      $val = trim($val);
+      if (is_numeric(trim($val))) {
+        $arr['fc_files']['field_running_time'][]['value'] = trim($val);
+      }
+    }
+    return;
+  }
+
+  //Try 300 $a - more common?
+  $runtime_300a = _cals_importer_xpath_value($xml, "datafield", 300, 'a');
+  if (!empty($runtime_300a)) {
+
+    //Match runtime string
+    preg_match("/\((\d+.?[\d\s]?\/?\d?\shr)\.[\,\s]*([\w\s]*)\.*\)/",
+      $runtime_300a[0], $matches);
+
+    if ($matches[1]) {
+      preg_match("/(\d+).*/", $matches[1], $whole_hour);
+      $hours = trim($whole_hour[1]);
+      $minutes = '00'; //may get replaced
+
+      //Check for a decimal number or fraction, should not be mixed
+      preg_match("/\d+\s(\d*\/?\d*)/", $matches[1], $fractional_min);
+      preg_match("/\d\.(\d*)/", $matches[1], $decimal_min);
+
+      if ((string) $fractional_min[1] == '1/2') $minutes = 30;
+      if ((string) $fractional_min[1] == '1/4') $minutes = 15;
+
+      if ($decimal_min[1]) {
+        //count digits
+        $count = strlen((string) $decimal_min[1]);
+        $divisor = pow(10, $count);
+        $minutes = (int) (60 * ($decimal_min[1] / $divisor) );
+      }
+      //otherwise whole minutes
+      if ($matches[2]) {
+        $min = explode(" ", $matches[2]);
+        $minutes = $min[0];
+      }
+    }
+    //Format in hhmmss for field
+    $timestamp = sprintf('%02d%02d00', $hours, (int) $minutes);
+    $arr['fc_files']['field_running_time'][]['value'] = $timestamp;
   }
 }
 
