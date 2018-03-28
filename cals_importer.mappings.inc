@@ -239,7 +239,7 @@ function _cals_importer_xpath_value($xml, $fieldname, $tag, $code = NULL) {
   //dpm(__FUNCTION__, $path, $tmp);
   if (count($tmp) >= 1) {
     foreach ($tmp as $me){
-      $str = (string) trim($me[0]);
+      $str = (string) strip_tags( trim($me[0]) );
       if(!empty($str)) $arr[] = $str;
     }
   }
