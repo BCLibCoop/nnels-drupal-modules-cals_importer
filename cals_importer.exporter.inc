@@ -77,11 +77,14 @@ function _cals_importer_create_marc_stub($node) {
 
     $valid = $lint->checkRecord($record);
     if(count($valid)) {
-      $vars = array("items" => $valid , "title" => "XML Stub Created with following errors", "type" => "ol", "attributes" => array());
-      drupal_set_message(theme_item_list($vars));
-    }
-    else {
-      drupal_set_message(t("XML Stub Created"));
+      //NO - error log these, do not spam the message for each record
+      $message = "XML Stub Created with following errors: @errors";
+      $variables = array('@errors' => $valid);
+      watchdog('cals_importer_filemarc_lint',
+        $message,
+        $variables,
+        $severity = WATCHDOG_NOTICE,
+        $link = NULL);
     }
 
     $new_xml_stub = $record->toXML("UTF-8", FALSE, FALSE);
@@ -197,7 +200,7 @@ function _cals_importer_get_subfields_collection_fields($wrapper) {
  */
 function _cals_importer_get_tag_array() {
   //$rs = db_query("select * from {eck_marc_tag} ");
-  $es = entity_load("marc_tag", FALSE);
+  $es = entity_load("marc_tag", FALSE, array(), TRUE);
   $me = array();
   foreach($es as $id => $e) {
     if(!empty($e->field_marc_tag_type) && !empty($e->field_export_type) &&
@@ -239,7 +242,7 @@ function _cals_importer_exporter_field_value($node, $fieldname) {
  * @return mixed
  */
 function _cals_importer_exporter_field_value_taxonomy_term($node, $fieldname) {
-  printAndDie($values);
+  //printAndDie($values);
 
   $values = field_view_field('taxonomy_term', $node, $fieldname, array('default'));
   return $values;
@@ -289,7 +292,7 @@ function _cals_build_marc_subfield_array($tag, $subfields) {
       'subfields' => $subfields,
     ));
   }
-  return '';
+  return array();
 }
 
 /**
@@ -546,6 +549,9 @@ function _cals_importer_exporter_build_new_record(&$record, $marcfields) {
  */
 function _cals_importer_exporter_iterate_controlfields(&$record, $controlfields) {
   foreach($controlfields as $tag => $arr) {
+    //Skip ldr, we handle it specially after initial record build,
+    //see *_build_final_leader called from *_generate_marcxml_files_search_interface
+    if ($tag == 'ldr') break;
     $data = $arr['value'];
     $field = new File_MARC_Control_Field($tag, $data, null, null);
     if($arr['required'] == 1 && empty($data)) {
@@ -731,8 +737,13 @@ function _cals_importer_exporter_build_marcxml_from_array($node) {
 
   $valid = $lint->checkRecord($record);
   if(count($valid)) {
-    $vars = array("items" => $valid , "title" => "XML Stub Created with following errors", "type" => "ol", "attributes" => array());
-    drupal_set_message(theme_item_list($vars));
+    $message = "XML Stub Created with following errors: @errors";
+    $variables = array('@errors' => $valid);
+    watchdog('cals_importer_filemarc_lint',
+      $message,
+      $variables,
+      $severity = WATCHDOG_NOTICE,
+      $link = NULL);
   }
   return $record->__toString();
   //drupal_goto("node/{$node->nid}/build-validate-marcxml-output");

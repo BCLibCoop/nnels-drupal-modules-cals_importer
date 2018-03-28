@@ -47,7 +47,7 @@ function _cals_importer_exporter_callback_005($vars) {
  * @return mixed
  */
 function _cals_importer_exporter_callback_leader($wrapper) {
-  $vals['00-04'] = 10000; //handled by File_MARC_Record::toRaw() once record
+  $vals['00-04'] = 00000; //handled by File_MARC_Record::toRaw() once record
   // is built
   $vals['05'] = 'n';
   //$vals['06'] = 'i'; //Provisioned by GMD callback per file entity, just
@@ -61,7 +61,6 @@ function _cals_importer_exporter_callback_leader($wrapper) {
   // - leader + directory +
   // field terminator (␞), 5 bytes
   // handled by File_MARC_Record::toRaw()
-  $vals['17'] = 7;
   //see https://github.com/BCLibCoop/nnels/issues/133
   $vals['17'] = 2;
   $vals['18'] = 'u';
@@ -73,6 +72,62 @@ function _cals_importer_exporter_callback_leader($wrapper) {
   //printAndDie($val, strlen($val), $vals);
 
   return $val;
+}
+
+/**
+ * @param $record
+ */
+//function _cals_importer_exporter_calc_base_address($record) {
+//
+//  $base = sprintf('%08d', strlen($dirLength) + 24 + 1);
+//  return array( 'base' => $base);
+//}
+
+function _cals_importer_exporter_calc_dir_length($raw_record) {
+  //Where that directory at?
+  preg_match('/4500(\d+)\x1E[\D\w]/', $raw_record, $matches);
+  //24 (ldr) + dir + 1
+  $dirLength = strlen($matches[1]) + 24 + 1;
+  //Zero-pad base address for 5 bytes (12-16)
+  return str_pad($dirLength, 5, '0', STR_PAD_LEFT);
+}
+
+function _cals_importer_exporter_calc_ldr_length($raw_record) {
+  //Number of bytes of record + 24-byte leader + 1 record terminator byte
+  $ldrLength = strlen($raw_record) + 24 + 1;
+  //Zero-pad base address for 5 bytes (00-04)
+  return str_pad($ldrLength, 5, '0', STR_PAD_LEFT);
+}
+
+/**
+ * @param array $supplied_bytes Should be array of byte positions + values
+ * @return array
+ */
+function _cals_importer_exporter_build_final_leader($supplied_bytes) {
+
+  //Initialize with string type
+  $ldr = (string) '';
+
+  //In case there are new format-dependent bytes in future
+  //Currently only byte 6
+  foreach ($supplied_bytes['value'] as $byte => $value) {
+    $ldr[$byte] = $value;
+  }
+
+  $ldr[5] = 'n';
+  $ldr[7] = 'm';
+  $ldr[8] = MARC_SPACE;
+  $ldr[9] = MARC_SPACE;
+  $ldr[10] = 2;
+  $ldr[11] = 2;
+  $ldr[17] = 'u';
+  $ldr[18] = 'u';
+  $ldr[19] = MARC_SPACE;
+
+  //Byte positions 00-04, 06, 12-16 and 20-23 handled by
+  //_cals_importer_exporter_calc_{ldr_length/dir_length}
+  $returned['value'] = $ldr;
+  return $returned;
 }
 
 /**
@@ -282,8 +337,6 @@ function _cals_importer_exporter_callback_511($vars) {
   $wrapper = $vars['node_wrapper'];
   $values = $wrapper->field_access_restrictions->value();
 
-  printAndDie($values);
-
   $arr =  _cals_build_marc_subfield_array($tag, $subfields);
   $arr[$tag]['ind1'] = 0;
   $arr[$tag]['ind2'] = '';
@@ -335,9 +388,6 @@ function _cals_importer_exporter_callback_521($vars) {
   $def = field_info_field("field_audience");
   $enumerations = list_allowed_values($def);
   $subfields =  _cals_importer_exporter_get_subfield_array_from_drupal_fields('a', 'field_audience', $wrapper, $enumerations);
-
-  printAndDie($subfields);
-
 
   $arr =  _cals_build_marc_subfield_array($tag, $subfields);
   if(!empty($arr)) {

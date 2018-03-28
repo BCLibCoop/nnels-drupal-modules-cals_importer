@@ -120,7 +120,7 @@ function _cals_importer_generate_marcxml_files_all_records(&$entity, $context = 
 
 function _cals_importer_generate_marcxml_files_search_interface_form($settings, &$form_state) {
   $form = array();
-  dpm($form_state['values']);
+  //dpm($form_state['values']);
   //printAndDie($form_state['values']);
 
   $form['title'] = array(
@@ -178,23 +178,83 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
   $host = $entity->hostEntity();
   $nid = $host->nid;
   $filename = $context['fields']['filename'];
-  $pnid = $context['fields']['pnid'];
-  $pnode = node_load($pnid); //get updated parent node
-  if (!empty($host->field_xml_stub) &&
-    !empty($host->field_nnels_856_tag) &&
-    $host->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] == 1 ) {
-    $xml = _cals_get_marc_xml_string($host);
-    //stub not string this doesn't matter
-    if($xml !== 0) {
-      $str = $host->field_xml_stub[LANGUAGE_NONE][0]['value'];
-      $fc_wrapper = _cals_wrap_fc($entity);
-      //Build the new records from stub + snippet, sorted as XML string
-      $full_format_record = _cals_get_set_xml_snippet($fc_wrapper,
-        $str);
+  $pnode = node_load($context['fields']['pnid']); //get updated parent node$host
+  /*if (!empty($host->field_nnels_856_tag) &&
+    $host->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] == 1 ) {*/
+    $xml_string = _cals_get_marc_xml_string($host);
+
+    //$xml_string indicates this repo item has at least been parsed
+    if($xml_string !== 0) {
+
+      //Build stub if it doesn't exist during context
+      //check stub field bad previous runs in addition to not initially existing
+      if ( empty( unserialize(
+        $host->field_xml_stub[LANGUAGE_NONE][0]['value'] ) ) )
+        _cals_importer_create_marc_stub($host);
+      $host_wrapped = entity_metadata_wrapper('node', $host);
+      $stub = unserialize($host_wrapped->field_xml_stub->value());
+
+      //Always build snippet for each context
+      $snippet = _cals_importer_exporter_build_file_resource_snippet
+      ($entity);
+
+      $merged = array();
+
+      foreach($stub as $field_key => $data) {
+        //order here is important, we want leader from snippet to prevail.
+        //In all others there should be no collisions between control,
+        //datafields in snippet vs stub
+        $merged[$field_key] =  $snippet[$field_key] + $stub[$field_key];
+        ksort($merged[$field_key]);
+      }
+
+      //File_MARC_Record?
+      $record = new File_MARC_Record(NULL);
+      _cals_importer_exporter_build_new_record($record, $merged);
+
+      //Build new leader
+      $fixed_leader = _cals_importer_exporter_build_final_leader
+      ($merged['controlfields']['ldr']);
+      $record->setLeader($fixed_leader['value']);
+
+      //Dump raw record
+      $raw = $record->toRaw();
+
+      //Calculate the final variable byte regions of LDR
+      $record_length = _cals_importer_exporter_calc_ldr_length($raw);
+      $base_address = _cals_importer_exporter_calc_dir_length($raw);
+
+      //Set full leader
+      $record->setLeaderLengths($record_length, $base_address);
+
+      //Lint
+      $linter = new File_MARC_Lint();
+      try {
+        $valid = $linter->checkRecord($record);
+        if(count($valid)) {
+          $vars = array("items" => $valid , "title" => "Record has errors",
+          "type" => "ol",
+          "attributes" => array());
+          drupal_set_message(theme_item_list($vars));
+        }
+      }
+      catch (Exception $e) {
+      }
+
+      //@todo now merge and persist in file
+      //Single record XML string outside of collection, namespace
+      $out_xml = simplexml_load_string(
+        $record
+          ->toXML())
+        ->children(NAME_SPACE)
+        ->asXML();
+
       //Append raw collection to file temporarily
-      file_put_contents($filename, $full_format_record, FILE_APPEND |
+      file_put_contents($filename, $out_xml, FILE_APPEND |
         LOCK_EX);
-    }
+
+    //@todo determine if non-parsed items can appear in this view to begin with
+
     //Save export set node with ref back to marc_xml_string source for this run
     $pnode->field_nid_entry[LANGUAGE_NONE][] = array("nid" => $nid);
     node_save($pnode);
@@ -206,14 +266,14 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
     $content = MARC_HEADER . "\n" . file_get_contents($filename) .
       "</marc:collection>";
 
-    $xml = simplexml_load_string($content);
-    $file = file_save_data($xml->asXml(), $filename, FILE_EXISTS_REPLACE);
+    $file = file_save_data( simplexml_load_string($content)->asXml(),
+      $filename,
+      FILE_EXISTS_REPLACE);
     $file->display = 1;
     $pnode->field_marc_xml_output_file[LANGUAGE_NONE][0] = (array)$file;
     node_save($pnode);
     drupal_set_message(t("File saved: please download via <a href='@url'>@url</a>",
       array("@url" => url("node/" . $pnode->nid) ) ) );
-
   }
 }
 

@@ -680,7 +680,6 @@ function _cals_importer_get_urls_from_marc($xml, $k, &$map) {
       if($added == 0) $map[$k]['values'][] = array('url' => $val);
     }
   }
-  //printAndDie($map[$k]);
 }
 
 /*
@@ -1140,7 +1139,6 @@ function _cals_importer_get_cataloging_agency_from_marc($xml, $k, &$map, $tags) 
   $tags = array("003", "040");
   foreach($tags as $tag) {
     $tmp = _cals_importer_xpath_value($xml, "datafield", $tag, '');
-    printAndDie(__FUNCTION__, $tmp);
 
     foreach ($tmp as $me) {
       $val = (string) trim($me[0]);

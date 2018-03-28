@@ -292,7 +292,8 @@ function _cals_importer_exporter_filing_characters($value, $start = 0, $count = 
     $substr = substr($value, $start, $len);
     if($substr == $char) {
       $new_start = $start + $len;
-      printPre("CHAR =  $char| SUBSTR = $substr| NEW Start = $new_start | LEN = $len | VALUE = $value");
+      //printPre("CHAR =  $char| SUBSTR = $substr| NEW Start = $new_start |
+      // LEN = $len | VALUE = $value");
       return _cals_importer_exporter_filing_characters($value, $new_start, $count);
     }
   }
