@@ -50,6 +50,7 @@ function _cals_run_batch_update_field_collection_s3_filesizes(&$entity, $context
  */
 function _cals_update_filesize_from_s3_value($file) {
 	//instantiate class
+    module_load_include('inc', 'cals_s3', 'cals_s3.NNELSStreamWrapper.class');
 	$wrapper = new \Drupal\cals_s3\NNELSStreamWrapper;
 	$uri = $file->uri;
 	$wrapper->setUri($uri);
@@ -116,9 +117,10 @@ function _cals_update_filecollection_file_filesize($node, $item_id) {
  *   the node passed to the parser
  */
 function _cals_importer_batch_update_filesizes($node) {
-  global $user;
-	$wrapper = new \Drupal\cals_s3\NNELSStreamWrapper;
-	$ObjectsListResponse = $wrapper->list_objects();
+    global $user;
+    module_load_include('inc', 'cals_s3', 'cals_s3.NNELSStreamWrapper.class');
+    $wrapper = new \Drupal\cals_s3\NNELSStreamWrapper;
+    $ObjectsListResponse = $wrapper->list_objects();
 	$arr = array();
 	$Objects = $ObjectsListResponse->body->Contents;
 	foreach ($Objects as $Object) {
