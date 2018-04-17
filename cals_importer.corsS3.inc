@@ -571,3 +571,49 @@ function _cals_importer_parse_marcxml_cors3($node) {
 	}
   return $arr;
 }
+
+/**
+* The main batch process to amend broken S3 paths in File Resources
+*
+ * @param $nid
+*   the node id
+*
+ * @return
+ *   $val, a string
+*/
+function _cals_run_batch_fix_field_collection_s3_paths(&$entity, $context = array()) {
+  if ($entity->type == 'repository_item') {
+    foreach (entity_metadata_wrapper('node', $entity)
+               ->field_file_resource->getIterator() as $delta => $wrapped) {
+      fix_s3_path( $wrapped );
+    }
+  }
+  elseif ($entity->type == 'field_collection_item') {
+      $wrapped = entity_metdata_wrapper('field_collection_item', $entity);
+      fix_s3_path( $wrapped );
+    }
+  return TRUE;
+}
+
+/**
+ * Clean urlencoded chars from the S3 Path for both the file_managed entity
+ * and resource in S3
+ * @param \EntityDrupalWrapper $fcie
+ */
+
+function fix_s3_path( $fcie ){
+  $fixed_s3 = preg_replace("/\%[0-9ABCDEF]{2}/", "",
+    $fcie->field_s3_path->value() );
+  $fcie->field_s3_path->set($fixed_s3);
+  $file = file_load((int) $fcie->field_s3_file_upload->file->getIdentifier());
+  $file->filename = $fixed_s3;
+
+  //Effect file upload
+  module_load_include('inc', 'cals_s3', 'cals_s3.NNELSStreamWrapper.class');
+  $stream = new \Drupal\cals_s3\NNELSStreamWrapper;
+  $stream->setUri($file->uri);
+  $stream->rename($file->uri, $fixed_s3);
+
+  $file->uri = $fixed_s3;
+  $fcie->save();
+}

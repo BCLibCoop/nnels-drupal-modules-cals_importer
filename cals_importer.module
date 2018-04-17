@@ -550,6 +550,13 @@ function cals_importer_action_info() {
       'configurable' => TRUE,
       'triggers' => array('any'),
     ),
+    //batch amend broken S3 paths in Field Collection "field_file_resource"
+    '_cals_run_batch_fix_field_collection_s3_paths' => array(
+      'label' => t('Mend Broken S3 paths'),
+      'type' => 'entity',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),
   );
 }
 
