@@ -602,18 +602,21 @@ function _cals_run_batch_fix_field_collection_s3_paths(&$entity, $context = arra
  */
 
 function fix_s3_path( $fcie ){
+  //Effect changes on field collection entity
   $fixed_s3 = preg_replace("/\%[0-9ABCDEF]{2}/", "",
     $fcie->field_s3_path->value() );
   $fcie->field_s3_path->set($fixed_s3);
   $file = file_load((int) $fcie->field_s3_file_upload->file->getIdentifier());
   $file->filename = $fixed_s3;
 
-  //Effect file upload
+  //Effect changes on file entity and S3 object
   module_load_include('inc', 'cals_s3', 'cals_s3.NNELSStreamWrapper.class');
   $stream = new \Drupal\cals_s3\NNELSStreamWrapper;
-  $stream->setUri($file->uri);
-  $stream->rename($file->uri, $fixed_s3);
+  $stream->setUri(urldecode($file->uri));
+  $stream->rename($stream->getUri(), $fixed_s3);
 
+  //Finalize and save
   $file->uri = $fixed_s3;
+  file_save($file);
   $fcie->save();
 }
