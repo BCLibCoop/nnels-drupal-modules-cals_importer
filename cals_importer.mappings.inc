@@ -144,28 +144,17 @@ function _cals_importer_repo_field_callback($fieldname) {
 /**
  * Returns fields for repository item
  *
- * @return
+ * @return array
  *   an array of flattened field defs
  *
  * @todo
  *   wrap into a static variable?
  *
  */
-function _cals_get_fields_repository_item($fieldnames) {
+function _cals_get_fields_repository_item() {
   $fields = field_info_instances("node", "repository_item");
+  $fieldnames = array_keys($fields);
 
-  //set title as first array element
-  /*
-  $map = array(
-    "title" =>
-      array(
-        'type' => 'text',
-        'required' => 1,
-        'values' => '',
-        'parser' => array("function" => '_cals_get_title_from_marc'),
-      ),
-  );
-  */
   $tmp = array(
     "_autocomplete", "_with_summary", "_hidden", "_buttons", "_select", "_textfield", "_embed", "_textarea",
   );
@@ -215,7 +204,6 @@ function _cals_get_fields_repository_item($fieldnames) {
   }
   $arr = array("types" => $types, "map" => $map);
   return $arr;
-
 }
 
 /**
