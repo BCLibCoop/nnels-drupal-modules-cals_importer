@@ -387,6 +387,14 @@ function cals_importer_action_info() {
       'triggers' => array('any'),
     ),
 
+    //Copy file resource entities between nodes
+    '_cals_transfer_file_resource_entity' => array(
+      'label' => t('Transfer File Resource Entity'),
+      'type' => 'node',
+      'configurable' => TRUE,
+      'triggers' => array('any'),
+    ),
+
     //batch update title field, stripping out trailing slashes, etc.
     '_cals_normalize_record_values' => array(
       'label' => t('2. Normalize Title, Publisher, Creators'),
