@@ -166,6 +166,8 @@ function _cals_transfer_file_resource_entity(&$node, $context) {
     'url',
     'feed_nid',
     'feed_node',
+    'feeds_item_guid',
+    'feeds_item_url',
     'host_entity',
     'revision_id',
     'field_name',
