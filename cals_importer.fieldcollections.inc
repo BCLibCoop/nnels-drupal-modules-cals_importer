@@ -147,10 +147,15 @@ function _cals_transfer_file_resource_entity_submit($form, $form_state) {
 /**
  * @param $node
  * @param $context
+ * @return boolean
  */
 
 function _cals_transfer_file_resource_entity(&$node, $context) {
 
+  //Only run this once for the group of selected nodes
+  if ($context['progress']['current'] > 1) {
+  return FALSE;
+  }
   //Wrap FileResource, Source Node and load Destination Node from $context
   $transfer_fc_wrapped = entity_metadata_wrapper('field_collection_item',
     $context['file_resources']);
@@ -208,16 +213,25 @@ function _cals_transfer_file_resource_entity(&$node, $context) {
     }
   }
 
+  //Might not have format set for certain items
+  try {
+    $format = $transfer_fc_wrapped->field_file_format->label();
+  }
+  catch (EntityMetadataWrapperException $exception)  {
+    $format = NULL;
+    watchdog('entity_api', $exception->getMessage());
+  }
+
   //Build results array for message output
   $result_info = array(
     $transfer_fc_wrapped->item_id->value(),
-    $transfer_fc_wrapped->field_file_format->label(),
+    $format,
     substr($source_node_wrapped->title->value(), 0, 30),
     $source_node_wrapped->nid->value(),
     substr($dest_node->title, 0, 30),
     $dest_node->nid
   );
-  $message = sprintf("Item ID %d (%s) was transferred from %s... (%d) \r\n to
+  $message = vsprintf("Item ID %d (%s) was transferred from %s... (%d) \r\n to
   %s... (%d)", $result_info);
 
   drupal_set_message($message);
