@@ -1258,8 +1258,8 @@ function _cals_importer_get_runningtime_from_marcxml(&$arr, $xml) {
   $runtime_300a = _cals_importer_xpath_value($xml, "datafield", 300, 'a');
   if (!empty($runtime_300a)) {
 
-    //Match runtime string
-    preg_match("/\((\d+.?[\d\s]?\/?\d?\shr)\.[\,\s]*([\w\s]*)\.*\)/",
+    //Match possible running times with units...oy vey
+    preg_match("/\((\d+.?[\d\s]?\/?\d*\s?[hr]*[min]*)\.*[\,\s]*([\w\s]*)\.*\)/",
       $runtime_300a[0], $matches);
 
     if ($matches[1]) {
