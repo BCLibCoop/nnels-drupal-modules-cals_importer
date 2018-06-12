@@ -921,22 +921,36 @@ function _cals_importer_get_isbn_sysnums_from_marc($xml, $k, &$map) {
  * @param $xml
  *   the original xml string
  *
- * @return
- *   an array of Drupal-ready fields
  *
  */
 function _cals_importer_get_performer_from_marcxml(&$arr, $xml) {
 
-  $tmp = _cals_importer_xpath_value($xml, "datafield", 511, "a");
+  $raw_511_a = _cals_importer_xpath_value( $xml, "datafield", 511, "a" );
+  $prepared_narrator_values = array();
 
-  foreach ($tmp as $val) {
-    $val = str_replace("Narrated by ", "", $val);
-    $val = _cals_importer_strip_trailing_periods_value($val);
-    //$val = rtrim($val, ".");
-    $val = _cals_importer_get_normalized_performer($val);
-    $tmp2 = explode(",", $val);
-    foreach ($tmp2 as $val2)
-      $arr['fc_files']['field_performer'][]['value'] = trim($val2);
+  foreach ($raw_511_a as $value) {
+
+    //Transform raw string and obtain normalized Performer value(s)
+    $normalized_narrator_values = _cals_importer_get_normalized_performer(
+      _cals_importer_strip_trailing_periods_value(
+        str_replace("Narrated by ", "", $value
+        )
+      )
+    );
+
+    //Loop through our normalized values and breakdown any lists
+    foreach ( $normalized_narrator_values as $key => $candidate ) {
+      $exploded = explode(",", $candidate);
+      $de_listed_values = array_values(
+        ( $exploded ? $exploded : $candidate )
+      );
+      $prepared_narrator_values = array_merge($prepared_narrator_values,
+        $de_listed_values);
+    }
+
+    //Trim values and add to file resource fields
+    foreach ($prepared_narrator_values as $prepared_value)
+      $arr['fc_files']['field_performer'][]['value'] = trim( $prepared_value );
   }
 }
 function xmlToArray($xml, $options = array()) {
@@ -1211,16 +1225,22 @@ function _cals_importer_get_basic_values_from_marc($xml, $k, &$map, $tags) {
 /**
  *
  * @param $string
- *   the peformer value to normalize
+ *   the performer value to normalize
  *
  * @return
  *   the normalized value
  *
  */
 function _cals_importer_get_normalized_performer($string) {
+
   $prefixes = variable_get('cals_importer_prefix_stopwords_narrators');
   $arr = explode("\r\n", $prefixes );
-  return trim(str_replace($arr, "", $string));
+
+  $filtered_string = trim(str_replace($arr, "", $string));
+  //Split potential narrator list on conjunctions
+  $filtered_split_string = preg_split( "/ (and|&) /", $filtered_string);
+
+  return $filtered_split_string;
 }
 
 /**
