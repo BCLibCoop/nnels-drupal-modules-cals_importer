@@ -55,18 +55,13 @@ function _cals_importer_repo_field_callback($fieldname) {
         array('tag' => 540, 'code' => 'd'),
       )
     ),
-    'field_publisher' => array('function' => '_cals_importer_get_basic_values_from_marc',
+    'field_publisher_source' => array('function' => '_cals_importer_get_basic_values_from_marc',
       "tags" => array(
+        array('tag' => 534, 'code' => 'c'),
         array('tag' => 264, 'code' => 'a'),
         array('tag' => 264, 'code' => 'b'),
         array('tag' => 260, 'code' => 'a'),
         array('tag' => 260, 'code' => 'b'),
-
-      )
-    ),
-    'field_publisher_source' => array('function' => '_cals_importer_get_basic_values_from_marc',
-      "tags" => array(
-        array('tag' => 534, 'code' => 'c'),
       )
     ),
     'field_dc_creator' => array('function' => '_cals_importer_get_creator_from_marc',
@@ -483,7 +478,7 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
 
       //There can be more comma-separated parts in
       //array returned from _cals_importer_xpath_value
-      $orig_pub_date_part = explode(',', $orig_pub_date_part);
+      $orig_pub_date_part = explode(',', trim( $orig_pub_date_part, '.' ) );
       _cals_map_date_qualifiers
       ($orig_pub_date_part, 534, $dates, TRUE);
     }
@@ -505,7 +500,7 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
 
   if ( count( $date_pub_264c ) )
     foreach ( $date_pub_264c as $pub_date_part ) {
-      $pub_date_parts = explode(',', $pub_date_part);
+      $pub_date_parts = explode(',', trim( $pub_date_part, '.' ) );
       foreach ( $pub_date_parts as $part ) _cals_map_date_qualifiers($part, 264, $dates, TRUE);
     }
   else if (count($date_pub_260c))
@@ -552,7 +547,7 @@ function _cals_map_date_qualifiers($str, $tag, &$dates, $is_present) {
   $date_value = _cals_get_iso_year($str);
   if(!empty($date_value)) {
     if($check_copyright) {
-      $qualifier = "Copyright";
+      $qualifier = "Copyrighted";
     }
     else {
       if($is_present) //if there's 534 included, it takes "issued" qualifier, otherwise "created"
@@ -1249,9 +1244,6 @@ function _cals_importer_get_normalized_performer($string) {
  *   the drupal ready array of fields
  * @param $xml
  *   the original xml string
- *
- * @return
- *   an array of Drupal-ready fields
  *
  * see: http://www.loc.gov/marc/bibliographic/bd306.html
  */
