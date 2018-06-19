@@ -78,7 +78,7 @@ function _cals_importer_create_marc_stub($node) {
       //NO - error log these, do not spam the message for each record
       $message = "XML Stub Created with following errors: @errors";
       $variables = array('@errors' => $valid);
-      watchdog('cals_importer_filemarc_lint',
+      watchdog('cals_importer_exporter_FileMARC_Linter',
         $message,
         $variables,
         $severity = WATCHDOG_NOTICE,
@@ -735,7 +735,7 @@ function _cals_importer_exporter_build_marcxml_from_array($node) {
   if(count($valid)) {
     $message = "XML Stub Created with following errors: @errors";
     $variables = array('@errors' => $valid);
-    watchdog('cals_importer_filemarc_lint',
+    watchdog('cals_importer_exporter_FileMARC_Linter',
       $message,
       $variables,
       $severity = WATCHDOG_NOTICE,
