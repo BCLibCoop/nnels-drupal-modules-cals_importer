@@ -233,16 +233,27 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
         $check_result = $linter->checkRecord($record);
         if( count( $check_result ) ) {
           $wrapped = entity_metadata_wrapper('field_collection_item', $entity);
-          $formatted_result = sprintf("Linter found a problem in record for %s - (%s):",
-            $host_wrapped->title->value(), $wrapped->field_file_format->label() );
-          $vars = array("items" => $check_result , "title" => $formatted_result,
-          "type" => "ul",
-          "attributes" => array());
-          drupal_set_message(theme_item_list($vars));
+          $url = url(drupal_get_path_alias('node/' . $wrapped->getIdentifier()));
+          $formatted_message = sprintf(
+            "Linter found a problem in exported record for the following item: %s - (%s). Check XML components at %s",
+            $host_wrapped->title->value(),
+            $wrapped->field_file_format->label(),
+            $url
+          );
+          watchdog('
+            cals_importer_exporter_FileMARC_Linter',
+            $formatted_message,
+            array(),
+            WATCHDOG_WARNING
+          );
         }
       }
       catch (Exception $e) {
-        watchdog('cals_importer_exporter', $e->getMessage(), WATCHDOG_ERROR);
+        watchdog(
+            'cals_importer_exporter_FileMARC_Linter',
+            $e->getMessage(),
+            WATCHDOG_ERROR
+        );
       }
 
       //@todo now merge and persist in file
