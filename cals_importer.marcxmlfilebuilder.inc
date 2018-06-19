@@ -200,7 +200,7 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
 
       $merged = array();
 
-      foreach($stub as $field_key => $data) {
+      foreach ($stub as $field_key => $data) {
         //order here is important, we want leader from snippet to prevail.
         //In all others there should be no collisions between control,
         //datafields in snippet vs stub
@@ -230,15 +230,30 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
       //Lint
       $linter = new File_MARC_Lint();
       try {
-        $valid = $linter->checkRecord($record);
-        if(count($valid)) {
-          $vars = array("items" => $valid , "title" => "Record has errors",
-          "type" => "ol",
-          "attributes" => array());
-          drupal_set_message(theme_item_list($vars));
+        $check_result = $linter->checkRecord($record);
+        if( count( $check_result ) ) {
+          $wrapped = entity_metadata_wrapper('field_collection_item', $entity);
+          $url = url(drupal_get_path_alias('node/' . $wrapped->getIdentifier()));
+          $formatted_message = sprintf(
+            "Linter found a problem in exported record for the following item: %s - (%s). Check XML components at %s",
+            $host_wrapped->title->value(),
+            $wrapped->field_file_format->label(),
+            $url
+          );
+          watchdog('
+            cals_importer_exporter_FileMARC_Linter',
+            $formatted_message,
+            array(),
+            WATCHDOG_WARNING
+          );
         }
       }
       catch (Exception $e) {
+        watchdog(
+            'cals_importer_exporter_FileMARC_Linter',
+            $e->getMessage(),
+            WATCHDOG_ERROR
+        );
       }
 
       //@todo now merge and persist in file

@@ -146,30 +146,32 @@ function _cals_importer_exporter_callback_040($vars) {
   $value = $wrapper->field_dc_creator->value();
   //$label = ($value == 0) ? "no restrictions" : "restrictions";
 
+  //initialize
   $arr['040'] = array(
     'ind1' => '',
     'ind2' => '',
-    'subfields' => array(
-      array(
-        'c' => 'BVNNELS',
-        'd' => 'BVNNELS',
-      ),
-      //array('value' => $label, 'subfield' => 'a'),
-      //array('value' => 'BVNNELS', 'subfield' => 'b'),
-    ),
+    'subfields' => array()
   );
 
   $tmp = $xml->xpath("//marc:datafield[@tag='040']/marc:subfield[@code='a']");
-  if (count($tmp) >= 1) {
+  if ( !empty ( (string) $tmp[0] ) ) {
     $a = (string) $tmp[0];
-    $arr['040']['subfields'][0]['a'] = trim($a);
   }
+  else { //Required default for subfield a
+    $a = 'BVNNELS';
+  }
+  //Add found subfield or default
+  $arr['040']['subfields'][0]['a'] = trim($a);
 
   $tmp = $xml->xpath("//marc:datafield[@tag='040']/marc:subfield[@code='b']");
-  if (count($tmp) >= 1) {
+  if ( !empty ( (string) $tmp[0] ) ) {
     $b = (string) $tmp[0];
     $arr['040']['subfields'][0]['b'] = trim($b);
   }
+  //Remaining non-variable identifiers for subfields c, d
+  $arr['040']['subfields'][0]['c'] = 'BVNNELS';
+  $arr['040']['subfields'][0]['d'] = 'BVNNELS';
+
   return $arr;
 }
 
@@ -427,6 +429,24 @@ function _cals_importer_exporter_callback_534($vars) {
       if(count($me) >= 1) $subfields = array_merge($subfields, $me);
       $i++;
     }
+  }
+  //Set subfield p from field_publisher_source if it exists
+  if (isset($subfields[0]['c'])) {
+    $subfield_p = "Original version: " . $subfields[0]['c'];
+
+    //Find an Issued or Copyrighted DC Date to append
+    $qualifiers = array(
+      'Created',
+      'Copyrighted'
+    );
+
+    foreach ( $wrapper->field_date->getIterator() as $delta => $fc_instance) {
+      if ( in_array($fc_instance->field_qualifier_date->value(), $qualifiers )) {
+        $subfield_p .= ', ' . $fc_instance->field_dc_date->value() . '.';
+        break 1;
+      }
+    }
+    $subfields[]['p'] = $subfield_p;
   }
 
   $arr =  _cals_build_marc_subfield_array($tag, $subfields);

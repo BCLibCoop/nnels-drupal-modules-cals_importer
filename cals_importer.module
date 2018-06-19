@@ -387,6 +387,14 @@ function cals_importer_action_info() {
       'triggers' => array('any'),
     ),
 
+    //Copy file resource entities between nodes
+    '_cals_transfer_file_resource_entity' => array(
+      'label' => t('Transfer File Resource Entity'),
+      'type' => 'node',
+      'configurable' => TRUE,
+      'triggers' => array('any'),
+    ),
+
     //batch update title field, stripping out trailing slashes, etc.
     '_cals_normalize_record_values' => array(
       'label' => t('2. Normalize Title, Publisher, Creators'),
@@ -548,6 +556,13 @@ function cals_importer_action_info() {
       'label' => t('CALS: Copy Publisher to Field Collection (FILE)'),
       'type' => 'entity',
       'configurable' => TRUE,
+      'triggers' => array('any'),
+    ),
+    //batch amend broken S3 paths in Field Collection "field_file_resource"
+    '_cals_run_batch_fix_field_collection_s3_paths' => array(
+      'label' => t('Mend Broken S3 paths'),
+      'type' => 'entity',
+      'configurable' => FALSE,
       'triggers' => array('any'),
     ),
   );

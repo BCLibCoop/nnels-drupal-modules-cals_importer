@@ -196,8 +196,8 @@ function _cals_importer_exporter_snippet_callback_LDR($format) {
  */
 function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
 
-  define("MARC_SPACE", chr(32) );
-  define("MARC_FILL", chr(124) );
+  defined("MARC_SPACE") or define("MARC_SPACE", chr(32) );
+  defined("MARC_FILL") or define("MARC_FILL", chr(124) );
 
   $final_008 = '';
 
@@ -415,6 +415,10 @@ function _cals_importer_exporter_snippet_callback_300($fc_wrapped) {
  */
 function _cals_importer_exporter_snippet_callback_306($fc_wrapped) {
   $runtime = $fc_wrapped->field_running_time->value();
+
+  //Zero-pad the hours if we have a HMMSS timestamp
+  if (strlen($runtime) == 5) $runtime = "0" . $runtime;
+
   $snippet_306 = array(
     'ind1' => '',
     'ind2' => '',

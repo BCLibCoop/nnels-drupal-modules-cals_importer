@@ -53,12 +53,12 @@ function _cals_importer_create_marc_stub_vbo(&$entity, $context = array()) {
  *
  */
 function _cals_importer_create_marc_stub($node) {
+
   $tags = _cals_importer_get_tag_array(); //tag mappings
   $lint = new File_MARC_Lint();
   $xml_string = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
   $xml_string = MARC_HEADER . $xml_string . '</marc:collection>';
   $records = new File_MARCXML($xml_string, File_MARC::SOURCE_STRING, "http://www.loc.gov/MARC21/slim");
-  //$xml = _cals_get_marc_xml_string($node);
   $n = 0;
   while ($record = $records->next()) {
 
@@ -66,12 +66,10 @@ function _cals_importer_create_marc_stub($node) {
     _cals_importer_exporter_marcxml_remove_tags($record, $tags);
     //get marc-ready array
     $marcfields = _cals_importer_exporter_get_marc_fields($node, $record, $tags);
+
+    //Serialized Stub
     $node->field_xml_stub[LANGUAGE_NONE][0]['value'] = serialize($marcfields);
 
-    if(function_exists('dpm')) {
-      //dpm($marcfields['controlfields']);
-      //dpm($marcfields['datafields']);
-    }
     //with new datafields, generate the new record
     _cals_importer_exporter_build_new_record($record, $marcfields);
 
@@ -87,12 +85,11 @@ function _cals_importer_create_marc_stub($node) {
         $link = NULL);
     }
 
-    $new_xml_stub = $record->toXML("UTF-8", FALSE, FALSE);
-    /* */
-    //$new_xml_stub = $record->toRaw();
-
-    $node->field_xml_stub_xml[LANGUAGE_NONE][0]['value'] = $new_xml_stub;
+    //Do not save XML
+    //$new_xml_stub = $record->toXML("UTF-8", FALSE, FALSE);
+    //$node->field_xml_stub_xml[LANGUAGE_NONE][0]['value'] = $new_xml_stub;
     //_cals_importer_update_admin_audit($node,  $action);
+
     node_save($node);
   }
 
@@ -554,7 +551,7 @@ function _cals_importer_exporter_iterate_controlfields(&$record, $controlfields)
     if ($tag == 'ldr') break;
     $data = $arr['value'];
     $field = new File_MARC_Control_Field($tag, $data, null, null);
-    if($arr['required'] == 1 && empty($data)) {
+    if (isset($arr['required']) && $arr['required'] == 1 && empty($data)) {
       drupal_set_message("Missing value for tag $tag. Invalid XML Record Stub.");
       return;
     }
@@ -572,7 +569,7 @@ function _cals_importer_exporter_iterate_datafields(&$record, $datafields) {
     if(empty($subfields)) {
       if($arr['required'] == 1)
         //throw error msg
-        drupal_set_message("Missing subfields for tag $code. Invalid XML Record Stub.");
+        drupal_set_message("Missing subfields for tag $tag. Invalid XML Record Stub.");
     }
     else {
       //if($code == 720) printAndDie($marc_subfields);
@@ -583,8 +580,8 @@ function _cals_importer_exporter_iterate_datafields(&$record, $datafields) {
 
           $marc_subfields = _cals_importer_exporter_get_marc_subfield($subfield);
           $field = new File_MARC_Data_Field($tag, $marc_subfields, 0, null);
-          $field->setIndicator(1, "{$arr['ind1']}");
-          $field->setIndicator(2, "{$arr['ind2']}");
+          if ( isset( $arr['ind1'] ) ) $field->setIndicator(1, "{$arr['ind1']}");
+          if ( isset( $arr['ind2'] ) ) $field->setIndicator(2, "{$arr['ind2']}");
           _cals_importer_exporter_insert_field($record, $field, $tag);
 
           //printAndDie($field);
@@ -604,10 +601,10 @@ function _cals_importer_exporter_iterate_datafields(&$record, $datafields) {
 
       }
       else { //old method
-        $field = new File_MARC_Data_Field($code, $marc_subfields, 0, null);
+        $field = new File_MARC_Data_Field($tag, $marc_subfields, 0, null);
         $field->setIndicator(1, "{$arr['ind1']}");
         $field->setIndicator(2, "{$arr['ind2']}");
-        _cals_importer_exporter_insert_field($record, $field, $code);
+        _cals_importer_exporter_insert_field($record, $field, $tag);
       }
     }
   }
@@ -684,19 +681,18 @@ function _cals_importer_view_marcxml_stub($node) {
       'attributes' => array()
     );
     $html = theme('item_list', $vars);
-    if(!empty($node->field_xml_stub_xml)) {
-      $html .= t('<h2>New MARC XML</h2>') .
-        _cals_importer_exporter_formatted_marcxml(
-          $node->field_xml_stub_xml[LANGUAGE_NONE][0]['safe_value']
-        );
-    }
+//    if(!empty($node->field_xml_stub_xml)) {
+//      $html .= t('<h2>New MARC XML</h2>') .
+//        _cals_importer_exporter_formatted_marcxml(
+//          $node->field_xml_stub_xml[LANGUAGE_NONE][0]['safe_value']
+//        );
+//    }
     if(!empty($node->field_xml_string)) {
       $html .= t('<h2>Original MARC XML</h2>') .
         _cals_importer_exporter_formatted_marcxml(
         $node->field_xml_string[LANGUAGE_NONE][0]['safe_value']
       );
     }
-    //printAndDie($node);
     return $html;
   }
   else{

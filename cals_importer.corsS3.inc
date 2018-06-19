@@ -50,7 +50,8 @@ function _cals_run_batch_update_field_collection_s3_filesizes(&$entity, $context
  */
 function _cals_update_filesize_from_s3_value($file) {
 	//instantiate class
-	$wrapper = new NNELSStreamWrapper;
+    module_load_include('inc', 'cals_s3', 'cals_s3.NNELSStreamWrapper.class');
+	$wrapper = new \Drupal\cals_s3\NNELSStreamWrapper;
 	$uri = $file->uri;
 	$wrapper->setUri($uri);
 	$filesize = $wrapper->get_filesize();
@@ -116,9 +117,10 @@ function _cals_update_filecollection_file_filesize($node, $item_id) {
  *   the node passed to the parser
  */
 function _cals_importer_batch_update_filesizes($node) {
-  global $user;
-	$wrapper = new NNELSStreamWrapper;
-	$ObjectsListResponse = $wrapper->list_objects();
+    global $user;
+    module_load_include('inc', 'cals_s3', 'cals_s3.NNELSStreamWrapper.class');
+    $wrapper = new \Drupal\cals_s3\NNELSStreamWrapper;
+    $ObjectsListResponse = $wrapper->list_objects();
 	$arr = array();
 	$Objects = $ObjectsListResponse->body->Contents;
 	foreach ($Objects as $Object) {
@@ -150,7 +152,7 @@ function _cals_importer_batch_update_filesizes($node) {
  */
  
 function _cals_importer_filesizes_batch($node, &$context) {
-  //$limit = 400; //10;
+  $limit = 400; //10;
   if (empty($context['sandbox']['progress']) ) {
   	
     $context['sandbox']['progress'] = 0;
@@ -568,4 +570,80 @@ function _cals_importer_parse_marcxml_cors3($node) {
 
 	}
   return $arr;
+}
+
+/**
+* The main batch process to amend broken S3 paths in File Resources
+*
+ * @param $nid
+*   the node id
+*
+ * @return
+ *   $val, a string
+*/
+function _cals_run_batch_fix_field_collection_s3_paths(&$entity, $context = array()) {
+
+  $e = $entity;
+  if ($entity->type == 'repository_item') {
+    foreach (entity_metadata_wrapper('node', $entity)
+               ->field_file_resource->getIterator() as $delta => $wrapped) {
+      fix_s3_path( $wrapped );
+    }
+  }
+  elseif ($entity->type == 'field_collection_item') {
+      $wrapped = entity_metdata_wrapper('field_collection_item', $entity);
+      fix_s3_path( $wrapped );
+    }
+  return TRUE;
+}
+
+/**
+ * Clean urlencoded and problematic chars from the S3 Path for both the
+ * file_managed entity and resource in S3
+ * @param \EntityDrupalWrapper $fcie
+ */
+
+function fix_s3_path( $fcie ) {
+
+  //Remove URL-encoded strings
+  $fixed_s3 = preg_replace("/\%[0-9ABCDEF]{2}/", "",
+    $fcie->field_s3_path->value() );
+
+  //Prepare problem punctuation
+  $replacements = array(
+    '—' => '-',
+    '―' => '-',
+    "'" => '',
+    "’" => '',
+  );
+  //Replace
+  $fixed_s3 = str_replace(array_keys($replacements), $replacements, $fixed_s3);
+
+  //Map French-accented chars to unadorned equivalents due to S3-signing fail
+  $fixed_s3 = html_entity_decode(
+                preg_replace(
+                  '~&([a-z]{1,2})(
+                    ?:acute|cedil|circ|grave|lig|orn|ring|slash|th|tilde|uml
+                    );~i',
+                  '$1',
+                  htmlentities($fixed_s3, ENT_QUOTES, 'UTF-8')
+                ),
+                ENT_QUOTES,
+                'UTF-8'
+              );
+
+  $fcie->field_s3_path->set($fixed_s3);
+  $file = file_load((int) $fcie->field_s3_file_upload->file->getIdentifier());
+  $file->filename = $fixed_s3;
+
+  //Effect changes on file entity and S3 object
+  module_load_include('inc', 'cals_s3', 'cals_s3.NNELSStreamWrapper.class');
+  $stream = new \Drupal\cals_s3\NNELSStreamWrapper;
+  $stream->setUri(urldecode($file->uri));
+  $stream->rename($stream->getUri(), $fixed_s3);
+
+  //Finalize and save
+  $file->uri = $fixed_s3;
+  file_save($file);
+  $fcie->save();
 }
