@@ -430,6 +430,24 @@ function _cals_importer_exporter_callback_534($vars) {
       $i++;
     }
   }
+  //Set subfield p from field_publisher_source if it exists
+  if (isset($subfields[0]['c'])) {
+    $subfield_p = "Original version: " . $subfields[0]['c'];
+
+    //Find an Issued or Copyrighted DC Date to append
+    $qualifiers = array(
+      'Created',
+      'Copyrighted'
+    );
+
+    foreach ( $wrapper->field_date->getIterator() as $delta => $fc_instance) {
+      if ( in_array($fc_instance->field_qualifier_date->value(), $qualifiers )) {
+        $subfield_p .= ', ' . $fc_instance->field_dc_date->value() . '.';
+        break 1;
+      }
+    }
+    $subfields[]['p'] = $subfield_p;
+  }
 
   $arr =  _cals_build_marc_subfield_array($tag, $subfields);
   $arr[$tag]['ind1'] = '';
