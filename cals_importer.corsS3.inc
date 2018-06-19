@@ -582,6 +582,8 @@ function _cals_importer_parse_marcxml_cors3($node) {
  *   $val, a string
 */
 function _cals_run_batch_fix_field_collection_s3_paths(&$entity, $context = array()) {
+
+  $e = $entity;
   if ($entity->type == 'repository_item') {
     foreach (entity_metadata_wrapper('node', $entity)
                ->field_file_resource->getIterator() as $delta => $wrapped) {
@@ -596,15 +598,40 @@ function _cals_run_batch_fix_field_collection_s3_paths(&$entity, $context = arra
 }
 
 /**
- * Clean urlencoded chars from the S3 Path for both the file_managed entity
- * and resource in S3
+ * Clean urlencoded and problematic chars from the S3 Path for both the
+ * file_managed entity and resource in S3
  * @param \EntityDrupalWrapper $fcie
  */
 
-function fix_s3_path( $fcie ){
-  //Effect changes on field collection entity
+function fix_s3_path( $fcie ) {
+
+  //Remove URL-encoded strings
   $fixed_s3 = preg_replace("/\%[0-9ABCDEF]{2}/", "",
     $fcie->field_s3_path->value() );
+
+  //Prepare problem punctuation
+  $replacements = array(
+    '—' => '-',
+    '―' => '-',
+    "'" => '',
+    "’" => '',
+  );
+  //Replace
+  $fixed_s3 = str_replace(array_keys($replacements), $replacements, $fixed_s3);
+
+  //Map French-accented chars to unadorned equivalents due to S3-signing fail
+  $fixed_s3 = html_entity_decode(
+                preg_replace(
+                  '~&([a-z]{1,2})(
+                    ?:acute|cedil|circ|grave|lig|orn|ring|slash|th|tilde|uml
+                    );~i',
+                  '$1',
+                  htmlentities($fixed_s3, ENT_QUOTES, 'UTF-8')
+                ),
+                ENT_QUOTES,
+                'UTF-8'
+              );
+
   $fcie->field_s3_path->set($fixed_s3);
   $file = file_load((int) $fcie->field_s3_file_upload->file->getIdentifier());
   $file->filename = $fixed_s3;
