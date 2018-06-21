@@ -627,8 +627,7 @@ function _cals_mend_broken_file_resource_s3_paths(&$entity, $context = array()) 
     $wrapped = entity_metdata_wrapper('field_collection_item', $entity);
     full_mend_s3_path( $wrapped );
     }
-  elseif ($entity-> type == 'default' && property_exists($entity, 'filesize')
-  ) {
+  elseif (property_exists($entity, 'filesize') ) {
     fix_s3_path( $entity );
   }
   return TRUE;
