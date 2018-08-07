@@ -394,7 +394,7 @@ function _cals_importer_exporter_snippet_callback_300($fc_wrapped) {
   $field = field_info_field('field_file_format');
   $format_label = $field['settings']['allowed_values'][$key];
 
-  $size = format_size($fc_wrapped->field_s3_file_upload->file->size->value());
+  $size = format_size($fc_wrapped->field_s3_file_upload[0]->file->value()->filesize);
 
   $workable_array = array(
       'ind1' => '',
