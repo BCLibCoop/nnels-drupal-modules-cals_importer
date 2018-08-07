@@ -444,6 +444,7 @@ function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
   $format_keys = array(
     'epub 2' => 'etext',
     'epub 3' => 'etext',
+    'epub 3 (media overlays)' => 'etext',
     'pdf' => 'etext',
     'e-text' => 'etext',
     'azw3' => 'etext',
