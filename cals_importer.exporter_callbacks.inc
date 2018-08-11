@@ -408,52 +408,119 @@ function _cals_importer_exporter_callback_521($vars) {
  * @return array
  */
 function _cals_importer_exporter_callback_534($vars) {
+
   $node = $vars['node'];
   $tag = $vars['tag'];
   $wrapper = $vars['node_wrapper'];
+
   //loop thru the following to build up the 534 tag
   $tmp = array(
     'field_publisher_source' => 'c',
     'field_isbn' => 'z',
     'field_isbn_audio' => 'z',
   );
+
   $subfields = array();
 
   $i = 0;
   foreach($tmp as $fieldname => $code) {
     //printAndDie($code, $fieldname, $wrapper);
-    $me = _cals_importer_exporter_get_subfield_array_from_drupal_fields($code, $fieldname, $wrapper);
+    $stored_subfield_array =
+      _cals_importer_exporter_get_subfield_array_from_drupal_fields($code, $fieldname, $wrapper);
 
-    if(!empty($me) ) {
+    if(!empty($stored_subfield_array) ) {
       //if(count($me) == 1) $subfields[$i] = $me[0];
-      if(count($me) >= 1) $subfields = array_merge($subfields, $me);
+      if(count($stored_subfield_array) >= 1) $subfields = array_merge($subfields, $stored_subfield_array);
+      //Now $subfields is populated.
       $i++;
     }
   }
-  //Set subfield p from field_publisher_source if it exists
-  if (isset($subfields[0]['c'])) {
-    $subfield_p = "Original version: " . $subfields[0]['c'];
+  //Default to MARCXML value for 534c
+  $xml_534c = reset(_cals_importer_get_xpath_values($tag, NULL, NULL, 'c',
+    $vars['xml']->record));
 
+  //If we don't have it from MARCXML, build of it from Drupal fields
+  if ( empty( $xml_534c ) ) {
+
+    $pub_parts = array(
+      0 => '',
+      1 => '',
+      2 => '',
+    );
+
+    //0 => publisher, 1 => location
+    //$pub_parts = $vars['node_wrapper']->field_publisher_source->value();
+    if ( isset( $subfields[1]['c']) ) {
+      $pub_parts[0] = $subfields[0]['c'];
+      $pub_parts[1] = $subfields[1]['c'];
+      unset($subfields[1]); //No repeat instances of subfield c allowed.
+    }
+    else {
+      //Single in old form Englewood Cliffs, N.J. : Prentice Hall, 1974.
+      //Explode on colon and check for copyright to discard in favour of DC Date
+      $exploded = explode(':', $subfields[0]['c']);
+      $exploded[1] = preg_replace(
+        "/([\w\s]+?),?\s?[\[\]\d]+\.?/",
+        "$1",
+        $exploded[1]
+      );
+      foreach ($exploded as $instance => $piece) {
+        $pub_parts[$instance] = $piece;
+      }
+    } //end else
+
+    //Attempt to backfill for empty values
+    $placeholders = array(
+      0 => '[place of publication not identified]',
+      1 => '[publisher not identified]',
+      2 => '[date of publication not identified]',
+    );
+
+    $j = -1;
+    foreach ($pub_parts as $key => $value) {
+      if (empty($value)) {
+        $pub_parts[$key] = $placeholders[$key];
+        $j++;
+      }
+      //All three were empty, produce no 534
+      if ($j == 2) {
+        return;
+      }
+    }
+
+    //Re-glue the parts, name + location
+    $subfields[0]['c'] = $pub_parts[0] . ' : ' . $pub_parts[1];
+
+    //Date published, ensure appends with a comma and ends with period.
     //Find an Issued or Copyrighted DC Date to append
     $qualifiers = array(
       'Created',
       'Copyrighted'
     );
-
     foreach ( $wrapper->field_date->getIterator() as $delta => $fc_instance) {
-      if ( in_array($fc_instance->field_qualifier_date->value(), $qualifiers )) {
-        $subfield_p .= ', ' . $fc_instance->field_dc_date->value() . '.';
+      if (in_array($fc_instance->field_qualifier_date->value(), $qualifiers)) {
+        $pub_parts[2] = $fc_instance->field_dc_date->value();
         break 1;
       }
     }
-    $subfields[]['p'] = $subfield_p;
+    if (isset($pub_parts[2])) {
+      $subfields[0]['c'] .= ', ' . $pub_parts[2];
+    }
+    $subfields[0]['c'] .= '.';
   }
+  //Otherwise replace c
+  else $subfields[0]['c'] = $xml_534c;
 
-  $arr =  _cals_build_marc_subfield_array($tag, $subfields);
+  //Set subfield p from c's value. Required.
+  $subfields[]['p'] = "Original version: " . $subfields[0]['c'];
+
+  $arr =  _cals_build_marc_subfield_array( $tag, $subfields );
   $arr[$tag]['ind1'] = '';
   $arr[$tag]['ind2'] = '';
+
   return $arr;
 }
+
 /**
  * Subject
  * @param $vars
