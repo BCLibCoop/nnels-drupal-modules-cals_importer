@@ -108,8 +108,8 @@ function _cals_importer_exporter_update_publisher_and_datecreated_vbo(&$entity, 
 function _cals_importer_exporter_update_publisher($wrapper, $node, $fieldname = NULL) {
   $values = $node->{$fieldname}[LANGUAGE_NONE];
   if(empty($values)) return;
-  if(!($fieldname)) $fieldname = 'field_publisher';
-  if($fieldname == 'field_publisher') {
+  if(!($fieldname)) $fieldname = 'field_publisher_source';
+  if($fieldname == 'field_publisher_source') {
     _cals_importer_exporter_update_publisher_field_publisher($values, $wrapper);
   }
   else {
@@ -160,7 +160,7 @@ function _cals_importer_exporter_update_publisher_field_publisher($values, $wrap
     if(!empty($place)) $wrapper->field_place_of_publication = $place;
     $wrapper->save();
     //$url = url(drupal_get_path_alias('node/' . $node->nid));
-    _cals_importer_set_message($node, t('Publisher updated'));
+    _cals_importer_set_message($wrapper->host_entity->title->value(), t('Publisher updated'));
     //drupal_set_message(t('Publisher updated for <a href="@url">@title</a>@title', array('@url' => $url, '@title' => $node->title)));
   }
 
@@ -304,7 +304,7 @@ function _cals_importer_exporter_update_fc_date($wrapper, $node, $date_qualifier
  */
 function _cals_importer_exporter_get_date_by_type($wrapper, $node, $date_qualifier) {
   $dates = $node->field_date[LANGUAGE_NONE];
-  $timestamp = $wrapper->field_s3_file_upload->file->timestamp->value();
+  $timestamp = $wrapper->field_s3_file_upload[0]->file->value()->timestamp;
   if($date_qualifier == '_none') $date_qualifier = '';
   foreach($dates as $k => $v) {
     $id = $v['value'];
