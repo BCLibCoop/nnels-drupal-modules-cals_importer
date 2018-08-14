@@ -459,11 +459,21 @@ function _cals_importer_exporter_callback_534($vars) {
       //Single in old form Englewood Cliffs, N.J. : Prentice Hall, 1974.
       //Explode on colon and check for copyright to discard in favour of DC Date
       $exploded = explode(':', $subfields[0]['c']);
-      $exploded[1] = preg_replace(
-        "/([\w\s]+?),?\s?[\[\]\d]+\.?/",
-        "$1",
-        $exploded[1]
-      );
+      if (! isset($exploded[1])) {
+        $exploded_retry = explode('.,', $subfields[0]['c']);
+        if (isset($exploded_retry[1])) {
+          //Add the exploded period (.) back for abbreviation
+          $exploded_retry[0] .= '.';
+          //Replace if we tried second method
+          $exploded = $exploded_retry;
+        }
+      } else {
+        $exploded[1] = preg_replace(
+          "/([\w\s]+?),?\s?[\[\]\d]+\.?/",
+          "$1",
+          $exploded[1]
+        );
+      }
       foreach ($exploded as $instance => $piece) {
         $pub_parts[$instance] = $piece;
       }
