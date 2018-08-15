@@ -449,7 +449,7 @@ function _cals_importer_exporter_callback_534($vars) {
     );
 
     //0 => publisher, 1 => location
-    //$pub_parts = $vars['node_wrapper']->field_publisher_source->value();
+    //if there's already two instances of publisher_source
     if ( isset( $subfields[1]['c']) ) {
       $pub_parts[0] = $subfields[0]['c'];
       $pub_parts[1] = $subfields[1]['c'];
@@ -469,7 +469,7 @@ function _cals_importer_exporter_callback_534($vars) {
         }
       } else {
         $exploded[1] = preg_replace(
-          "/([\w\s]+?),?\s?[\[\]\d]+\.?/",
+          "/([\w\s]+?),?\s?[\©\[\]\d]+\.?/",
           "$1",
           $exploded[1]
         );
@@ -521,8 +521,8 @@ function _cals_importer_exporter_callback_534($vars) {
   //Otherwise replace c
   else $subfields[0]['c'] = $xml_534c;
 
-  //Set subfield p from c's value. Required.
-  $subfields[]['p'] = "Original version: " . $subfields[0]['c'];
+  //Set subfield p. Required.
+  $subfields[]['p'] = "Original version: ";
 
   $arr =  _cals_build_marc_subfield_array( $tag, $subfields );
   $arr[$tag]['ind1'] = '';
