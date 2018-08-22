@@ -189,7 +189,9 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
       //Build stub if it doesn't exist during context
       //check stub field bad previous runs in addition to not initially existing
       if ( empty( unserialize(
-        $host->field_xml_stub[LANGUAGE_NONE][0]['value'] ) ) )
+        $host->field_xml_stub[LANGUAGE_NONE][0]['value'] ) )
+      || function_exists('dpm') //Debug mode is on, so rebuild fresh each time
+      )
         _cals_importer_create_marc_stub($host);
       $host_wrapped = entity_metadata_wrapper('node', $host);
       $stub = unserialize($host_wrapped->field_xml_stub->value());
