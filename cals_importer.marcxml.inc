@@ -154,39 +154,22 @@ function _cals_reparse_record_details_form($settings, &$form_state) {
     '#default_value' => isset($settings['settings']['hero']) ? $settings['settings']['hero'] : '',
   );
 
-  //Load the record set parent node
-  $set = node_load($settings['view']->argument['field_record_set_nid']->argument);
-  $contents = @file_get_contents($set->field_marc_xml_file['und'][0]['uri']);
+  $scope = array(0 => t('Item MARCXML'), 1 => t('Record set MARCXML'));
 
-  //Validation before we proceed with Reparse
-  //Check for a MARC XML file uri
-  if ($contents === FALSE) {
-    $error['no_file'] = TRUE;
-  } else { //File URI exist, load XML
-    $xml = simplexml_load_string($contents);
-  }
-  //XML was good, supply this to submit handler
-  if ($xml === FALSE) {
-    $error['bad_xml'] = TRUE;
-  } else {
-    $form['record_set_xml'] = array(
-      '#type' => 'hidden',
-      '#value' => $contents,
-    );
-  }
+  $form['scope_of_reparse'] = array(
+    '#type' => 'radios',
+    '#title' => t('Reparsing scope'),
+    '#default_value' => $scope[0],
+    '#required' => TRUE,
+    '#options' => $scope,
+    '#description' => t('Item-level will use field_marcxml_string for each node. Record set uses the field_marc_xml_file upload.'),
+  );
 
-  if ($error) {
-    switch ($error) {
-      case $error['no_file']:
-        drupal_set_message("There is no MARC XML file associated with this record set. Please check the upload: ", 'warning');
-        break;
-      case $error['bad_xml']:
-        drupal_set_message("Invalid XML associated with this record set. Please check the upload: ", 'warning');
-        break;
-    }
-    drupal_goto(check_url($_SERVER['REDIRECT_URL'])); //Go back to the record
-    // set node path
-  }
+
+  $form['record_set_id'] = array(
+    '#type' => 'hidden',
+    '#value' => $settings['view']->argument['field_record_set_nid']->argument,
+  );
 
   return $form;
 }
@@ -198,21 +181,56 @@ function _cals_reparse_record_details_form($settings, &$form_state) {
  */
 
 function _cals_reparse_record_details_submit($form, $form_state) {
+
+  //Pass along our settings
   $return = array();
   $return['fields_to_parse'] = $form_state['values']['fields_to_parse'];
+  $return['scope_of_reparse'] = $form_state['values']['scope_of_reparse'];
 
-  $simple_xml_obj = simplexml_load_string($form_state['values']['record_set_xml']);
+  //Pre-load the record set parent node if we are in Mode 1
+  if ($form_state['values']['scope_of_reparse'] == 1) {
+    $xml_bearing_node = node_load($form_state['values']['record_set_id']);
+    $contents = @file_get_contents($xml_bearing_node->field_marc_xml_file['und'][0]['uri']);
 
-  $indexed_collection = array();
+    //Validation before we proceed with Reparse
+    //Check for a MARC XML file uri
+    if ($contents === FALSE) {
+      $error['no_file'] = TRUE;
+    } else { //File URI exist, load XML
+      $xml = simplexml_load_string($contents);
+    }
+    //XML was good, supply this to function
+    if ($xml === FALSE) {
+      $error['bad_xml'] = TRUE;
+    } else {
+      $return['record_set_xml'] = $contents;
+    }
 
-  foreach ($simple_xml_obj->children(NAME_SPACE) as $record) {
-    $index = (string) $record->controlfield[0];
-    $indexed_collection[$index] = $record->asXML(); //store as string,
-    // gets serialized when passed to bulk action function
-  }
+    if ($error) {
+      switch ($error) {
+        case $error['no_file']:
+          drupal_set_message("There is no MARC XML file associated with this record set. Please check the upload: ", 'warning');
+          break;
+        case $error['bad_xml']:
+          drupal_set_message("Invalid XML associated with this record set. Please check the upload: ", 'warning');
+          break;
+      }
+      drupal_goto(check_url($_SERVER['REDIRECT_URL'])); //Go back to the record
+    }
 
-  ksort($indexed_collection);
-  $return['indexed_collection'] = $indexed_collection;
+    //$simple_xml_obj = simplexml_load_string($return['record_set_xml']);
+
+    $indexed_collection = array();
+
+    foreach ($xml->children(NAME_SPACE) as $record) {
+      $index = (string) $record->controlfield[0];
+      $indexed_collection[$index] = $record->asXML(); //store as string,
+      // gets serialized when passed to bulk action function
+    }
+
+    ksort($indexed_collection);
+    $return['indexed_collection'] = $indexed_collection;
+  }//end scope of reparse mode 1
 
   return $return; //Note, return value here must be an array.
 }
@@ -228,41 +246,48 @@ function _cals_reparse_record_details(&$node, $context) {
   $arr_fields = _cals_get_fields_repository_item();
   $reparse_field_map = array_intersect_key($arr_fields['map'], $context['fields_to_parse']);
 
-  //_cals_parse_record_details($node, $context['fields_to_parse']);
-  $SCNs = entity_metadata_wrapper('node', $node)
-    ->field_system_control_number->value();
-
-  //Catch if we are dealing with an unparsed or node lacking SCN at
-  // all
-  if (empty($SCNs) ) {
-    drupal_set_message("Print a list of nodes without systemcontrols here");
-    return FALSE;
+  //Reparse Mode 0 - default: use only the repo item's MARCXML record
+  if ( $context['scope_of_reparse'] == 0 ) {
+    _cals_parse_record_details($node, $context['fields_to_parse']);
   }
+  //Reparse Mode 1 - Use the index built in submit handler to iterate
+  elseif ( $context['scope_of_reparse'] == 1 ) {
+    $SCNs = entity_metadata_wrapper('node', $node)
+      ->field_system_control_number->value();
 
-  $parsed = '';
-
-  foreach ($SCNs as $SCN) {
-    if (
-      //Find a match between the node in context and our index collection of
-      // records
-      array_key_exists( $SCN, $context['indexed_collection'] ) &&
-      ! $parsed
-    ) {
-      //Load the matched record as a single-item SimpleXML collection for field
-      // map iterator
-      $loaded =  MARC_HEADER . "\n" . $context['indexed_collection'][$SCN] . "</marc:collection>";
-      $prepared_simplexml_record = simplexml_load_string($loaded);
-
-      _cals_importer_iterate_field_map (
-        $node,
-        $prepared_simplexml_record,
-        $reparse_field_map, //the fields to reparse
-        "parse"
-      );
-      $parsed = TRUE; //Don't reparse in case of SCN duplicate in index
+    //Catch if we are dealing with an unparsed or node lacking SCN at
+    // all
+    if (empty($SCNs)) {
+      drupal_set_message("There were not any SCNs in the selected nodes to match on.");
+      return FALSE;
     }
-  }
-  $message = t('Reparsing: %title %fields',
+
+    $parsed = '';
+
+    foreach ($SCNs as $SCN) {
+      if (
+        //Find a match between the node in context and our index collection of
+        // records
+        array_key_exists($SCN, $context['indexed_collection']) &&
+        !$parsed
+      ) {
+        //Load the matched record as a single-item SimpleXML collection for field
+        // map iterator
+        $loaded = MARC_HEADER . "\n" . $context['indexed_collection'][$SCN] . "</marc:collection>";
+        $prepared_simplexml_record = simplexml_load_string($loaded);
+
+        _cals_importer_iterate_field_map(
+          $node,
+          $prepared_simplexml_record,
+          $reparse_field_map, //the fields to reparse
+          "parse"
+        );
+        $parsed = TRUE; //Don't reparse in case of SCN duplicate in index
+      }
+    } //end foreach
+  } //end scope of reparse mode 1
+
+  $message = t('Reparsed: (%fields) on Title: "%title"',
     array(
       '%title' => $node->title,
       '%fields' => implode(", ", $context['fields_to_parse'])
