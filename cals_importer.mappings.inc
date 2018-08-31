@@ -1041,6 +1041,7 @@ function xmlToArray($xml, $options = array()) {
  *   $map is returned by reference with values appended
  */
 function _cals_importer_get_creator_from_marc($xml, $k, &$map, $tags) {
+  $tmp = '';
   if(count($map[$k]['values'])) {
     $tmp = $map[$k]['values']; //from 700 series, see: https://github.com/BCLibCoop/nnels/issues/116
     $map[$k]['values'] = array();
