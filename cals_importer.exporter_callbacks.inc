@@ -448,6 +448,26 @@ function _cals_importer_exporter_callback_534($vars) {
       2 => '',
     );
 
+    //Cleanup values and then filter our repeats
+    $test_values = array();
+    foreach ($subfields as $instance => $subfield) {
+      if ( isset($subfield['c']) ) {
+        //Remove leading spaces, square brackets and
+        $subfield['c'] =
+          _cals_importer_strip_square_brackets_value(
+          trim( $subfield['c'] )
+        );
+        if ( in_array( $subfield['c'], $test_values ) ) {
+          unset($subfields[$instance]);
+          $subfield['c'] = NULL;
+        }
+        if ($subfield['c']) $subfields[$instance]['c'] = $test_values[] =
+          $subfield['c'];
+      }
+    }
+    //Rekey in case we filtered out any repeat values above
+    $subfields = array_values( $subfields );
+
     //0 => publisher, 1 => location
     //if there's already two instances of publisher_source
     if ( isset( $subfields[1]['c']) ) {
