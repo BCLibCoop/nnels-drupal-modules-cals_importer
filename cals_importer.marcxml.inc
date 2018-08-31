@@ -77,6 +77,7 @@ function _cals_importer_normalize_node_field(&$node, $field) {
 	  	_cals_importer_normalize_publisher($node);
 	  	break;
     case "field_publisher_source":
+      _cals_importer_strip_square_brackets_value($node, $field);
       _cals_importer_strip_trailing_periods($node, $field);
       break;
 
@@ -218,12 +219,23 @@ function _cals_reparse_record_details_submit($form, $form_state) {
       drupal_goto(check_url($_SERVER['REDIRECT_URL'])); //Go back to the record
     }
 
-    //$simple_xml_obj = simplexml_load_string($return['record_set_xml']);
-
     $indexed_collection = array();
 
     foreach ($xml->children(NAME_SPACE) as $record) {
-      $index = (string) $record->controlfield[0];
+      $candidate_SCN_positions = array(
+        '028' => _cals_importer_xpath_value($record, 'datafield', '028',
+          'a'),
+        '037' => _cals_importer_xpath_value($record, 'datafield', '037',
+          'a'),
+        '001' => _cals_importer_xpath_value($record, 'controlfield', '001')
+      );
+      $found_switch = FALSE;
+
+      foreach ($candidate_SCN_positions as $code) {
+        if (! empty($code) && $found_switch != TRUE) $index = (string) $code[0];
+        $found_switch = TRUE;
+      }
+
       $indexed_collection[$index] = $record->asXML(); //store as string,
       // gets serialized when passed to bulk action function
     }
