@@ -165,6 +165,8 @@ function _cals_importer_create_marcxml_snippet_file_resource($node) {
 function _cals_importer_exporter_snippet_callback_LDR($format) {
   switch($format) {
     case 4:
+    case 11:
+    case 13:
       //Nonmusical Sound Recording (i) for MP3
       return $byte = 'i';
     default:
@@ -449,8 +451,12 @@ function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
     'e-text' => 'etext',
     'azw3' => 'etext',
     'mp3' => 'mp3',
-    'daisy 202' => 'daisy',
-    'daisy 3' => 'daisy',
+    'daisy 202 - full text' => 'etext',
+    'daisy 202 - full text and audio' => 'daisy',
+    'daisy 202 - audio' => 'mp3',
+    'daisy 3 - full text' => 'etext',
+    'daisy 3 - full text and audio' => 'daisy',
+    'daisy 3 - audio' => 'mp3',
     'braille' => 'etext'
   );
 
