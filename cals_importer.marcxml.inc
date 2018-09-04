@@ -77,7 +77,7 @@ function _cals_importer_normalize_node_field(&$node, $field) {
 	  	_cals_importer_normalize_publisher($node);
 	  	break;
     case "field_publisher_source":
-      _cals_importer_strip_square_brackets_value($node, $field);
+      _cals_importer_strip_square_brackets_value($field);
       _cals_importer_strip_trailing_periods($node, $field);
       break;
 
