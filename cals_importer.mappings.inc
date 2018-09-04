@@ -811,13 +811,19 @@ function _cals_get_descriptors_from_marc($xml, $k, &$map) {
 //check w/ Jonathan as to the $flag parameter: can't find elsewhere in code
 function _cals_importer_get_system_numbers_from_marc($xml, $k, &$map) {
   $str = array();
-  $tmp = _cals_importer_xpath_value($xml, "datafield", '037', 'a');
-  foreach($tmp as $value) {
-    $map[$k]['values'][] = $value;
-  }
-  $tmp = _cals_importer_xpath_value($xml, "datafield", '028', 'a');
-  foreach($tmp as $value) {
-    $map[$k]['values'][] = $value;
+
+  $scn_targets = array(
+    '028' => 'a',
+    '035' => 'a',
+    '037' => 'a',
+  );
+
+  foreach ($scn_targets as $tag => $subfield) {
+    $tmp = _cals_importer_xpath_value($xml, "datafield", $tag, $subfield);
+    foreach($tmp as $value) {
+      $map[$k]['values'][] = $value;
+    }
+    unset($tmp);
   }
 }
 

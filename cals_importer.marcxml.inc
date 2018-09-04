@@ -225,6 +225,8 @@ function _cals_reparse_record_details_submit($form, $form_state) {
       $candidate_SCN_positions = array(
         '028' => _cals_importer_xpath_value($record, 'datafield', '028',
           'a'),
+        '035' => _cals_importer_xpath_value($record, 'datafield', '035',
+          'a'),
         '037' => _cals_importer_xpath_value($record, 'datafield', '037',
           'a'),
         '001' => _cals_importer_xpath_value($record, 'controlfield', '001')
