@@ -785,7 +785,8 @@ function _cals_importer_block_process_repo_item_submit($form, &$form_state) {
 }
 
 function _cals_importer_update_publisher_and_source_form($options) {
-  if (is_numeric(arg(1)) && arg(0) == 'node') {
+
+  if ( $options['entity_type'] == 'node') {
     $vocabulary = taxonomy_vocabulary_machine_name_load('publisher');
     $terms = entity_load('taxonomy_term', FALSE, array('vid' => $vocabulary->vid));
     //printAndDie($terms);
@@ -1203,37 +1204,6 @@ function cals_importer_views_post_execute(&$view) {
   }
   if($msg)
     drupal_set_message(t("@view modified by: ", array("@view" => $view->name)) . __FUNCTION__);
-
-}
-
-function sssss() {
-
-
-  $tmp = $xml->xpath("//marc:datafield[@tag='264']/marc:subfield[@code='c']");
-  if (count($tmp) >= 1) {
-    $str = (string) $tmp[0];
-    $dates['264'] = $str;
-  }
-  else {
-    $tmp = $xml->xpath("//marc:datafield[@tag='260']/marc:subfield[@code='c']");
-    if (count($tmp) >= 1) {
-      $str = (string) $tmp[0];
-      $dates['260'] = $str;
-    }
-  }
-
-  $tmp = $xml->xpath("//marc:datafield[@tag='533']/marc:subfield[@code='d']");
-  if (count($five_thirty3) >= 1) {
-    if(!isset($dates['533'])) $dates['533'] = '';
-    $str = (string) $five_thirty3[0];
-    $dates['533'] .= $str;
-  }
-
-  $tmp = $xml->xpath("//marc:datafield[@tag='534']/marc:subfield[@code='c']");
-  if (count($tmp) >= 1) {
-    if(!isset($dates['534'])) $dates['534'] = '';
-    $dates['534'] .= (string) $tmp[0];
-  }
 
 }
 
