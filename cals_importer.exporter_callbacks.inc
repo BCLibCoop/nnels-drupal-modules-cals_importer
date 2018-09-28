@@ -430,11 +430,24 @@ function _cals_importer_exporter_callback_534($vars) {
 
     if(!empty($stored_subfield_array) ) {
       //if(count($me) == 1) $subfields[$i] = $me[0];
-      if(count($stored_subfield_array) >= 1) $subfields = array_merge($subfields, $stored_subfield_array);
+      if(count($stored_subfield_array) >= 1) $subfields = array_merge
+      ($subfields, $stored_subfield_array);
       //Now $subfields is populated.
       $i++;
     }
   }
+
+  //Concat subfield $z since it can only come from Drupal field
+  foreach ($subfields as $sub => $key) {
+    if (key($key) == 'z') {
+      $take[] = $subfields[$sub]['z'];
+      unset($subfields[$sub]);
+    }
+  }
+  if (isset($take) && count($take) > 1) $subfields[]['z'] = implode(' ; ',
+    $take);
+  else $subfields[]['z'] = $take[0];
+
   //Default to MARCXML value for 534c
   $xml_534c = reset(_cals_importer_get_xpath_values($tag, NULL, NULL, 'c',
     $vars['xml']->record));
@@ -489,7 +502,7 @@ function _cals_importer_exporter_callback_534($vars) {
         }
       } else {
         $exploded[1] = preg_replace(
-          "/([\w\s]+?),?\s?[\©\[\]\d]+\.?/",
+          "/([\w\s]+?),?\s?[\©c\[\]\d]+\.?/",
           "$1",
           $exploded[1]
         );
@@ -538,13 +551,32 @@ function _cals_importer_exporter_callback_534($vars) {
     }
     $subfields[0]['c'] .= '.';
   }
-  //Otherwise replace c
-  else $subfields[0]['c'] = $xml_534c;
+  else {
+    //Otherwise replace C instances
+    foreach ($subfields as $sub => $key) {
+      if (key($subfields[$sub]) == 'c') unset($subfields[$sub]);
+    }
+    $subfields[]['c'] = $xml_534c;
+  }
+
+  //Rekey for middle C
+  $subfields[]['c'] = $subfields[0]['c'];
+  unset($subfields[0]['c']);
 
   //Set subfield p. Required.
   $subfields[]['p'] = "Original version: ";
 
-  $arr =  _cals_build_marc_subfield_array( $tag, $subfields );
+  //Re-key, flatten-merge recursively and slap in an instance
+  //This is to produce a single 534 instance with subfields and $p on top.
+  krsort($subfields);
+  $subfields = array_reduce(
+    array_values($subfields),
+    'array_merge',
+    array()
+  );
+  $subfield_instance[] = $subfields;
+
+  $arr =  _cals_build_marc_subfield_array( $tag, $subfield_instance );
   $arr[$tag]['ind1'] = '';
   $arr[$tag]['ind2'] = '';
 
