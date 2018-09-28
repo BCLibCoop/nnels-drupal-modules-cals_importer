@@ -382,6 +382,7 @@ function _cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$rec
 
     switch($tag) {
       case 'leader':
+      case 'ldr':
         $val = _cals_importer_exporter_callback_leader($node_wrapper);
         break;
       case '001':
