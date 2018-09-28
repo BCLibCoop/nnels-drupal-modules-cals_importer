@@ -208,8 +208,13 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   //Obtain original 008
   if (! empty($xml)) {
     $element_008 = $xml->xpath("//marc:controlfield[@tag='008']");
-    if ($element_008) $original_008 = $element_008[0]->__toString();
-  } else $original_008 = '';
+    if ($element_008) {
+      $original_008 = $element_008[0]->__toString();
+    }
+    else {
+      $original_008 = '';
+    }
+  }
 
   //Keep 00-05 if exists
   //yymmdd format
@@ -224,7 +229,7 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   //07-10 Date Created
 
   //default to timestamp of file creation
-  $created= date("Y", $fc_wrapped->field_s3_file_upload->value()
+  $created= date("Y", $fc_wrapped->field_s3_file_upload[0]->value()
   ['timestamp']);
 
   //Loop through all field_date instances and find an Created year
@@ -267,8 +272,9 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   $format = $fc_wrapped->field_file_format->label();
   $audience = $fc_wrapped->host_entity->field_audience->value();
   $lang = $fc_wrapped->host_entity->field_iso_language->value()[0];
-
-  if ($format == 'MP3') {
+  
+  //Check all MP3/audio-only formats
+  if (in_array(array('MP3', 'DAISY 202 - Audio', 'DAISY 3 - Audio'), $format)) {
     //18-21 nnnn
     foreach (range(18,21) as $key ) {
       $final_008[$key] = 'n';
