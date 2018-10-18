@@ -94,20 +94,31 @@ function _cals_reparse_title_edition($node) {
 }
 
 /**
- * The main MARC parser
+ * Main Parser Function
  *
  * @param $node
- *   the node passed to the parser
- *
- * @return
- *   an array.
- *
+ *  The node context passed in via bulk operation
+ * @param $fields
+ *  Target fields for the field mapper
+ * @param bool $reparse_flag
+ *  Initial parse (default) or re-parse
  */
-function _cals_parse_record_details($node, $fields) {
+function _cals_parse_record_details($node, $fields, $reparse_flag = FALSE) {
+
   $xml = _cals_get_marc_xml_string($node);
-  if($xml === 0) return;
-  $arr_fields = _cals_get_fields_repository_item();
-  $map = $arr_fields['map'];
+  if($xml === 0) return; //Can't act on a stub node without MARCXML record
+
+  //Full (initial parse mode)
+  if ( $reparse_flag === FALSE ) {
+    $arr_fields = _cals_get_fields_repository_item();
+    $map = $arr_fields['map'];
+  }
+
+  //Using Item-level mode of reparse operation
+  if ( $reparse_flag === TRUE ) {
+    unset($map);
+    $map = $fields;
+  }
   //loop thru map to populate node
   _cals_importer_iterate_field_map($node, $xml, $map, "parse");
   $atts = array("attributes" => array("target" => "_blank"));
@@ -256,13 +267,15 @@ function _cals_reparse_record_details_submit($form, $form_state) {
  */
 
 function _cals_reparse_record_details(&$node, $context) {
-
   $arr_fields = _cals_get_fields_repository_item();
+
+  //Initialize up the field map with target fields that are valid for
+  // RepositoryItem
   $reparse_field_map = array_intersect_key($arr_fields['map'], $context['fields_to_parse']);
 
   //Reparse Mode 0 - default: use only the repo item's MARCXML record
   if ( $context['scope_of_reparse'] == 0 ) {
-    _cals_parse_record_details($node, $context['fields_to_parse']);
+    _cals_parse_record_details($node, $reparse_field_map, TRUE);
   }
   //Reparse Mode 1 - Use the index built in submit handler to iterate
   elseif ( $context['scope_of_reparse'] == 1 ) {
