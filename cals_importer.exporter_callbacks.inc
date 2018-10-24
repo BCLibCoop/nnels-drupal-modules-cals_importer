@@ -105,15 +105,10 @@ function _cals_importer_exporter_calc_ldr_length($raw_record) {
  */
 function _cals_importer_exporter_build_final_leader($supplied_bytes) {
 
-  //Initialize with string type
-  $ldr = (string) '';
+  //@todo: Re-check byte 6 in case new format-dependent bytes in future
+  //$ldr[6] = $supplied_bytes[6] ? $supplied_bytes[6] : MARC_SPACE;
 
-  //In case there are new format-dependent bytes in future
-  //Currently only byte 6
-  foreach ($supplied_bytes['value'] as $byte => $value) {
-    $ldr[$byte] = $value;
-  }
-
+  $ldr = array_fill(0, 23, MARC_SPACE);
   $ldr[5] = 'n';
   $ldr[7] = 'm';
   $ldr[8] = MARC_SPACE;
@@ -124,9 +119,18 @@ function _cals_importer_exporter_build_final_leader($supplied_bytes) {
   $ldr[18] = 'u';
   $ldr[19] = MARC_SPACE;
 
+  //Initialize with string type
+  $ldr_out = (string) '';
+
+  //Process into string
+  //PHP 5.6 casts this as array if using the string pos notation so we append.
+  foreach ($ldr as $key => $char) {
+    $ldr_out .= $char;
+  }
+
   //Byte positions 00-04, 06, 12-16 and 20-23 handled by
   //_cals_importer_exporter_calc_{ldr_length/dir_length}
-  $returned['value'] = $ldr;
+  $returned['value'] = $ldr_out;
   return $returned;
 }
 

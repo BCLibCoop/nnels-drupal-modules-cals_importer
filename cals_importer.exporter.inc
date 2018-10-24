@@ -383,7 +383,8 @@ function _cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$rec
     switch($tag) {
       case 'leader':
       case 'ldr':
-        $val = _cals_importer_exporter_callback_leader($node_wrapper);
+        //$val = _cals_importer_exporter_callback_leader($node_wrapper);
+        $val = $record->getLeader();
         break;
       case '001':
         $val = 'BVNNELS' . $node->nid; //see https://github.com/BCLibCoop/nnels/issues/130
