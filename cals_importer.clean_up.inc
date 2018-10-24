@@ -534,7 +534,7 @@ function _cals_normalize_record_entry($node) {
           _cals_importer_strip_square_brackets($node, $field);
           _cals_importer_normalize_creators($node, $field);
           break;
-        case "field_publisher":
+        case "field_publisher_source":
           //_cals_importer_strip_square_brackets($node, "title");
           //_cals_importer_normalize_publisher($node);
           _cals_importer_strip_trailing_periods($node, $field);

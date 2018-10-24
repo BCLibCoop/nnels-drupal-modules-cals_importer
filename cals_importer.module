@@ -608,30 +608,30 @@ function _cals_importer_get_block_items() {
 
   $items = array();
 
-  $items['_cals_importer_update_repository_item'] = array(
-    'access arguments' => array('administer site configuration'),
-    'page callback' => '_cals_importer_update_repository_item',
-    'title' => 'Parse MARC/XML',
-    'file' => "cals_importer.marcxml.inc",
-    'description' => "item parsed",
-  );
+//  $items['_cals_importer_update_repository_item'] = array(
+//    'access arguments' => array('administer site configuration'),
+//    'page callback' => '_cals_importer_update_repository_item',
+//    'title' => 'Parse MARC/XML',
+//    'file' => "cals_importer.marcxml.inc",
+//    'description' => "Item parsed",
+//  );
 
 
-  $items['_cals_reparse_titles_edition'] = array(
-    'access arguments' => array('administer site configuration'),
-    'page callback' => '_cals_reparse_title_edition',
-    'file' => "cals_importer.marcxml.inc",
-    'title' => 'Reparse Titles / Edition',
-    'description' => 'Reparses title fields + dc relation field',
-
-  );
+//  $items['_cals_reparse_titles_edition'] = array(
+//    'access arguments' => array('administer site configuration'),
+//    'page callback' => '_cals_reparse_title_edition',
+//    'file' => "cals_importer.marcxml.inc",
+//    'title' => 'Reparse Titles / Edition',
+//    'description' => 'Reparses title fields + dc relation field',
+//
+//  );
 
 
   $items['_cals_normalize_record_value'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_normalize_record_value',
     'file' => "cals_importer.clean_up.inc",
-    'title' => 'Normalize',
+    'title' => 'Normalize Title, Creator/Contributor, Publisher',
     'description' => 'Title, author and publisher values normalized',
   );
 
@@ -658,17 +658,17 @@ function _cals_importer_get_block_items() {
     'access arguments' => array('parse s3 paths'),
     'page callback' => '_cals_importer_create_marc_stub_node',
     'file' => "cals_importer.exporter.inc",
-    'title' => "Add MARC-ready stub entry",
-    'description' => 'Add MARC-ready Stub',
+    'title' => "Build Record Stub",
+    'description' => 'Created the MARCXML stub',
   );
 
-  $items['_cals_importer_exporter_build_marcxml_from_array'] = array(
-    'access arguments' => array('parse s3 paths'),
-    'page callback' => '_cals_importer_exporter_build_marcxml_from_array',
-    'file' => "cals_importer.exporter.inc",
-    'title' => "Build / Validate MARC-XML File",
-    'description' => 'Added MARC-XML File',
-  );
+//  $items['_cals_importer_exporter_build_marcxml_from_array'] = array(
+//    'access arguments' => array('parse s3 paths'),
+//    'page callback' => '_cals_importer_exporter_build_marcxml_from_array',
+//    'file' => "cals_importer.exporter.inc",
+//    'title' => "Build / Validate MARC-XML File",
+//    'description' => 'Added MARC-XML File',
+//  );
 
 
   /*
@@ -684,8 +684,8 @@ function _cals_importer_get_block_items() {
     'access arguments' => array('parse s3 paths'),
     'page callback' => '_cals_importer_create_marcxml_snippet_file_resource',
     'file' => "cals_importer.exporter.inc",
-    'title' => "Test MARC XML Snippets",
-    'description' => 'Test MARC-XML snippets per file resource',
+    'title' => "Build File Snippet",
+    'description' => 'Built record snippets per file resource',
   );
 
   /**
