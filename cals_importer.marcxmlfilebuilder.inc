@@ -216,7 +216,7 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
 
       //Build new leader
       $fixed_leader = _cals_importer_exporter_build_final_leader
-      ( str_split($merged['controlfields']['ldr']['value']) );
+      ( $merged['controlfields']['ldr']['value'] );
       $record->setLeader($fixed_leader['value']);
 
       //Dump raw record

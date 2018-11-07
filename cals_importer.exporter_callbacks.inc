@@ -105,11 +105,10 @@ function _cals_importer_exporter_calc_ldr_length($raw_record) {
  */
 function _cals_importer_exporter_build_final_leader($supplied_bytes) {
 
-  //@todo: Re-check byte 6 in case new format-dependent bytes in future
-  //$ldr[6] = $supplied_bytes[6] ? $supplied_bytes[6] : MARC_SPACE;
-
   $ldr = array_fill(0, 23, MARC_SPACE);
   $ldr[5] = 'n';
+  //@todo: Re-check byte 6 in case new format-dependent bytes in future
+  $ldr[6] = $supplied_bytes[6] ? $supplied_bytes[6] : MARC_SPACE;
   $ldr[7] = 'm';
   $ldr[8] = MARC_SPACE;
   $ldr[9] = MARC_SPACE;

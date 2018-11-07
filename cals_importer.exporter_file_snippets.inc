@@ -163,14 +163,17 @@ function _cals_importer_create_marcxml_snippet_file_resource($node) {
  * @return string $byte
  */
 function _cals_importer_exporter_snippet_callback_LDR($format) {
-  switch($format) {
-    case 4:
-      //Nonmusical Sound Recording (i) for MP3
-      return $byte = 'i';
-    default:
-      //Language Material (a) for all other formats
-      return $byte = 'a';
+
+  $format_keys = variable_get('nnels_importer_exporter_format_map');
+  foreach ($format_keys as $key => $value) {
+    if ( $value['media_pattern'] == 'audio' ) $audio_keys[] = $key;
   }
+
+  //Nonmusical Sound Recording (i) for audio-based formats like MP3
+  if ( in_array( $format, $audio_keys ) ) return $byte = 'i';
+
+  //Language Material (a) for all other formats
+  else return $byte = 'a';
 }
 
 /**
@@ -446,19 +449,7 @@ function _cals_importer_exporter_snippet_callback_306($fc_wrapped) {
  * @return mixed $workable_array
  */
 function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
-
-  $format_keys = array(
-    'epub 2' => 'etext',
-    'epub 3' => 'etext',
-    'epub 3 (media overlays)' => 'etext',
-    'pdf' => 'etext',
-    'e-text' => 'etext',
-    'azw3' => 'etext',
-    'mp3' => 'mp3',
-    'daisy 202' => 'daisy',
-    'daisy 3' => 'daisy',
-    'braille' => 'etext'
-  );
+  $format_keys = variable_get('nnels_importer_exporter_format_map');
 
   /**
    * Electronic text (EPUB, PDF, e-text)
@@ -492,7 +483,7 @@ function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
 
 
   /**
-   * MP3 books
+   * Audio/MP3 books
    * =336  \\$a spoken word $b spw $2 rdacontent
    * =337  \\$a audio $b s $2 rdamedia
    * =337  \\$a computer $b c $2 rdamedia
@@ -500,7 +491,7 @@ function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
    * =338  \\$a online resource $b cr $2 rdacarrier
    **/
 
-  $mp3_pattern = array(
+  $audio_pattern = array(
     336 => array (
       0 => array(
         'a' => 'spoken word',
@@ -586,7 +577,7 @@ function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
   $format = $fc_wrapped->field_file_format->value();
   $format_label = strtolower($fc_wrapped->field_file_format->label());
 
-  $pattern = (string) $format_keys[$format_label] . '_pattern';
+  $pattern = (string) $format_keys[$format]['media_pattern'] . '_pattern';
   $loaded_pattern = $$pattern;
 
   if (empty($loaded_pattern)) {
