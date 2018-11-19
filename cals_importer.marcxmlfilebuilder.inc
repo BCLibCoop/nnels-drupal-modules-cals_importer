@@ -190,7 +190,8 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
       //check stub field bad previous runs in addition to not initially existing
       if ( empty( unserialize(
         $host->field_xml_stub[LANGUAGE_NONE][0]['value'] ) )
-      || function_exists('dpm') //Debug mode is on, so rebuild fresh each time
+        || function_exists('dpm') //Debug mode is on, so rebuild fresh each time
+        || variable_get("nnels_importer_rebuild_stubs" === TRUE)
       )
         _cals_importer_create_marc_stub($host);
       $host_wrapped = entity_metadata_wrapper('node', $host);
