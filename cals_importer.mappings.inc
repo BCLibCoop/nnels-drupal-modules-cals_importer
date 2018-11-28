@@ -1277,7 +1277,9 @@ function _cals_importer_get_runningtime_from_marcxml(&$arr, $xml) {
 
   //Try 300 $a - more common?
   $runtime_300a = _cals_importer_xpath_value($xml, "datafield", 300, 'a');
-  if (!empty($runtime_300a)) {
+
+  //If we have a runtime from 300$a and lacks "page as a substring"
+  if ( ! empty( $runtime_300a ) && ( ! strpos( $runtime_300a[0], "page" ) ) ) {
 
     //Match possible running times with units...oy vey
     preg_match("/\((\d+.?[\d\s]?\/?\d*\s?[hr]*[min]*)\.*[\,\s]*([\w\s]*)\.*\)/",
@@ -1310,6 +1312,11 @@ function _cals_importer_get_runningtime_from_marcxml(&$arr, $xml) {
     //Format in hhmmss for field
     $timestamp = sprintf('%02d%02d00', $hours, (int) $minutes);
     $arr['fc_files']['field_running_time'][]['value'] = $timestamp;
+  }
+  else {
+    /* No useable runtime value found.
+     * Leaves $arr['fc_files'] empty for next field callback
+     */
   }
 }
 
