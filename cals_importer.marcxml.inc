@@ -221,10 +221,10 @@ function _cals_reparse_record_details_submit($form, $form_state) {
     if ($error) {
       switch ($error) {
         case $error['no_file']:
-          drupal_set_message("There is no MARC XML file associated with this record set. Please check the upload: ", 'warning');
+          drupal_set_message("There is no MARC XML file associated with the record set. Please check the upload.", 'warning');
           break;
         case $error['bad_xml']:
-          drupal_set_message("Invalid XML associated with this record set. Please check the upload: ", 'warning');
+          drupal_set_message("Invalid XML associated with this record set. Please check the upload.", 'warning');
           break;
       }
       drupal_goto(check_url($_SERVER['REDIRECT_URL'])); //Go back to the record
@@ -232,6 +232,7 @@ function _cals_reparse_record_details_submit($form, $form_state) {
 
     $indexed_collection = array();
 
+    //For each record in the record set
     foreach ($xml->children(NAME_SPACE) as $record) {
       $candidate_SCN_positions = array(
         '028' => _cals_importer_xpath_value($record, 'datafield', '028',
