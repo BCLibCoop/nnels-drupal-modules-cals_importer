@@ -203,7 +203,7 @@ function _cals_get_fields_repository_item() {
 
 /**
  * helper function to parse xml path
- * @param $xml
+ * @param $record_xml
  *   the original xml string
  * @param $tag
  *   the tag to parse
@@ -214,11 +214,11 @@ function _cals_get_fields_repository_item() {
  *   an array of values
  *
  */
-function _cals_importer_xpath_value($xml, $fieldname, $tag, $code = NULL) {
+function _cals_importer_xpath_value($record_xml, $fieldname, $tag, $code = NULL) {
   $arr = array();
-  $path = "//marc:{$fieldname}[@tag='" . $tag . "']";
+  $path = ".//marc:{$fieldname}[@tag='" . $tag . "']";
   if(!empty($code) ) $path .= "/marc:subfield[@code='" . $code . "']";
-  $tmp = $xml->xpath($path);
+  $tmp = $record_xml->xpath($path);
   //dpm(__FUNCTION__, $path, $tmp);
   if (count($tmp) >= 1) {
     foreach ($tmp as $me){
