@@ -207,6 +207,7 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
         //order here is important, we want leader from snippet to prevail.
         //In all others there should be no collisions between control,
         //datafields in snippet vs stub
+
         $merged[$field_key] =  $snippet[$field_key] + $stub[$field_key];
         ksort($merged[$field_key]);
       }
@@ -259,7 +260,6 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
         );
       }
 
-      //@todo now merge and persist in file
       //Single record XML string outside of collection, namespace
       $out_xml = simplexml_load_string(
         $record
@@ -271,8 +271,6 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
       file_put_contents($filename, $out_xml, FILE_APPEND |
         LOCK_EX);
 
-    //@todo determine if non-parsed items can appear in this view to begin with
-
     //Save export set node with ref back to marc_xml_string source for this run
     $pnode->field_nid_entry[LANGUAGE_NONE][] = array("nid" => $nid);
     node_save($pnode);
@@ -282,7 +280,7 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
     $uri = file_create_url($filename);
     //Wrap in marc:collection tag upon retrieval
     $content = MARC_HEADER . "\n" . file_get_contents($filename) .
-      "</marc:collection>";
+      "\n</collection>";
 
     $file = file_save_data( simplexml_load_string($content)->asXml(),
       $filename,

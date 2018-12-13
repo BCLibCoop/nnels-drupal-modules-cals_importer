@@ -11,10 +11,11 @@
 //the MARC namespace
 define("NAME_SPACE", "http://www.loc.gov/MARC21/slim");
 define("MARC_HEADER",
-  '<marc:collection
+  '<collection
     xmlns:marc="http://www.loc.gov/MARC21/slim"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd">');
+    xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd">'
+);
 //require these files..
 module_load_include('inc', 'cals_importer', 'cals_importer.misc');
 module_load_include('inc', 'cals_importer', 'cals_importer.fieldcollections');
