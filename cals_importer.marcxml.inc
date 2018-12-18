@@ -301,7 +301,7 @@ function _cals_reparse_record_details(&$node, $context) {
       ) {
         //Load the matched record as a single-item SimpleXML collection for field
         // map iterator
-        $loaded = MARC_HEADER . "\n" . $context['indexed_collection'][$SCN] . "</marc:collection>";
+        $loaded = MARC_HEADER . "\n" . $context['indexed_collection'][$SCN] . "</collection>";
         $prepared_simplexml_record = simplexml_load_string($loaded);
 
         _cals_importer_iterate_field_map(

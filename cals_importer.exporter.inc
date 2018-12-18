@@ -57,7 +57,7 @@ function _cals_importer_create_marc_stub($node) {
   $tags = _cals_importer_get_tag_array(); //tag mappings
   $lint = new File_MARC_Lint();
   $xml_string = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
-  $xml_string = MARC_HEADER . $xml_string . '</marc:collection>';
+  $xml_string = MARC_HEADER . $xml_string . '</collection>';
   $records = new File_MARCXML($xml_string, File_MARC::SOURCE_STRING, "http://www.loc.gov/MARC21/slim");
   $n = 0;
   while ($record = $records->next()) {
@@ -726,7 +726,6 @@ function _cals_importer_exporter_formatted_marcxml($str) {
  * @return mixed
  */
 function _cals_importer_exporter_build_marcxml_from_array($node) {
-  //$xml_string = MARC_HEADER . '</marc:collection>';
   $record = new File_MARC_Record(NULL);
   $marcfields = unserialize($node->field_xml_stub[LANGUAGE_NONE][0]['value']);
   if(function_exists('dpm')) dpm($marcfields);
