@@ -318,7 +318,8 @@ function _cals_importer_get_file_from_filepath($filepath) {
       'filename' => $filepath, 
       'filemime' => "application/zip",    //application/zip or multipart/x-zip
       'status' => 1,
-      'display' => 1
+      'display' => 1,
+      'type' => 'document',
     );
     try {
 			file_save($file);
