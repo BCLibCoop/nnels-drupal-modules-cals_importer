@@ -139,31 +139,48 @@ function _cals_importer_exporter_update_publisher_field_publisher($values, $wrap
     }
   }
   elseif($count > 1) {
-    foreach($values as $k => $v) {
-      $value = $v['value'];
-      if($k == 0)
-        $place = $value;
-      elseif($k == 1)
-        $pub = $value;
-    }
-    if(empty($pub) && !empty($place)) {
-      $pub = $place;
-      $place = '';
-    }
+    //More than one value, loop through and use first index as place, later
+    // as pub
 
+    //Need some way of tagging the subfields a's and b's in earlier function
+
+    //2 subfields = a:Place b:Pub
+    //3 subfields = a:Place b:Pub, a:Place b:NULL
+    //4 subfields = a:Place b:Pub, a:Place, b:Pub
+    //Ignore > 4
+
+    switch($count) {
+      case 2:
+        $place = $values[0]['value'];
+        $pub = $values[1]['value'];
+      break;
+
+      case 3:
+        $place .= $values[0]['value'];
+        $place .= ', ' . $values[1]['value'];
+        $pub .= $values[2]['value'];
+        break;
+
+      default:
+      case 4:
+        $place .= $values[0]['value'];
+        $place .= ', ' . $values[1]['value'];
+        $pub .= $values[2]['value'];
+        $pub .= ', ' . $values[3]['value'];
+        break;
+    }
   }
   else {
     return;
   }
-  if( !empty($pub)  ) {
-    $wrapper->field_publisher_format = $pub;
-    if(!empty($place)) $wrapper->field_place_of_publication = $place;
-    $wrapper->save();
-    //$url = url(drupal_get_path_alias('node/' . $node->nid));
-    _cals_importer_set_message($wrapper->host_entity->title->value(), t('Publisher updated'));
-    //drupal_set_message(t('Publisher updated for <a href="@url">@title</a>@title', array('@url' => $url, '@title' => $node->title)));
-  }
-
+  if( !empty($pub)  ) $wrapper->field_publisher_format = str_replace( array('[',']'), '', $pub );
+  if( !empty($place) ) $wrapper->field_place_of_publication = str_replace(
+    array('[',']'), '', $place );
+  //Don't use _cals_importer_strip_square_brackets, it bakes in node-level field
+  $wrapper->save();
+  //$url = url(drupal_get_path_alias('node/' . $node->nid));
+  _cals_importer_set_message($wrapper->host_entity->title->value(), t('Publisher updated'));
+  //drupal_set_message(t('Publisher updated for <a href="@url">@title</a>@title', array('@url' => $url, '@title' => $node->title)));
 }
 
 function _cals_importer_set_message($node, $message = NULL) {
