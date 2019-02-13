@@ -260,7 +260,8 @@ function _cals_importer_normalize_indicators($str) {
  * @return int
  */
 
-function _cals_importer_exporter_filing_characters($value, $start = 0, $count = 0) {
+function _cals_importer_exporter_filing_characters($value, $lang, $start = 0,
+$count = 0) {
   $value = strtolower($value);
   $count++;
   $first = substr($value, 0, 1);
@@ -283,22 +284,33 @@ function _cals_importer_exporter_filing_characters($value, $start = 0, $count = 
     "ton ", "tōn ", "tou ", "um ", "uma ", "un ", "un'", "una ", "une ",
     "unei ", "unha ", "uno ", "uns ", "unui ", "us ", "y ", "ye ", "yr "); */
   $str = variable_get('cals_importer_non_filing_characters');
+
   $str = str_replace('\s', ' ', $str);
   $arr = explode("\r\n", $str);
+
+  //Filter out homonyms based on known collisions between
+  // languages
+  if ($lang == 'eng') $filter = $eng_filter = array(
+    "die ", "bat ", "hen ", "he ",
+    "lou ", "i ", "in ", "it ", "to ", "um ",
+    "uno ", "us ", "ye ", "yr ");
+  if ($lang == 'fre') $filter = $fr_filter = array("de ", "il ","lou ", "y ");
+
+  if(isset($filter)) $arr = array_diff($arr, $filter);
 
   foreach($arr as $char) {
     $len = strlen($char);
     $substr = substr($value, $start, $len);
     if($substr == $char) {
       $new_start = $start + $len;
-      //printPre("CHAR =  $char| SUBSTR = $substr| NEW Start = $new_start |
-      // LEN = $len | VALUE = $value");
-      return _cals_importer_exporter_filing_characters($value, $new_start, $count);
+      return _cals_importer_exporter_filing_characters($value, $lang,
+        $new_start, $count);
     }
   }
   //if returns false on first iteration, then reset start to 0;
   if($count == 1 && $start == 1 && $first == '"') $start = 0;
   return $start;
+
 }
 
 /**

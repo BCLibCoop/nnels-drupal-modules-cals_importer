@@ -229,9 +229,13 @@ function _cals_importer_exporter_callback_245($vars) {
   $code = 245;
   $subfield = 'a';
   $ind2 = 0;
+
+  $lang = reset(entity_metadata_wrapper('node', $node)
+    ->field_iso_language->value());
+
   foreach($safe_values as $value) {
     normalize_title($value);
-    $ind2 = _cals_importer_exporter_filing_characters($value);
+    $ind2 = _cals_importer_exporter_filing_characters($value, $lang, 0, 0);
     $arr[245]['subfields'][]['a'] = $value;
   }
   $arr[245]['ind1'] = 0;
