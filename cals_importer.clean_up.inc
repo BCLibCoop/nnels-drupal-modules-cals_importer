@@ -179,10 +179,40 @@ function _cals_importer_exporter_update_publisher_field_publisher($values, $wrap
   //Don't use _cals_importer_strip_square_brackets, it bakes in node-level field
   $wrapper->save();
   //$url = url(drupal_get_path_alias('node/' . $node->nid));
-  _cals_importer_set_message($wrapper->host_entity->title->value(), t('Publisher updated'));
+  _cals_importer_set_fileres_message($wrapper, t('Publisher fields updated for file: '));
   //drupal_set_message(t('Publisher updated for <a href="@url">@title</a>@title', array('@url' => $url, '@title' => $node->title)));
 }
 
+/**
+ * Messaging function for wrapped Resource entities
+ * @param $wrapper
+ * @param null $message
+ */
+function _cals_importer_set_fileres_message($wrapper, $message = NULL) {
+  if (! $wrapper->getBundle() == 'field_file_resource') {
+    drupal_set_message("The bulk operation used called the wrapper message function without passing a File Resource entity ", 'warning');
+    //Trickle down to generic messaging for nodes
+    cals_importer_set_message($wrapper, $message);
+    return;
+  }
+
+  $url = url(drupal_get_path_alias('field-collection/field-file-resource/' .
+    $wrapper->getIdentifier() . '/edit'));
+  if($message)
+    $msg = $message . ": " . t('<a href="@url">@title</a>', array('@url' =>
+        $url, '@title' => $wrapper->host_entity->title->value() . " (" .
+        $wrapper->field_file_format->label() . ") "));
+  else
+    $msg = t('Title updated: <a href="@url">@title</a>', array('@url' =>
+      $url, '@title' => $wrapper->host_entity->title->value()));
+  drupal_set_message($msg);
+}
+
+/**
+ * Messsaging function for nodes
+ * @param $node
+ * @param null $message
+ */
 function _cals_importer_set_message($node, $message = NULL) {
   $url = url(drupal_get_path_alias('node/' . $node->nid));
   if($message)
