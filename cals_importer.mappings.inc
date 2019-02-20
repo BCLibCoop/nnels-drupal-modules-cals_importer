@@ -264,6 +264,9 @@ function _cals_get_title_from_marc($xml, $k, &$map) {
   foreach($tag as $subfield ) {
     $code = (string) $subfield->attributes()->code;
     if($code != 'c') {
+      if($code == 'b' && substr(rtrim($tmp[0]), -1) != ":") {
+        $title[0] .= " :";
+      }
       $tmp = _cals_importer_xpath_value($xml, "datafield", 245, $code);
       foreach ($tmp as $me) $title[] = $me;
     }
