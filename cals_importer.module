@@ -390,7 +390,7 @@ function cals_importer_action_info() {
 
     //Copy file resource entities between nodes
     '_cals_transfer_file_resource_entity' => array(
-      'label' => t('Transfer File Resource Entity'),
+      'label' => t('Transfer File Resource Entities'),
       'type' => 'node',
       'configurable' => TRUE,
       'triggers' => array('any'),

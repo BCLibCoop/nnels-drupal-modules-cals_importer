@@ -100,6 +100,7 @@ function _cals_transfer_file_resource_entity_form($settings, &$form_state) {
     '#title' => t('Select the File Attachment to transfer '),
     '#options' => $options,
     '#required' => TRUE,
+    '#multiple' => TRUE,
     '#size' => count($options),
     '#description' => t("NB: MSG"),
     '#default_value' => isset($options[0]) ? $options[0] : '',
@@ -145,8 +146,8 @@ function _cals_transfer_file_resource_entity_submit($form, $form_state) {
 }
 
 /**
- * @param $node
- * @param $context
+ * @param stdClass $node
+ * @param array $context
  * @return boolean
  */
 
@@ -154,17 +155,10 @@ function _cals_transfer_file_resource_entity(&$node, $context) {
 
   //Only run this once for the group of selected nodes
   if ($context['progress']['current'] > 1) {
-  return FALSE;
+    return FALSE;
   }
-  //Wrap FileResource, Source Node and load Destination Node from $context
-  $transfer_fc_wrapped = entity_metadata_wrapper('field_collection_item',
-    $context['file_resources']);
-  $source_node_wrapped = entity_metadata_wrapper('node',$transfer_fc_wrapped->host_entity->value());
-  $dest_node = node_load($context['destination_node']);
 
-  //Get the possible fields from the File Resource field collection,
-  // excepting those that cannot be written except during construction.
-  $fields = $transfer_fc_wrapped->getPropertyInfo();
+  //Forbidden Drupal Entity Fields
   $forbidden = array(
     'item_id',
     'uuid',
@@ -179,60 +173,72 @@ function _cals_transfer_file_resource_entity(&$node, $context) {
     'archived'
   );
 
-  foreach ($forbidden as $forbid) {
-    unset($fields[$forbid]);
-  }
+  //Load Destination Node from $context
+  $dest_node = node_load($context['destination_node']);
 
-  //Find our File Resource by item_id in situ
-  foreach ($source_node_wrapped->field_file_resource->value() as $delta =>
-           $item) {
-    if ($item->item_id == $context['file_resources']) {
-      //The transfer target entity was found
-      //Create a new File Resource instance, set to Destination Node & wrap-it
-      $new_entity = entity_create('field_collection_item', array('field_name' => 'field_file_resource'));
-      $new_entity->setHostEntity('node', $dest_node);
-      $new_entity_wrapped = entity_metadata_wrapper('field_collection_item',
-        $new_entity);
+  //Iterate over the selected transferrable file resources one-to-many
+  foreach ($context['file_resources'] as $transferrable_id) {
+    $transfer_fc_wrapped = entity_metadata_wrapper('field_collection_item',
+      $transferrable_id);
+    $source_node_wrapped = entity_metadata_wrapper('node', $transfer_fc_wrapped->host_entity->value());
 
-      //Loop through allowed fields and extract the values
-      foreach ($fields as $index => $field) {
-        try {
-          $new_entity_wrapped->$index->set($transfer_fc_wrapped->$index->value
-          ());
-        }
-        catch (Exception $exception) {
-          drupal_set_message($exception->getMessage(), 'error');
-        }
-      }
-      //All finished so save Destination Node with new entity referenced.
-      node_save($dest_node);
-
-      //Unset the old instance to avoid duplicates
-      unset($source_node_wrapped->field_file_resource[$delta]);
-      entity_save($source_node_wrapped->type(), $source_node_wrapped);
+    //Get the possible fields from the File Resource field collection,
+    // excepting those that cannot be written except during construction.
+    $fields = $transfer_fc_wrapped->getPropertyInfo();
+    foreach ($forbidden as $forbid) {
+      unset($fields[$forbid]);
     }
-  }
 
-  //Might not have format set for certain items
-  try {
-    $format = $transfer_fc_wrapped->field_file_format->label();
-  }
-  catch (EntityMetadataWrapperException $exception)  {
-    $format = NULL;
-    watchdog('entity_api', $exception->getMessage());
-  }
+    //Find our File Resource by item_id in situ
+    foreach ($source_node_wrapped->field_file_resource->value() as $delta =>
+             $item) {
+      //Check for a match on this round
+      if ($item->item_id == $transferrable_id) {
+        //The transfer target entity was found
+        //Create a new File Resource instance, set to Destination Node & wrap-it
+        $new_entity = entity_create('field_collection_item', array('field_name' => 'field_file_resource'));
+        $new_entity->setHostEntity('node', $dest_node);
+        $new_entity_wrapped = entity_metadata_wrapper('field_collection_item',
+          $new_entity);
 
-  //Build results array for message output
-  $result_info = array(
-    $transfer_fc_wrapped->item_id->value(),
-    $format,
-    substr($source_node_wrapped->title->value(), 0, 30),
-    $source_node_wrapped->nid->value(),
-    substr($dest_node->title, 0, 30),
-    $dest_node->nid
-  );
-  $message = vsprintf("Item ID %d (%s) was transferred from %s... (%d) \r\n to
+        //Loop through allowed fields and extract the values
+        foreach ($fields as $index => $field) {
+          try {
+            $new_entity_wrapped->$index->set($transfer_fc_wrapped->$index->value
+            ());
+          } catch (Exception $exception) {
+            drupal_set_message($exception->getMessage(), 'error');
+          }
+        }
+        //All done: save Destination Node with new entity referenced.
+        node_save($dest_node);
+
+        //Unset the old instance to avoid duplicates
+        unset($source_node_wrapped->field_file_resource[$delta]);
+        entity_save($source_node_wrapped->type(), $source_node_wrapped);
+      }
+    }
+
+    //Might not have format set for certain items
+    try {
+      $format = $transfer_fc_wrapped->field_file_format->label();
+    } catch (EntityMetadataWrapperException $exception) {
+      $format = NULL;
+      watchdog('entity_api', $exception->getMessage());
+    }
+
+    //Build results array for message output
+    $result_info = array(
+      $transfer_fc_wrapped->item_id->value(),
+      $format,
+      substr($source_node_wrapped->title->value(), 0, 30),
+      $source_node_wrapped->nid->value(),
+      substr($dest_node->title, 0, 30),
+      $dest_node->nid
+    );
+    $message = vsprintf("Item ID %d (%s) was transferred from %s... (%d) \r\n to
   %s... (%d)", $result_info);
 
-  drupal_set_message($message);
+    drupal_set_message($message);
+  } //End selected $transferrable foreach
 }
