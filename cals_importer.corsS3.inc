@@ -54,7 +54,7 @@ function _cals_update_filesize_from_s3_value($file) {
 	$wrapper = new \Drupal\cals_s3\NNELSStreamWrapper;
 	$uri = $file->uri;
 	$wrapper->setUri($uri);
-	$filesize = $wrapper->get_filesize();
+	$filesize = $wrapper->get_filesize($wrapper->getUri());
   //dpm($file);
 	if( $filesize != $file->filesize || empty($file->filesize) ) {
 		if(empty($filesize)) $filesize = 1;
@@ -431,8 +431,13 @@ function _cals_importer_populate_field_file_resource($node) {
   $filepath = '';
   if(!empty($node->field_s3_path[LANGUAGE_NONE]) ) $filepath = trim($node->field_s3_path[LANGUAGE_NONE][0]['value']);
 
-  $filepath = str_replace("download.nnels.ca/", "", $filepath);
-  $filepath = str_replace("download2.nnels.ca/", "", $filepath);
+    // Bucket is now baked into the file_managed path by Field File Path
+    // module with differing environment defaults.
+    // E.g. dev : nnels-data-dev, prod : nnels-data-prod
+    $filepath = str_replace("download.nnels.ca/", "nnels-data-prod/",
+      $filepath);
+    $filepath = str_replace("download2.nnels.ca/", "nnels-data-dev/",
+      $filepath);
 
   //We need to check if the current file exists in the file_managed table
   //drush sqlq "select * from file_managed limit 0, 100"
@@ -636,6 +641,9 @@ function _cals_mend_broken_file_resource_s3_paths(&$entity, $context = array()) 
 
 /**
  * @param $entity
+ * Previously, removed the endpoint name (s3.libraries.coop) from S3 Path
+ * which would sometimes occur. Now this seems deprecated against AWS S3,
+ * although reverse problems occurs where bucket is now needed explicitly.
  */
 function fix_s3_path( $entity ) {
 
@@ -653,6 +661,9 @@ function fix_s3_path( $entity ) {
         key($results['field_collection_item'])));
     //Fix it's field_s3_path first
     $pattern = '/s3:\/\/[a-z3.]+libraries.coop\//';
+    //@todo Ensure server's default bucket gets inserted where there is NO
+    // match in S3 path?
+    //$pattern = '/s3:\/\/nnels-data-dev|prod\//';
     $loaded_resource->field_s3_path->set(
       preg_replace($pattern, "s3://", $loaded_resource->field_s3_path->value())
     );
