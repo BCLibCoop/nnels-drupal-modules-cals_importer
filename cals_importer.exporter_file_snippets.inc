@@ -452,7 +452,7 @@ function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
   $format_keys = variable_get('nnels_importer_exporter_format_map');
 
   /**
-   * Electronic text (EPUB, PDF, e-text)
+   * Electronic text (EPUB, PDF, e-text(DOC, RTF))
    *  =336 \\$a txt $2 rdacontent
    *  =337 \\$a computer $2 rdamedia
    *  =338 \\$a online resource $2 rdacarrier
