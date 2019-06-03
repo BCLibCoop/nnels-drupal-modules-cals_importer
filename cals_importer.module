@@ -1820,15 +1820,18 @@ function _cals_importer_update_licensed_access(&$entity, $context = array()) {
 function _cals_parse_licensed_access($node) {
   $xml = _cals_get_marc_xml_string($node);
   if ($xml === 0) return;
-  $str = 'xyz';//placeholder string
-  $tmp = $xml->xpath("//marc:datafield[@tag='506']/marc:subfield[@code='a']");
-  if (!count($tmp)) {
-    drupal_set_message(t('%string  Access Restriction not updated (no 506 element).'), array('%string' => $node->title));
-    return '';
-  }
-  $str = (string) $tmp[0];
-  $tmp = strpos(strtolower($str), "restricted");
-  $node->field_access_restrictions[LANGUAGE_NONE][0]['value'] = (is_numeric($tmp)) ? 1 : 0;
+//  $str = 'xyz';//placeholder string
+//  $tmp = $xml->xpath("//marc:datafield[@tag='506']/marc:subfield[@code='a']");
+//  if (!count($tmp)) {
+//    drupal_set_message(t('%string  Access Restriction not updated (no 506 element).'), array('%string' => $node->title));
+//    return '';
+//  }
+//  $str = (string) $tmp[0];
+//  $tmp = strpos(strtolower($str), "restricted");
+//  $node->field_access_restrictions[LANGUAGE_NONE][0]['value'] = (is_numeric($tmp)) ? 1 : 0;
+
+  //Default Requires Login see: https://github.com/BCLibCoop/nnels/issues/187
+  $node->field_access_restrictions[LANGUAGE_NONE][0]['value'] = 1;
 
   node_save($node);
   drupal_set_message(t('%string  Access Restriction updated.'), array('%string' => $node->title));
