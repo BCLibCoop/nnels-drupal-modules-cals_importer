@@ -844,20 +844,26 @@ function _cals_importer_get_oclc_number_from_marc($xml, $k, &$map) {
 }
 
 function _cals_importer_get_access_restrictions($xml, $k, &$map) {
-  $codes = array("a", "d");
-  $title = array();
-  $vals = array();
-  foreach($codes as $code) {
-    $tmp = _cals_importer_xpath_value($xml, "datafield", '506', $code);
-    if (count($tmp) >= 1) {
-      $vals[] = (string) trim($tmp[0]);
-      if(count($vals)) {
-        $str = implode(" ", $vals);
-        $pos = strpos(strtolower($str),"restricted");
-        $map[$k]['values'][] = (is_numeric($pos)) ? 1 : 0;
-      }
-    }
-  }
+
+  //Default Requires Login see: https://github.com/BCLibCoop/nnels/issues/187
+  $map[$k]['values'][] = 1;
+
+  //Obsolete processing based on restricted string in MARCXML 506 a,d subfields
+
+//  $codes = array("a", "d");
+//  $title = array();
+//  $vals = array();
+//  foreach($codes as $code) {
+//    $tmp = _cals_importer_xpath_value($xml, "datafield", '506', $code);
+//    if (count($tmp) >= 1) {
+//      $vals[] = (string) trim($tmp[0]);
+//      if(count($vals)) {
+//        $str = implode(" ", $vals);
+//        $pos = strpos(strtolower($str),"restricted");
+//        $map[$k]['values'][] = (is_numeric($pos)) ? 1 : 0;
+//      }
+//    }
+//  }
 }
 
 
