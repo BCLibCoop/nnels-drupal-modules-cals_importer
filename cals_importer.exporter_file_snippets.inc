@@ -277,7 +277,10 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   $lang = $fc_wrapped->host_entity->field_iso_language->value()[0];
   
   //Check all MP3/audio-only formats
-  if (in_array(array('MP3', 'DAISY 202 - Audio', 'DAISY 3 - Audio'), $format)) {
+  //$formats = variable_get('nnels_importer_exporter_format_map');
+  //@todo array_filter to get only those formats with 'media_pattern' == 'audio'
+  if ( in_array( $format,  array('MP3', 'DAISY 202 - Audio', 'DAISY 3 - Audio' )
+  )) {
     //18-21 nnnn
     foreach (range(18,21) as $key ) {
       $final_008[$key] = 'n';
@@ -305,7 +308,12 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
     );
 
     if ( $label ) $final_008[30] = $lit_forms[$label];
-    else $final_008[30] = 'z';
+    else {
+      $final_008[30] = 'z';
+      drupal_set_message('Warning: Literary Format was missing for NID: ' .
+        $node->nid
+        . " ({$node->title})", 'warning' );
+    }
 
     $final_008[31] = MARC_SPACE;
     $final_008[32] = MARC_FILL;
@@ -330,8 +338,8 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
     }
 
     //33 literary format
-    $litform = $fc_wrapped->host_entity->field_literary_format->value();
-    $final_008[33] = $litform ? $litform : MARC_FILL;
+    $final_008[33] = $fc_wrapped->host_entity->field_literary_format->value() ?: MARC_FILL;
+    if ($final_008[33] == MARC_FILL) drupal_set_message('Warning: Literary Format was missing for NID: ' . $node->nid . " ({$node->title})", 'warning' );
   }
 
   //34 one fill char
