@@ -72,7 +72,7 @@ function _cals_importer_exporter_build_file_resource_snippet
       $tag;
 
     if ( function_exists($callable) )
-      $result = call_user_func($callable, $fc_wrapper);
+      $result = call_user_func($callable, $fc_wrapper, $stubfields);
 
     //@todo log bad callbacks instead
     if ($result == FALSE) {
@@ -405,23 +405,37 @@ function _cals_importer_exporter_snippet_callback_264($fc_wrapped) {
  * @param \EntityDrupalWrapper $fc_wrapped
  * @return array $workable_array
  */
-function _cals_importer_exporter_snippet_callback_300($fc_wrapped) {
+function _cals_importer_exporter_snippet_callback_300($fc_wrapped, $stubfields) {
 
   $key = $fc_wrapped->field_file_format->value();
   $field = field_info_field('field_file_format');
   $format_label = $field['settings']['allowed_values'][$key];
+  $extent_stanza = $stubfields['datafields']['300'][0]['a'] ?: NULL;
 
-  $size = format_size($fc_wrapped->field_s3_file_upload[0]->file->value()->filesize);
+  $size = $fc_wrapped->field_s3_file_upload[0]->value() ? format_size
+  ($fc_wrapped->field_s3_file_upload[0]->file->value()
+    ->filesize) : NULL ;
 
   $workable_array = array(
       'ind1' => '',
       'ind2' => '',
   );
 
-  $format_size_stanza = sprintf("1 %s file (%s)", $format_label,
-    $size );
-
-  $workable_array['subfields'][] = array( 'a' => $format_size_stanza);
+  if (! empty($size) ) {
+    $extent_stanza = sprintf("1 %s file (%s)", $format_label,
+      $size);
+  } else { //No filesize, its physical
+      //@todo Use format ID vs label
+      if ( array_key_exists(16, $field["settings"]["allowed_values"]) ) {
+        $extent_stanza = '1 volume braille';
+      } elseif ( array_key_exists(17, $field["settings"]["allowed_values"]) ) {
+        $extent_stanza = '1 volume print/braille';
+      }
+  }
+  //Check for NULL extent and no existing 300$a
+  if ( isset($extent_stanza) ) $workable_array['subfields'][] = array(
+    'a' => $extent_stanza
+  );
 
   return $workable_array;
 }
@@ -577,6 +591,38 @@ function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
       1 => array(
         'a' => 'online resource',
         'b' => 'cr',
+        2 => 'rdacarrier',
+      ),
+    ),
+  );
+
+
+  /**
+   * Tactile Text (physical braille)
+   * =336  \\$a tactile text $b tct $2 rdacontent
+   * =337  \\$a unmediated $b n $2 rdamedia
+   * =338  \\$a volume $b nc $2 rdacarrier
+   **/
+
+  $tactile_pattern = array(
+    336 => array (
+      0 => array(
+        'a' => 'tactile text',
+        'b' => 'tct',
+        2 => 'rdacontent',
+      ),
+    ),
+    337 => array(
+      0 => array(
+        'a' => 'unmediated',
+        'b' => 'n',
+        2 => 'rdamedia',
+      ),
+    ),
+    338 => array(
+      0 => array(
+        'a' => 'volume',
+        'b' => 'nc',
         2 => 'rdacarrier',
       ),
     ),
