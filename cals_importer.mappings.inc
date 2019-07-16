@@ -40,6 +40,7 @@ function _cals_importer_repo_field_callback($fieldname) {
 
     "field_subject" => array("function" => '_cals_get_subject_from_marc'),
     "field_genre" => array("function" => '_cals_get_genre_from_marc'),
+    "field_genre_mapped" => array("function" => '_cals_get_mapped_genre_from_marc'),
 
     //'field_uri' => array('function' => '_cals_importer_get_uri_from_marc'),
     'field_urls_external' => array('function' => '_cals_importer_get_urls_from_marc',
@@ -642,6 +643,12 @@ function _cals_get_taxonomy_terms_from_xpath($xpathvalue, $fieldname, &$map) {
 function _cals_get_genre_from_marc($xml, $k, &$map) {
   $xpathvalue = $xml->xpath("//marc:datafield[@tag='655'][@ind1=' ']/marc:subfield[@code='a']|//marc:datafield[@tag='655'][@ind2=' ']/marc:subfield[@code='a']");
   _cals_get_taxonomy_terms_from_xpath($xpathvalue, $k, $map);
+}
+
+function _cals_get_mapped_genre_from_marc($xml, $k, &$map) {
+  $xpathvalue = $xml->xpath("//marc:datafield[@tag='655'][@ind1=' ']/marc:subfield[@code='a']|//marc:datafield[@tag='655'][@ind2=' ']/marc:subfield[@code='a']");
+  module_load_include('inc', 'cals_importer', 'cals_importer.term_parse');
+  _cals_importer_term_parse_find_term($xpathvalue, $k, $map);
 }
 
 /**
