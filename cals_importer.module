@@ -465,15 +465,6 @@ function cals_importer_action_info() {
       'triggers' => array('any'),
     ),
 
-
-    //batch generate MARC XML files from all files that include 856 tag
-    '_cals_importer_generate_marcxml_files_all_records' => array(
-      'label' => t('CALS: Generate downloadable MARC XML files (entire recordset)'),
-      'type' => 'node',
-      'configurable' => FALSE,
-      'triggers' => array('any'),
-    ),
-
     //batch generate MARC XML files from search interface
     '_cals_importer_generate_marcxml_files_search_interface' => array(
       'label' => t('CALS: Generate downloadable MARC XML files (search interface)'),

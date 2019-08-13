@@ -121,11 +121,14 @@ function _cals_importer_get_xpath_values($tag, $ind1, $ind2, $code, $xml) {
  * @param $node
  * @return int|\SimpleXMLElement
  */
-function _cals_get_marc_xml_string($node) {
+function _cals_get_marc_xml_string($node_wrapper) {
   libxml_use_internal_errors(true);
   $value = '<xyz>'; //set to something that will fail by default
-	if (isset($node->field_xml_string[LANGUAGE_NONE]) )
-		$value = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
+
+  if (is_a($node_wrapper, 'stdClass') ) $node_wrapper =
+    entity_metadata_wrapper('node', $node_wrapper);
+	if (isset($node_wrapper->field_xml_string ) )
+		$value = $node_wrapper->field_xml_string->value();
   $str = '<?xml version="1.0" encoding="UTF-8"?>
 <marc:collection xmlns:marc="http://www.loc.gov/MARC21/slim" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd">' .
   $value .
@@ -133,7 +136,7 @@ function _cals_get_marc_xml_string($node) {
 
   $xml = simplexml_load_string($str, null, 0, 'marc', true);
 	if(!$xml) {
-		_cals_get_message_invalid_xml($node);
+		_cals_get_message_invalid_xml($node_wrapper);
 		return 0; // return 0, allows individual calling functions to do their own thing
 	}
   $xml->registerXPathNamespace("marc", NAME_SPACE);

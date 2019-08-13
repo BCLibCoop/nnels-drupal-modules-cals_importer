@@ -77,7 +77,8 @@ function _cals_importer_get_marcxml_wrapper($string) {
  *
  */
 
-function _cals_importer_generate_marcxml_files_all_records(&$entity, $context = array() ) {
+function _cals_importer_generate_marcxml_files_all_records_old(&$entity,
+                                                            $context = array() ) {
 
   if (isset($entity->nid)) {
     $node = node_load($entity->nid);
@@ -173,107 +174,48 @@ function _cals_importer_generate_marcxml_files_search_interface_submit($form, $f
  * See: https://github.com/BCLibCoop/nnels/issues/124
  * @param $entity
  * @param array $context
+ * @throws \Exception
  */
 function _cals_importer_generate_marcxml_files_search_interface(&$entity, $context = array() ) {
+
+  //Setup
   $host = $entity->hostEntity();
+  $host_wrapped = entity_metadata_wrapper('node', $entity->hostEntity());
   $nid = $host->nid;
   $filename = $context['fields']['filename'];
   $pnode = node_load($context['fields']['pnid']); //get updated parent node$host
+
   /*if (!empty($host->field_nnels_856_tag) &&
     $host->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] == 1 ) {*/
-    $xml_string = _cals_get_marc_xml_string($host);
+  $xml_string = _cals_get_marc_xml_string($host_wrapped);
 
-    //$xml_string indicates this repo item has at least been parsed
-    if($xml_string !== 0) {
+  //$xml_string indicates this repo item has at least been parsed
+  if($xml_string !== 0) {
 
-      //Build stub if it doesn't exist during context
-      //check stub field bad previous runs in addition to not initially existing
-      if ( empty( unserialize(
-        $host->field_xml_stub[LANGUAGE_NONE][0]['value'] ) )
-        || function_exists('dpm') //Debug mode is on, so rebuild fresh each time
-        || variable_get("nnels_importer_rebuild_stubs" === TRUE)
-      )
-        _cals_importer_create_marc_stub($host);
-      $host_wrapped = entity_metadata_wrapper('node', $host);
-      $stub = unserialize($host_wrapped->field_xml_stub->value());
+    $stub = _cals_importer_exporter_stub_generator($host_wrapped);
 
-      //Always build snippet for each context
-      $snippet = _cals_importer_exporter_build_file_resource_snippet
-      ($entity);
+    //The main generator
+    $out_xml = _cals_importer_exporter_snippet_generator(
+      $entity,
+      $host_wrapped,
+      $stub
+      );
 
-      $merged = array();
-
-      foreach ($stub as $field_key => $data) {
-        //order here is important, we want leader from snippet to prevail.
-        //In all others there should be no collisions between control,
-        //datafields in snippet vs stub
-
-        $merged[$field_key] =  $snippet[$field_key] + $stub[$field_key];
-        ksort($merged[$field_key]);
-      }
-
-      //File_MARC_Record?
-      $record = new File_MARC_Record(NULL);
-      _cals_importer_exporter_build_new_record($record, $merged);
-
-      //Build new leader
-      $fixed_leader = _cals_importer_exporter_build_final_leader
-      ( $merged['controlfields']['ldr']['value'] );
-      $record->setLeader($fixed_leader['value']);
-
-      //Dump raw record
-      $raw = $record->toRaw();
-
-      //Calculate the final variable byte regions of LDR
-      $record_length = _cals_importer_exporter_calc_ldr_length($raw);
-      $base_address = _cals_importer_exporter_calc_dir_length($raw);
-
-      //Set full leader
-      $record->setLeaderLengths($record_length, $base_address);
-
-      //Lint
-      $linter = new File_MARC_Lint();
-      try {
-        $check_result = $linter->checkRecord($record);
-        if( count( $check_result ) ) {
-          $wrapped = entity_metadata_wrapper('field_collection_item', $entity);
-          $url = url(drupal_get_path_alias('node/' . $wrapped->getIdentifier()));
-          $formatted_message = sprintf(
-            "Linter found a problem in exported record for the following item: %s - (%s). Check XML components at %s",
-            $host_wrapped->title->value(),
-            $wrapped->field_file_format->label(),
-            $url
-          );
-          watchdog('
-            cals_importer_exporter_FileMARC_Linter',
-            $formatted_message,
-            array(),
-            WATCHDOG_WARNING
-          );
-        }
-      }
-      catch (Exception $e) {
-        watchdog(
-            'cals_importer_exporter_FileMARC_Linter',
-            $e->getMessage(),
-            WATCHDOG_ERROR
-        );
-      }
-
-      //Single record XML string outside of collection, namespace
-      $out_xml = simplexml_load_string(
-        $record
-          ->toXML())
-        ->children(NAME_SPACE)
-        ->asXML();
-
-      //Append raw collection to file temporarily
-      file_put_contents($filename, $out_xml, FILE_APPEND |
-        LOCK_EX);
+    //Append raw collection to file temporarily
+    file_put_contents($filename, $out_xml, FILE_APPEND |
+      LOCK_EX);
 
     //Save export set node with ref back to marc_xml_string source for this run
     $pnode->field_nid_entry[LANGUAGE_NONE][] = array("nid" => $nid);
-    node_save($pnode);
+    try {
+      node_save($pnode);
+    } catch (Exception $e) {
+    }
+
+  }
+  else {
+    drupal_set_message('No XML string for @nid, skipped.', array("@nid" =>
+      $nid));
   }
 
   if ($context['progress']['current'] == $context['progress']['total']) {
@@ -336,6 +278,105 @@ function _cals_importer_build_marcxml($node) {
   }
 }
 
+/**
+ * @param $entity
+ * @param $host_wrapped
+ * @param $stub
+ * @return mixed
+ */
+function _cals_importer_exporter_snippet_generator($entity, $host_wrapped,
+                                                  $stub){
+
+  //Build snippet for each context
+  $snippet = _cals_importer_exporter_build_file_resource_snippet($entity);
+
+  $merged = array();
+
+  foreach ($stub as $field_key => $data) {
+    //order here is important, we want leader from snippet to prevail.
+    //In all others there should be no collisions between control,
+    //datafields in snippet vs stub
+
+    $merged[$field_key] =  $snippet[$field_key] + $stub[$field_key];
+    ksort($merged[$field_key]);
+  }
+
+  //File_MARC_Record?
+  $record = new File_MARC_Record(NULL);
+  _cals_importer_exporter_build_new_record($record, $merged);
+
+  //Build new leader
+  $fixed_leader = _cals_importer_exporter_build_final_leader
+  ( $merged['controlfields']['ldr']['value'] );
+  $record->setLeader($fixed_leader['value']);
+
+  //Dump raw record
+  $raw = $record->toRaw();
+
+  //Calculate the final variable byte regions of LDR
+  $record_length = _cals_importer_exporter_calc_ldr_length($raw);
+  $base_address = _cals_importer_exporter_calc_dir_length($raw);
+
+  //Set full leader
+  $record->setLeaderLengths($record_length, $base_address);
+
+  //Lint
+  $linter = new File_MARC_Lint();
+  try {
+    $check_result = $linter->checkRecord($record);
+    if( count( $check_result ) ) {
+      $wrapped = entity_metadata_wrapper('field_collection_item', $entity);
+      $url = url(drupal_get_path_alias('node/' . $wrapped->getIdentifier()));
+      $formatted_message = sprintf(
+        "Linter found a problem in exported record for the following item: %s - (%s). Check XML components at %s",
+        $host_wrapped->title->value(),
+        $wrapped->field_file_format->label(),
+        $url
+      );
+      watchdog('
+            cals_importer_exporter_FileMARC_Linter',
+        $formatted_message,
+        array(),
+        WATCHDOG_WARNING
+      );
+    }
+  }
+  catch (Exception $e) {
+    watchdog(
+      'cals_importer_exporter_FileMARC_Linter',
+      $e->getMessage(),
+      WATCHDOG_ERROR
+    );
+  }
+
+  //Single record XML string outside of collection, namespace
+  return simplexml_load_string(
+    $record
+      ->toXML())
+    ->children(NAME_SPACE)
+    ->asXML();
+}
+
+/**
+ * @param $host_wrapped
+ * @return mixed
+ */
+function _cals_importer_exporter_stub_generator($host_wrapped){
+
+    //Build stub if it doesn't exist during context
+    //check stub field bad previous runs in addition to not initially existing
+    $test = 0;
+    if ( empty( unserialize(
+        $host_wrapped->field_xml_stub->value() ) )
+      || function_exists('dpm') //Debug mode is on, so rebuild fresh each time
+      || variable_get("nnels_importer_rebuild_stubs" === TRUE)
+    )
+      _cals_importer_create_marc_stub($host_wrapped);
+
+    $stub = unserialize($host_wrapped->field_xml_stub->value());
+
+  return $stub;
+}
 class MarcXmlFileBuilder {
 
   public function __construct($node, $xml) {
