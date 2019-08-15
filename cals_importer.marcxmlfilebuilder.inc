@@ -495,13 +495,12 @@ function bg_marcxml_exporter_process() {
   $content = simplexml_load_string(MARC_HEADER . "\n" . $records . "\n" . "</collection>")->asXML();
   $set_filename = str_replace(' ', '_', strtolower(entity_load_single('node',
       $record_set)->title));
-  $public_path = "public://{$set_filename}.xml";
-  $zip_path = "public://{$set_filename}.zip";
+  $public_path = "temporary://{$set_filename}.xml";
+  $zip_path = "temporary://{$set_filename}.zip";
   $s3_object_name = $timestamp . "-all_export/{$set_filename}.zip";
 
   try {
     $write_local = file_put_contents($public_path, $content);
-
       ($zip = new ZipArchive)->open(drupal_realpath($zip_path),
               ZipArchive::CREATE);
       $zip->addFile(drupal_realpath($public_path), "{$set_filename}.xml");
@@ -529,13 +528,21 @@ function bg_marcxml_exporter_process() {
             'Bucket' => variable_get('amazons3_bucket'),
             'Key'    => $s3_object_name
           ));
+
+          if ($check_s3) {
+            //remove temporary files
+            file_unmanaged_delete($public_path);
+            file_unmanaged_delete($zip_path);
+          }
+
         } catch(Exception $e) {
-          $i = 0;
+          drupal_set_message("Failed to upload to S3 with error: {$e->getMessage()}", 'error',
+            FALSE);
         }
       }
   }
   catch(Exception $e) {
-    drupal_set_message("Failed to write record set file: %e", array
+    drupal_set_message("Failed to write record set file: %e", 'error', array
     ($e->getMessage()));
   }
 }
