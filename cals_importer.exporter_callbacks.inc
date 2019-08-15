@@ -190,6 +190,7 @@ function _cals_importer_exporter_callback_240($vars) {
   $tag = $vars['tag'];
 
   $wrapper = $vars['node_wrapper'];
+  $lang = reset($wrapper->field_iso_language->value());
   $subfields = array();
 
   $term = $wrapper->field_uniform_title->value();
@@ -198,7 +199,7 @@ function _cals_importer_exporter_callback_240($vars) {
     $code = 240;
     $subfield = 'a';
     $ind2 = 0;
-    $ind2 = _cals_importer_exporter_filing_characters($value);
+    $ind2 = _cals_importer_exporter_filing_characters($value, $lang);
     $arr[240]['subfields'][]['a'] = $value;
     $arr[240]['ind1'] = 0;
     $arr[240]['ind2'] = $ind2;
@@ -255,6 +256,7 @@ function _cals_importer_exporter_callback_264($vars) {
   $tag = $vars['tag'];
   $wrapper = $vars['node_wrapper'];
   $values = _cals_importer_exporter_field_value($node, 'field_publisher');
+  $lang = reset($wrapper->field_iso_language->value());
 
   $arr[264] = array(
     'ind1' => '',
@@ -272,8 +274,8 @@ function _cals_importer_exporter_callback_264($vars) {
 
     $subcode = ($k == 0) ? 'a' : 'b';
     $v = trim($v);
-
-    //$ind2 = _cals_importer_exporter_filing_characters($value);
+    //Why was this disabled?
+    //$ind2 = _cals_importer_exporter_filing_characters($value, $lang);
     $arr[264]['subfields'][0][$subcode] = $v;
   }
   $pubdate = NULL;

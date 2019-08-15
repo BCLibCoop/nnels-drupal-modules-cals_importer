@@ -446,7 +446,7 @@ function _cals_importer_exporter_parse_datafields($node, $node_wrapper, &$record
           $ind2 = $tagset['ind2'];
           //if($ind1 = "''") $ind1 = '';
           if($ind2 = "''") $ind2 = '';
-          if ($ind1 == 'use MarcXML indicators') {
+           if ($ind1 == 'use MarcXML indicators') {
             $ind1 = _cals_importer_get_marc_indicators($xml, $tag, 1);
           }
           if ($ind2 == 'use MarcXML indicators') {
