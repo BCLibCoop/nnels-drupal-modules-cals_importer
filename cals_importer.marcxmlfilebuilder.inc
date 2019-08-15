@@ -4,6 +4,8 @@
  * Generates basic marc xml files
  */
 
+use \Drupal\amazons3\S3Client;
+define('ALL_EXPORT_QUEUE_NAME', 'marcxml_generate_all_files');
 
 /**
  * Invokes Drupal's batch api to generate new marc xml files with 856 tags, etc.
@@ -365,7 +367,6 @@ function _cals_importer_exporter_stub_generator($host_wrapped){
 
     //Build stub if it doesn't exist during context
     //check stub field bad previous runs in addition to not initially existing
-    $test = 0;
     if ( empty( unserialize(
         $host_wrapped->field_xml_stub->value() ) )
       || function_exists('dpm') //Debug mode is on, so rebuild fresh each time
@@ -430,4 +431,111 @@ class MarcXmlFileBuilder {
   }
 
 
+}
+
+/**
+ * Enqueue export jobs by record set
+ * Test with:
+ * drush eval "module_load_install('cals_importer');
+ * bg_marcxml_exporter_process();"
+ */
+function bg_marcxml_exporter_process() {
+
+  /* @var \SystemQueue $queue */
+  $queue = DrupalQueue::get(ALL_EXPORT_QUEUE_NAME);
+  // There is no harm in trying to recreate existing.
+  $queue->createQueue();
+
+  $recordset_query = new \EntityFieldQuery();
+  $recordset_query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'record_set')
+    ->propertyCondition('status', NODE_PUBLISHED);
+
+  $record_sets = $recordset_query->execute();
+  //Time this operation began
+  $timestamp = (new DateTime)->format('Y-m-d-H:i:s');
+
+  //Select a specific record set for test
+  //Later a foreach loop through $record_sets
+  $record_set = "79173";
+  $records = "";
+
+  $node_query = new \EntityFieldQuery();
+  $node_query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'repository_item')
+    ->propertyCondition('status', NODE_PUBLISHED)
+    //->addTag('debug')
+    //is fieldCondition correct here?
+    ->fieldCondition('field_record_set', 'nid', $record_set, '=')
+  ;
+
+  //Get all the record set items
+  $parsed_nodes = $node_query->execute();
+  //reset(entity_load_single('node', $record_set)->field_parsed_nodes);
+
+  //Process all nodes in this record set
+  foreach ($parsed_nodes['node'] as $parsed) {
+    $parsed_wrapped = entity_metadata_wrapper('node', $parsed->nid);
+    //Trigger the VBO exporter stub, snippet generators
+    if ( _cals_get_marc_xml_string($parsed_wrapped) ) {
+      $stub = _cals_importer_exporter_stub_generator($parsed_wrapped);
+      //foreach associated field_file_resources, entityize and call
+      //_cals_importer_exporter_snippet_generator
+      foreach ($parsed_wrapped->field_file_resource->getIterator() as $delta
+        => $file_resource_wrapper) {
+        $records .= _cals_importer_exporter_snippet_generator
+        (entity_load_single('field_collection_item', $file_resource_wrapper->getIdentifier()),
+        $parsed_wrapped, $stub);
+      }
+      unset($parsed_wrapped);
+    }
+  }
+
+  //$records is populated, write to local file
+  $content = simplexml_load_string(MARC_HEADER . "\n" . $records . "\n" . "</collection>")->asXML();
+  $set_filename = str_replace(' ', '_', strtolower(entity_load_single('node',
+      $record_set)->title));
+  $public_path = "public://{$set_filename}.xml";
+  $zip_path = "public://{$set_filename}.zip";
+  $s3_object_name = $timestamp . "-all_export/{$set_filename}.zip";
+
+  try {
+    $write_local = file_put_contents($public_path, $content);
+
+      ($zip = new ZipArchive)->open(drupal_realpath($zip_path),
+              ZipArchive::CREATE);
+      $zip->addFile(drupal_realpath($public_path), "{$set_filename}.xml");
+      $check_zip = $zip->close();
+
+      if ( $check_zip && file_exists($zip_path) ){
+        //upload to Amazon timestamp folder
+        $s3_client = S3Client::factory(
+          array(
+           // 'signature' => 'v4',
+            'Key'    => variable_get('amazons3_key'),
+            'Secret' => variable_get('amazons3_secret'),
+          )
+        );
+
+        try {
+          // Upload data.
+          $result = $s3_client->putObject([
+            'Bucket' => variable_get('amazons3_bucket'),
+            'Key' => $s3_object_name,
+            'SourceFile' => drupal_realpath($zip_path),
+            'ACL'    => 'public-read'
+          ]);
+          $check_s3 = $s3_client->waitUntilObjectExists(array(
+            'Bucket' => variable_get('amazons3_bucket'),
+            'Key'    => $s3_object_name
+          ));
+        } catch(Exception $e) {
+          $i = 0;
+        }
+      }
+  }
+  catch(Exception $e) {
+    drupal_set_message("Failed to write record set file: %e", array
+    ($e->getMessage()));
+  }
 }

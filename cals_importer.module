@@ -301,7 +301,10 @@ function cals_importer_menu() {
     'description' => 'Add MARC-ready file snippet',
   );
 
-
+  $items['admin/cals_importer_marcxml_all'] = array(
+    'page callback' => 'bg_marcxml_exporter_process',
+    'access arguments' => array('parse s3 paths'),
+  );
 
   return $items;
 
