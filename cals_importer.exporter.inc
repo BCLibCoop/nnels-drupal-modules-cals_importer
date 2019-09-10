@@ -395,9 +395,8 @@ function _cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$rec
         break;
 
       case '005':
-        $val = $node->changed;
         //yyyymmddhhmmss.f
-        $val = date('YmdHis.0', $val);
+        if (is_numeric($node->changed)) $val = date('YmdHis.0', $node->changed);
         break;
       case '008':
        // $val = _cals_importer_export_callback_008($node, $node_wrapper, $xml);
