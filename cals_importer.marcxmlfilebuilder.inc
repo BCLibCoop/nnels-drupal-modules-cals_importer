@@ -457,10 +457,14 @@ function cals_importer_marcxml_all_exporter_form($form, &$form_state) {
 
       //Provide queue stats and status
       //@todo add link to queue ui manager
+
+      $queue_link = url('admin/config/system/queue-ui/inspect/' .
+        ALL_EXPORT_QUEUE_NAME);
       $queue_status =
         "<p>The latest All Export job was queued at {$check}
          by <strong>{$owner}</strong></p>
         <p><strong>{$number}</strong> items remaining to process.</p>
+        <p>Check individual queue items <a href='{$queue_link}'> here.</a></p>
         <p>Cron process is set to run every <strong>{$cron_rate}</strong> hours</p>
         <p>Upon job completion a message will be dispatched to your account email.</p>
         ";
