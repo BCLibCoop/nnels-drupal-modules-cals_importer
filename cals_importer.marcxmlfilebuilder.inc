@@ -433,47 +433,192 @@ class MarcXmlFileBuilder {
 
 }
 
-/**
- * Enqueue export jobs by record set
- * Test with:
- * drush eval "module_load_install('cals_importer');
- * or URL /admin/cals_importer_marcxml_all
- * bg_marcxml_exporter_process();"
- */
-function bg_marcxml_exporter_process() {
+function cals_importer_marcxml_all_exporter_form($form, &$form_state) {
+  //Title set
+  drupal_set_title("MARCXML All Record Export");
 
-  /* @var \SystemQueue $queue */
-  $queue = DrupalQueue::get(ALL_EXPORT_QUEUE_NAME);
-  // There is no harm in trying to recreate existing.
-  $queue->createQueue();
+  //Default
+  $queue_status = "<p>No All Export jobs in queue.</p>";
 
-  $recordset_query = new \EntityFieldQuery();
-  $recordset_query->entityCondition('entity_type', 'node')
+  //Get the current queue and count it
+  $queue = (DrupalQueue::get(ALL_EXPORT_QUEUE_NAME));
+  $number = $queue->numberOfItems();
+  if ($number > 0) {
+
+    //Check for existing timestamp
+    $check = variable_get('latest_all_export_timestamp');
+
+    if ($check) {
+      //Setup for queue status
+      $form_state['timestamp'] = $check;
+      $cron_rate = (int) variable_get('cron_safe_threshold',
+        DRUPAL_CRON_DEFAULT_THRESHOLD) / 3600;
+      $owner = variable_get(ALL_EXPORT_QUEUE_NAME . "_notify_user")['name'];
+
+      //Provide queue stats and status
+      //@todo add link to queue ui manager
+      $queue_status =
+        "<p>The latest All Export job was queued at {$check}
+         by <strong>{$owner}</strong></p>
+        <p><strong>{$number}</strong> items remaining to process.</p>
+        <p>Cron process is set to run every <strong>{$cron_rate}</strong> hours</p>
+        <p>Upon job completion a message will be dispatched to your account email.</p>
+        ";
+    }
+
+  }
+
+  $form['element'] = array(
+    '#markup' => "<div class='queue-status'>{$queue_status}</div>"
+  );
+
+  // Submit Buttons
+  $form['start_all_export'] = array(
+    '#name' => 'start',
+    '#type' => 'submit',
+    '#value' => t("Enqueue All Export job"),
+    '#submit' => array('cals_importer_marcxml_all_exporter_form_submit'),
+    '#attributes' =>
+      array(
+        'data-op' => 1
+      ),
+  );
+
+  $form['cancel_all_export'] = array(
+    '#name' => 'cancel',
+    '#type' => 'submit',
+    '#value' => t("Cancel All Export job"),
+    '#submit' => array('cals_importer_marcxml_all_exporter_form_submit'),
+    '#attributes' =>
+      array(
+        'data-op' => 2
+    ),
+  );
+
+  //Store queue reference for submit callback
+  $form_state['queue'] = $queue;
+
+  return $form;
+}
+
+function cals_importer_marcxml_all_exporter_form_submit($form, &$form_state){
+  global $user;
+  variable_set(ALL_EXPORT_QUEUE_NAME . "_notify_user", array
+  ('email' => $user->mail, 'name' => $user->name));
+
+  //Start
+  if ($form_state["clicked_button"]["#attributes"]["data-op"] == 1) {
+    cals_importer_all_exporter_query_queue_setup();
+    drupal_set_message("Started All Export job at 
+    {$form_state['timestamp']}", 'info');
+  }
+  //Cancel
+  if ($form_state["clicked_button"]["#attributes"]["data-op"] == 2) {
+    //Delete queue
+    $form_state['queue']->deleteQueue();
+    //Reset timestamp variable
+    variable_del('latest_all_export_timestamp');
+  }
+}
+
+function cals_importer_cron_queue_info() {
+  $queues = array();
+  $queues[ALL_EXPORT_QUEUE_NAME] = array(
+    'worker callback' => 'cals_importer_all_exporter_process', //function to call for each item
+    'time' => 300, //seconds to spend working on the queue
+    'skip on cron' => FALSE
+  );
+  return $queues;
+}
+
+function cals_importer_all_exporter_query_queue_setup(){
+
+  $queue = (DrupalQueue::get(ALL_EXPORT_QUEUE_NAME));
+
+  variable_set(
+    'latest_all_export_timestamp',
+    (new DateTime)->format('Y-m-d-H:i:s')
+  );
+
+  $record_sets = cals_importer_all_exporter_get_record_sets();
+
+  foreach ($record_sets['node'] as $record_set) {
+
+    $node_query = new \EntityFieldQuery();
+    $node_query->entityCondition('entity_type', 'node')
+      ->entityCondition('bundle', 'repository_item')
+      ->propertyCondition('status', NODE_PUBLISHED)
+      ->fieldCondition('field_record_set', 'nid', $record_set->nid, '=');
+
+    //Get all the record set items
+    $found_nodes = $node_query->execute();
+    if ($found_nodes) {
+      $queue->createItem(
+        array(
+          'nodes' => $found_nodes["node"],
+          'record_set' => $record_set->nid
+        )
+      );
+      unset($found_nodes);
+    }
+  }
+  //Get all loose items not apart of a record set
+  $singles_query = db_select('node', 'n');
+
+  $singles_query
+    ->fields('n', array('nid'))
+    ->condition('n.type', 'repository_item', '=')
+    ->addJoin('LEFT', 'field_data_field_record_set', 'frs', 'frs.entity_id = n.nid');
+
+    $singles_query->isNull('frs.field_record_set_nid');
+
+    $e = $singles_query->execute();
+    $r = $e->fetchAllAssoc('nid');
+
+    $singles_results = $r ? array('node' => $r) : array();
+    $singles_chunked = array_chunk($singles_results['node'], 500);
+    foreach ($singles_chunked as $n => $result_chunk) {
+      $queue->createItem(
+        array(
+          'nodes' => $result_chunk,
+          'record_set' => "loose_records_{$n}"
+        )
+      );
+    }
+}
+
+function cals_importer_all_exporter_get_record_sets() {
+  $record_set_query = new \EntityFieldQuery();
+  $record_set_query->entityCondition('entity_type', 'node')
     ->entityCondition('bundle', 'record_set')
     ->propertyCondition('status', NODE_PUBLISHED);
 
-  $record_sets = $recordset_query->execute();
+  return $record_sets = $record_set_query->execute() ?: FALSE;
+}
 
-  //Timestamp operation beginning
-  $timestamp = (new DateTime)->format('Y-m-d-H:i:s');
+/**
+ * @param $items
+ */
+function cals_importer_all_exporter_process($items) {
+  //Prepare S3 Client
+  $s3_client = S3Client::factory(
+    array(
+      //Signature V4 not needed currently
+      // 'signature' => 'v4',
+      'Key'    => variable_get('amazons3_key'),
+      'Secret' => variable_get('amazons3_secret'),
+    )
+  );
 
-  //Select a specific record set for test
-  //@todo Later a foreach loop through $record_sets
-  $record_set = "79173";
-  $records = "";
+  //Default
+  $bucket = variable_get('amazons3_bucket');
+  $timestamp = variable_get('latest_all_export_timestamp');
+  $s3_object_path = "all-records-exports/{$timestamp}";
 
-  $node_query = new \EntityFieldQuery();
-  $node_query->entityCondition('entity_type', 'node')
-    ->entityCondition('bundle', 'repository_item')
-    ->propertyCondition('status', NODE_PUBLISHED)
-    ->fieldCondition('field_record_set', 'nid', $record_set, '=');
+  $records = array();
 
-  //Get all the record set items
-  $parsed_nodes = $node_query->execute();
-
-  //Process all nodes in this record set
-  foreach ($parsed_nodes['node'] as $parsed) {
-    $parsed_wrapped = entity_metadata_wrapper('node', $parsed->nid);
+  foreach ($items['nodes'] as $item) {
+    $parsed_wrapped = entity_metadata_wrapper('node', $item->nid);
     //Trigger the VBO exporter stub, snippet generators
     if ( _cals_get_marc_xml_string($parsed_wrapped) ) {
       $stub = _cals_importer_exporter_stub_generator($parsed_wrapped);
@@ -489,11 +634,10 @@ function bg_marcxml_exporter_process() {
 
   //$records is populated, write to local file
   $content = simplexml_load_string(MARC_HEADER . "\n" . $records . "\n" . "</collection>")->asXML();
-  $set_filename = str_replace(' ', '_', strtolower(entity_load_single('node',
-      $record_set)->title));
+  $set_filename = str_replace(' ', '_', strtolower($items['record_set']));
   $public_path = "temporary://{$set_filename}.xml";
   $zip_path = "temporary://{$set_filename}.zip";
-  $s3_object_name = $timestamp . "-all_export/{$set_filename}.zip";
+  $s3_object_name = $s3_object_path . "-all_export/{$set_filename}.zip";
 
   try {
     $write_local = file_put_contents($public_path, $content);
@@ -505,27 +649,18 @@ function bg_marcxml_exporter_process() {
     $check_zip = $zip->close();
 
     if ( $check_zip && file_exists($zip_path) ){
-      //Prepare S3 Client
-      $s3_client = S3Client::factory(
-        array(
-          //Signature V4 not needed currently
-          // 'signature' => 'v4',
-          'Key'    => variable_get('amazons3_key'),
-          'Secret' => variable_get('amazons3_secret'),
-        )
-      );
 
       try {
         //Put Object in S3 at object timestamp path
         $result = $s3_client->putObject([
-          'Bucket' => variable_get('amazons3_bucket'),
+          'Bucket' => $bucket,
           'Key' => $s3_object_name,
           'SourceFile' => drupal_realpath($zip_path),
           'ACL'    => 'public-read'
         ]);
         //Check success
         $check_s3 = $s3_client->waitUntilObjectExists(array(
-          'Bucket' => variable_get('amazons3_bucket'),
+          'Bucket' => $bucket,
           'Key'    => $s3_object_name
         ));
 
@@ -545,4 +680,45 @@ function bg_marcxml_exporter_process() {
     drupal_set_message("Failed to write record set file: %e", 'error', array
     ($e->getMessage()));
   }
+  //@todo check queue items here before building $notify_path + calling
+  // queue_notify
+  $notify_path = "{$s3_client->getBaseUrl()}/{$bucket}/{$s3_object_path}/";
+  cals_importer_all_exporter_queue_notify($notify_path);
 }
+
+function cals_importer_all_exporter_queue_notify($notify_path) {
+  $queue = (DrupalQueue::get(ALL_EXPORT_QUEUE_NAME));
+  //If this is the last item in the queue, notify user of completion.
+  if ($queue->numberOfItems() == 1) {
+    $user = variable_get(ALL_EXPORT_QUEUE_NAME . "_notify_user");
+    $from = 'NNELS.ca <system@nnels.ca>';
+    $message = array(
+      'id' => "cals_importer_all_exporter_notify",
+      'from' => $from,
+      'to' => '$user->mail',
+      'subject' => 'NNELS System: All Export Job Finished',
+      'body' =>
+        "Greetings, {$user->name}:\r\n
+        Your requested all-export job has completed.\r\n
+        The final payload is deposited {$notify_path} here.
+        ",
+      'headers' => array(
+        'From' => $from,
+        'Sender' => $from,
+        'Return-Path' => $from,
+      ),
+    );
+
+    try {
+      $system = drupal_mail_system("cals_importer_exporter", "cals_importer_all_exporter_notify");
+      $system->mail($message);
+      variable_del('latest_all_export_timestamp');
+    }
+    catch (Exception $e) {
+      drupal_set_message($e->getMessage(), 'error');
+    }
+  } else {
+    return;
+  }
+}
+
