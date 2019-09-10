@@ -237,7 +237,9 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
         $check_result = $linter->checkRecord($record);
         if( count( $check_result ) ) {
           $wrapped = entity_metadata_wrapper('field_collection_item', $entity);
-          $url = url(drupal_get_path_alias('node/' . $wrapped->getIdentifier()));
+          $url = url(drupal_get_path_alias('field-collection/field-file-resource/' .
+            $wrapped->getIdentifier()));
+          $url = $url . "/?destination=node/{$host_wrapped->getIdentifier()}";
           $formatted_message = sprintf(
             "Linter found a problem in exported record for the following item: %s - (%s). Check XML components at %s",
             $host_wrapped->title->value(),
