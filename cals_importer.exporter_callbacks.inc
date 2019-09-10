@@ -191,6 +191,8 @@ function _cals_importer_exporter_callback_240($vars) {
 
   $wrapper = $vars['node_wrapper'];
   $subfields = array();
+  $lang = reset(entity_metadata_wrapper('node', $node)
+    ->field_iso_language->value());
 
   $term = $wrapper->field_uniform_title->value();
   if(is_object($term)) {
@@ -198,7 +200,7 @@ function _cals_importer_exporter_callback_240($vars) {
     $code = 240;
     $subfield = 'a';
     $ind2 = 0;
-    $ind2 = _cals_importer_exporter_filing_characters($value);
+    $ind2 = _cals_importer_exporter_filing_characters($value, $lang, 0, 0);
     $arr[240]['subfields'][]['a'] = $value;
     $arr[240]['ind1'] = 0;
     $arr[240]['ind2'] = $ind2;
