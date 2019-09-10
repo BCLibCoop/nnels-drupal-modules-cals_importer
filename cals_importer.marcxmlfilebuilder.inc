@@ -456,7 +456,6 @@ function cals_importer_marcxml_all_exporter_form($form, &$form_state) {
       $owner = variable_get(ALL_EXPORT_QUEUE_NAME . "_notify_user")['name'];
 
       //Provide queue stats and status
-      //@todo add link to queue ui manager
 
       $queue_link = url('admin/config/system/queue-ui/inspect/' .
         ALL_EXPORT_QUEUE_NAME);
@@ -638,7 +637,7 @@ function cals_importer_all_exporter_process($items) {
 
   //$records is populated, write to local file
   $content = simplexml_load_string(MARC_HEADER . "\n" . $records . "\n" . "</collection>")->asXML();
-  $set_filename = str_replace(' ', '_', strtolower($items['record_set']));
+  $set_filename = str_replace(' ', '_', strtolower(node_load($items["record_set"])->title));
   $public_path = "temporary://{$set_filename}.xml";
   $zip_path = "temporary://{$set_filename}.zip";
   $s3_object_name = $s3_object_path . "-all_export/{$set_filename}.zip";
