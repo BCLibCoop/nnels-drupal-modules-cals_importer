@@ -684,16 +684,17 @@ function cals_importer_all_exporter_process($items) {
     drupal_set_message("Failed to write record set file: %e", 'error', array
     ($e->getMessage()));
   }
-  //@todo check queue items here before building $notify_path + calling
-  // queue_notify
-  $notify_path = "{$s3_client->getBaseUrl()}/{$bucket}/{$s3_object_path}/";
-  cals_importer_all_exporter_queue_notify($notify_path);
-}
 
-function cals_importer_all_exporter_queue_notify($notify_path) {
+  // queue_notify
   $queue = (DrupalQueue::get(ALL_EXPORT_QUEUE_NAME));
   //If this is the last item in the queue, notify user of completion.
   if ($queue->numberOfItems() == 1) {
+    $notify_path = "{$s3_client->getBaseUrl()}/{$bucket}/{$s3_object_path}/";
+    cals_importer_all_exporter_queue_notify($notify_path);
+  }
+}
+
+function cals_importer_all_exporter_queue_notify($notify_path) {
     $user = variable_get(ALL_EXPORT_QUEUE_NAME . "_notify_user");
     $from = 'NNELS.ca <system@nnels.ca>';
     $message = array(
@@ -721,8 +722,5 @@ function cals_importer_all_exporter_queue_notify($notify_path) {
     catch (Exception $e) {
       drupal_set_message($e->getMessage(), 'error');
     }
-  } else {
-    return;
-  }
 }
 
