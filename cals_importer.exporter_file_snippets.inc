@@ -61,6 +61,7 @@ function _cals_importer_exporter_build_file_resource_snippet
     '306',
     'GMD',
     '008',
+    '035',
     '511',
   );
 
@@ -275,7 +276,7 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   $format = $fc_wrapped->field_file_format->label();
   $audience = $fc_wrapped->host_entity->field_audience->value();
   $lang = $fc_wrapped->host_entity->field_iso_language->value()[0];
-  
+
   //Check all MP3/audio-only formats
   //$formats = variable_get('nnels_importer_exporter_format_map');
   //@todo array_filter to get only those formats with 'media_pattern' == 'audio'
@@ -354,6 +355,20 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   $final_008[39] = 'd';
 
   return array( 'value' => $final_008);
+}
+
+function _cals_importer_exporter_snippet_callback_035($fc_wrapped, $stubdata) {
+  $unique_id = $fc_wrapped->getIdentifier();
+  //Nix old 035 for our SCN
+  if (isset($stubdata['datafields']['035'])) unset($stubdata['datafields']['035']);
+  $workable_array = array(
+    'ind1' => 0,
+    'ind2' => ''
+  );
+
+  $workable_array['subfields'][] = array('a' =>$unique_id);
+
+  return $workable_array;
 }
 
 function _cals_importer_exporter_snippet_callback_264($fc_wrapped) {
