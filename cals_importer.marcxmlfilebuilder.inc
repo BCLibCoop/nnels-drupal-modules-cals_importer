@@ -513,7 +513,7 @@ function cals_importer_marcxml_all_exporter_form_submit($form, &$form_state){
   if ($form_state["clicked_button"]["#attributes"]["data-op"] == 1) {
     cals_importer_all_exporter_query_queue_setup();
     drupal_set_message("Started All Export job at 
-    {$form_state['timestamp']}", 'info');
+    {$form_state['timestamp']}", 'status');
   }
   //Cancel
   if ($form_state["clicked_button"]["#attributes"]["data-op"] == 2) {
@@ -546,6 +546,8 @@ function cals_importer_all_exporter_query_queue_setup(){
   $record_sets = cals_importer_all_exporter_get_record_sets();
 
   foreach ($record_sets['node'] as $record_set) {
+    $set_name = $record_set->nid ? str_replace(' ', '_', strtolower(node_load
+    ($record_set->nid)->title)) : "missing_nid_set";
 
     $node_query = new \EntityFieldQuery();
     $node_query->entityCondition('entity_type', 'node')
@@ -556,15 +558,31 @@ function cals_importer_all_exporter_query_queue_setup(){
     //Get all the record set items
     $found_nodes = $node_query->execute();
     if ($found_nodes) {
-      $queue->createItem(
-        array(
-          'nodes' => $found_nodes["node"],
-          'record_set' => $record_set->nid
-        )
-      );
-      unset($found_nodes);
+        //Check for huge batches and split them up
+      if (count($found_nodes['node']) > 199) {
+        $chunks = array_chunk($found_nodes['node'], 50, TRUE);
+      }
+      if (isset($chunks)) {
+        foreach ($chunks as $k => $chunk) {
+          $queue->createItem(
+            array(
+              'nodes' => $chunk,
+              'record_set' => $set_name . "_{$k}",
+            )
+          );
+        }
+      } else { //continue as normal
+        $queue->createItem(
+          array(
+            'nodes' => $found_nodes["node"],
+            'record_set' => $set_name
+          )
+        );
+      }
+      unset($found_nodes); //cleanup
     }
-  }
+  }// end record set loop
+
   //Get all loose items not apart of a record set
   $singles_query = db_select('node', 'n');
 
@@ -579,7 +597,7 @@ function cals_importer_all_exporter_query_queue_setup(){
     $r = $e->fetchAllAssoc('nid');
 
     $singles_results = $r ? array('node' => $r) : array();
-    $singles_chunked = array_chunk($singles_results['node'], 500);
+    $singles_chunked = array_chunk($singles_results['node'], 50);
     foreach ($singles_chunked as $n => $result_chunk) {
       $queue->createItem(
         array(
@@ -637,10 +655,12 @@ function cals_importer_all_exporter_process($items) {
 
   //$records is populated, write to local file
   $content = simplexml_load_string(MARC_HEADER . "\n" . $records . "\n" . "</collection>")->asXML();
-  $set_filename = str_replace(' ', '_', strtolower(node_load($items["record_set"])->title));
+
+  //Set up filenames and path conventions
+  $set_filename = $items["record_set"];
   $public_path = "temporary://{$set_filename}.xml";
   $zip_path = "temporary://{$set_filename}.zip";
-  $s3_object_name = $s3_object_path . "-all_export/{$set_filename}.zip";
+  $s3_object_name = $s3_object_path . "_all_export/{$set_filename}.zip";
 
   try {
     $write_local = file_put_contents($public_path, $content);
