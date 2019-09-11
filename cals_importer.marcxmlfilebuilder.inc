@@ -660,7 +660,7 @@ function cals_importer_all_exporter_process($items) {
   $set_filename = $items["record_set"];
   $public_path = "temporary://{$set_filename}.xml";
   $zip_path = "temporary://{$set_filename}.zip";
-  $s3_object_name = $s3_object_path . "_all_export/{$set_filename}.zip";
+  $s3_object_name = $s3_object_path . ".export/{$set_filename}.zip";
 
   try {
     $write_local = file_put_contents($public_path, $content);
