@@ -362,7 +362,7 @@ function _cals_importer_exporter_snippet_callback_035($fc_wrapped, $stubdata) {
   //Nix old 035 for our SCN
   if (isset($stubdata['datafields']['035'])) unset($stubdata['datafields']['035']);
   $workable_array = array(
-    'ind1' => 0,
+    'ind1' => '',
     'ind2' => ''
   );
 
