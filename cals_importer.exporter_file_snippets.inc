@@ -46,9 +46,12 @@ function _cals_importer_exporter_build_file_resource_snippet
 ($field_collection_item) {
   //$tags = _cals_importer_get_tag_array_file_attach(); //tag mappings
 
-
   //Wrapper
   $fc_wrapper = _cals_wrap_fc($field_collection_item);
+
+  //Check for shareable flag, return early
+  $share_flag = $fc_wrapper->field_partner_sharing->value();
+  if (! $share_flag ) return array(FALSE);
 
   //Temporary access to stub if needed
   $node = $fc_wrapper->host_entity->value();
@@ -275,7 +278,7 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   $format = $fc_wrapped->field_file_format->label();
   $audience = $fc_wrapped->host_entity->field_audience->value();
   $lang = $fc_wrapped->host_entity->field_iso_language->value()[0];
-  
+
   //Check all MP3/audio-only formats
   //$formats = variable_get('nnels_importer_exporter_format_map');
   //@todo array_filter to get only those formats with 'media_pattern' == 'audio'

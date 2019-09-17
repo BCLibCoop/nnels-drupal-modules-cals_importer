@@ -93,7 +93,7 @@ function _cals_importer_generate_marcxml_files_all_records_old(&$entity,
 
   }//end main if
 
-  //static $xml = '';
+  static $xml = '';
   $filename = 'public://nnels_marcxml_all_records.xml';
   if($context['progress']['current'] == 1) {
     file_put_contents($filename, '');
@@ -203,17 +203,32 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
       $stub
       );
 
-    //Append raw collection to file temporarily
-    file_put_contents($filename, $out_xml, FILE_APPEND |
-      LOCK_EX);
+    //A record came out of the generator
+    if ($out_xml ) {
+      //Append raw collection to file temporarily
+      file_put_contents($filename, $out_xml, FILE_APPEND |
+        LOCK_EX);
 
-    //Save export set node with ref back to marc_xml_string source for this run
-    $pnode->field_nid_entry[LANGUAGE_NONE][] = array("nid" => $nid);
-    try {
-      node_save($pnode);
-    } catch (Exception $e) {
+      //Save export set node with ref back to marc_xml_string source for this run
+      $pnode->field_nid_entry[LANGUAGE_NONE][] = array("nid" => $nid);
+      try {
+        node_save($pnode);
+      } catch (Exception $e) {
+        watchdog('cals_importer_exporter_marcxml_files', $e->getMessage(),
+          WATCHDOG_ERROR);
+      }
+    } else { //Record to be generated was missing Partner Sharing flag
+      //Set a warning and skip writing temp file, export set write.
+      drupal_set_message('Item @title (@nid) - @format, skipped due to Partner Share flag .',
+        array(
+          "@title" => $host_wrapped->title->value(),
+          "@nid" => $nid,
+          "@format" => entity_metadata_wrapper('field_collection_item',
+            $entity->item_id)->field_file_format->label(),
+        ),
+        WATCHDOG_NOTICE
+      );
     }
-
   }
   else {
     drupal_set_message('No XML string for @nid, skipped.', array("@nid" =>
@@ -291,6 +306,7 @@ function _cals_importer_exporter_snippet_generator($entity, $host_wrapped,
 
   //Build snippet for each context
   $snippet = _cals_importer_exporter_build_file_resource_snippet($entity);
+  if (! reset($snippet)) return FALSE;
 
   $merged = array();
 
@@ -645,9 +661,11 @@ function cals_importer_all_exporter_process($items) {
       $stub = _cals_importer_exporter_stub_generator($parsed_wrapped);
       foreach ($parsed_wrapped->field_file_resource->getIterator() as $delta
         => $file_resource_wrapper) {
-        $records .= _cals_importer_exporter_snippet_generator
+        $record_generated = _cals_importer_exporter_snippet_generator
         (entity_load_single('field_collection_item', $file_resource_wrapper->getIdentifier()),
         $parsed_wrapped, $stub);
+        if ($record_generated) $records .= $record_generated;
+        else break; //Record to be generated was missing Partner Sharing flag
       }
       unset($parsed_wrapped);
     }
