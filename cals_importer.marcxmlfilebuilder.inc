@@ -451,8 +451,8 @@ function cals_importer_marcxml_all_exporter_form($form, &$form_state) {
     if ($check) {
       //Setup for queue status
       $form_state['timestamp'] = $check;
-      $cron_rate = (int) variable_get('cron_safe_threshold',
-        DRUPAL_CRON_DEFAULT_THRESHOLD) / 3600;
+//      $cron_rate = (int) variable_get('cron_safe_threshold',
+//        DRUPAL_CRON_DEFAULT_THRESHOLD) / 3600;
       $owner = variable_get(ALL_EXPORT_QUEUE_NAME . "_notify_user")['name'];
 
       //Provide queue stats and status
@@ -464,7 +464,7 @@ function cals_importer_marcxml_all_exporter_form($form, &$form_state) {
          by <strong>{$owner}</strong></p>
         <p><strong>{$number}</strong> items remaining to process.</p>
         <p>Check individual queue items <a href='{$queue_link}'> here.</a></p>
-        <p>Cron process is set to run every <strong>{$cron_rate}</strong> hours</p>
+        <p>Server-side cron runs every <strong>15 minutes</strong></p>
         <p>Upon job completion a message will be dispatched to your account email.</p>
         ";
     }
@@ -528,7 +528,7 @@ function cals_importer_cron_queue_info() {
   $queues = array();
   $queues[ALL_EXPORT_QUEUE_NAME] = array(
     'worker callback' => 'cals_importer_all_exporter_process', //function to call for each item
-    'time' => 300, //seconds to spend working on the queue
+    'time' => 60, //seconds to spend working on the queue
     'skip on cron' => FALSE
   );
   return $queues;
@@ -636,7 +636,7 @@ function cals_importer_all_exporter_process($items) {
   $timestamp = variable_get('latest_all_export_timestamp');
   $s3_object_path = "all-records-exports/{$timestamp}";
 
-  $records = array();
+  $records = '';
 
   foreach ($items['nodes'] as $item) {
     $parsed_wrapped = entity_metadata_wrapper('node', $item->nid);
@@ -681,13 +681,8 @@ function cals_importer_all_exporter_process($items) {
           'SourceFile' => drupal_realpath($zip_path),
           'ACL'    => 'public-read'
         ]);
-        //Check success
-        $check_s3 = $s3_client->waitUntilObjectExists(array(
-          'Bucket' => $bucket,
-          'Key'    => $s3_object_name
-        ));
 
-        if ($check_s3) {
+        if ($result) {
           //remove temporary files
           file_unmanaged_delete($public_path);
           file_unmanaged_delete($zip_path);
