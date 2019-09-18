@@ -65,6 +65,7 @@ function _cals_importer_exporter_build_file_resource_snippet
     'GMD',
     '008',
     '511',
+    '506',
   );
 
   $buildable_snippet_array = array();
@@ -683,6 +684,42 @@ function _cals_importer_exporter_snippet_callback_511($fc_wrapped) {
   }
   //Narrator was not found, will be purged
   else $workable_array['subfields'][] = $narrators;
+
+  return $workable_array;
+}
+
+function _cals_importer_exporter_snippet_callback_506($fc_wrapped) {
+
+  $workable_array = array();
+
+  //Check for shareable flag
+  $share_flag = $fc_wrapped->field_partner_sharing->value();
+  $access_flag = $fc_wrapped->hostEntity()->field_access_restrictions->value();
+
+  if ($access_flag == 0) { //Suppressed
+
+    $workable_array = array(
+      'ind1' => '1', //Restrictions apply
+      'ind2' => ''
+    );
+
+    switch ($share_flag) {
+      default: //Partner Sharing unset
+        $workable_array = array(); //Re-unset.
+        break;
+      case TRUE: //
+        $workable_array['subfields'][] = array(
+          'a' => "Restricted circulation--item is permitted for exchange with Marrakesh Treaty Contracting Parties."
+        );
+
+        break;
+      case FALSE:
+        $workable_array['subfields'][] = array(
+          'a' => "Restricted circulation--item is not permitted for exchange."
+        );
+        break;
+    }
+  }
 
   return $workable_array;
 }
