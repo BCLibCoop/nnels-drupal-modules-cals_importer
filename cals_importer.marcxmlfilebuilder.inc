@@ -605,7 +605,7 @@ function cals_importer_all_exporter_query_queue_setup($partner_share_mode = FALS
     if ($found_nodes) {
         //Check for huge batches and split them up
       if (count($found_nodes['node']) > 199) {
-        $chunks = array_chunk($found_nodes['node'], 50, TRUE);
+        $chunks = array_chunk($found_nodes['node'], 100, TRUE);
       }
       if (isset($chunks)) {
         foreach ($chunks as $k => $chunk) {
