@@ -40,19 +40,24 @@ function _cals_importer_exporter_build_marcxml_file_vbo(&$entity, $context = arr
  *
  * @param \FieldCollectionItemEntity $field_collection_item
  *   the FC entity passed to VBO action
+ * @param boolean $partner_share
+ *   the export mode, FALSE : All Export, TRUE : Partner Share only
  * @return array $buildable_snippet_array
  */
 function _cals_importer_exporter_build_file_resource_snippet
-($field_collection_item) {
+($field_collection_item, $partner_share = FALSE) {
   //$tags = _cals_importer_get_tag_array_file_attach(); //tag mappings
 
   //Wrapper
   $fc_wrapper = _cals_wrap_fc($field_collection_item);
 
-  //Check for shareable flag, return early
-  $share_flag = $fc_wrapper->field_partner_sharing->value();
-  if (! $share_flag ) return array(FALSE);
-
+  //Check for shareable flag (Y/N) in partner share mode (TRUE), return early
+  if ($partner_share) {
+    $share_flag = $fc_wrapper->field_partner_sharing->value();
+    if ( ! $share_flag ) { //Not Permitted
+      return array(FALSE);
+    } //Continue
+  }
   //Temporary access to stub if needed
   $node = $fc_wrapper->host_entity->value();
   $stubfields = unserialize($node->field_xml_stub[LANGUAGE_NONE][0]['value']);
@@ -79,7 +84,7 @@ function _cals_importer_exporter_build_file_resource_snippet
       $result = call_user_func($callable, $fc_wrapper, $stubfields);
 
     //@todo log bad callbacks instead
-    if ($result == FALSE) {
+    if ($result === FALSE) {
       drupal_set_message(t("Something went wrong in $callable. Please check its field definitions."), 'error');
       continue;
     }
@@ -694,7 +699,8 @@ function _cals_importer_exporter_snippet_callback_506($fc_wrapped) {
 
   //Check for shareable flag
   $share_flag = $fc_wrapped->field_partner_sharing->value();
-  $access_flag = $fc_wrapped->hostEntity()->field_access_restrictions->value();
+  $access_flag = $fc_wrapped->value()->hostEntity()
+    ->field_access_restrictions["und"][0]["value"];
 
   if ($access_flag == 0) { //Suppressed
 

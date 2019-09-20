@@ -142,6 +142,15 @@ function _cals_importer_generate_marcxml_files_search_interface_form($settings, 
     '#default_value' => isset($settings['settings']['body']) ? $settings['settings']['body'] : 'my description',
   );
 
+  $share_options = array(0 => t('All Records'), 1 => t('Partner Share Only'));
+  $form['export_mode'] = array(
+    '#type' => 'radios',
+    '#title' => t('Export mode'),
+    '#default_value' => 1,
+    '#options' => $share_options,
+    '#description' => t("Choose 'All Records' for exports to OCLC.\r\n
+    'Partner Share Only' for only permitted records to other bodies (such as ABC)."),
+  );
 
   return $form;
 }
@@ -163,9 +172,13 @@ function _cals_importer_generate_marcxml_files_search_interface_submit($form, $f
   $filename = "public://marc_exports/marcxml_export_{$node->nid}.xml";
   file_put_contents($filename, '');
 
+  //Cast $partner_share as boolean for easier handling downstream
+  $partner_share_mode = (boolean) $form_state["values"]["export_mode"];
+
   $return['fields'] = array(
     "pnid" => $node->nid,
-    "filename" => $filename
+    "filename" => $filename,
+    "mode" => $partner_share_mode,
   );
   return $return; //Note, return value here must be an array.
 }
@@ -186,6 +199,7 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
   $nid = $host->nid;
   $filename = $context['fields']['filename'];
   $pnode = node_load($context['fields']['pnid']); //get updated parent node$host
+  $partner_share_mode = $context['fields']['mode'];
 
   /*if (!empty($host->field_nnels_856_tag) &&
     $host->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] == 1 ) {*/
@@ -200,7 +214,8 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
     $out_xml = _cals_importer_exporter_snippet_generator(
       $entity,
       $host_wrapped,
-      $stub
+      $stub,
+      $partner_share_mode
       );
 
     //A record came out of the generator
@@ -256,7 +271,6 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
 /**
  * Simple wrapper to call main parser; if preferred, can invoke batch api instead.
  */
-
 function _cals_importer_generate_marcxml_file($node) {
 
   $xml = _cals_importer_build_marcxml($node);
@@ -274,7 +288,6 @@ function _cals_importer_generate_marcxml_file($node) {
  * builds the xml string
  *
  */
-
 function _cals_importer_build_marcxml($node) {
   $xml = '';
   $parent_nid = $node->field_record_set[LANGUAGE_NONE][0]['nid'];
@@ -299,13 +312,17 @@ function _cals_importer_build_marcxml($node) {
  * @param $entity
  * @param $host_wrapped
  * @param $stub
- * @return mixed
+ * @param bool $partner_share_mode
+ * @return bool|mixed
  */
-function _cals_importer_exporter_snippet_generator($entity, $host_wrapped,
-                                                  $stub){
+function _cals_importer_exporter_snippet_generator(
+  $entity, $host_wrapped, $stub, $partner_share_mode = FALSE){
 
   //Build snippet for each context
-  $snippet = _cals_importer_exporter_build_file_resource_snippet($entity);
+  $snippet = _cals_importer_exporter_build_file_resource_snippet($entity,
+    $partner_share_mode);
+
+  //Back out & return if snippet falls afoul of partner share mode
   if (! reset($snippet)) return FALSE;
 
   $merged = array();
@@ -467,8 +484,6 @@ function cals_importer_marcxml_all_exporter_form($form, &$form_state) {
     if ($check) {
       //Setup for queue status
       $form_state['timestamp'] = $check;
-//      $cron_rate = (int) variable_get('cron_safe_threshold',
-//        DRUPAL_CRON_DEFAULT_THRESHOLD) / 3600;
       $owner = variable_get(ALL_EXPORT_QUEUE_NAME . "_notify_user")['name'];
 
       //Provide queue stats and status
@@ -489,6 +504,16 @@ function cals_importer_marcxml_all_exporter_form($form, &$form_state) {
 
   $form['element'] = array(
     '#markup' => "<div class='queue-status'>{$queue_status}</div>"
+  );
+
+  $share_options = array(0 => t('All Records'), 1 => t('Partner Share Only'));
+  $form['export_mode'] = array(
+    '#type' => 'radios',
+    '#title' => t('Export mode'),
+    '#default_value' => 1,
+    '#options' => $share_options,
+    '#description' => t("Choose 'All Records' for exports to OCLC.\r\n
+    'Partner Share Only' for only permitted records to other bodies (such as ABC)."),
   );
 
   // Submit Buttons
@@ -521,13 +546,17 @@ function cals_importer_marcxml_all_exporter_form($form, &$form_state) {
 }
 
 function cals_importer_marcxml_all_exporter_form_submit($form, &$form_state){
+
   global $user;
   variable_set(ALL_EXPORT_QUEUE_NAME . "_notify_user", array
   ('email' => $user->mail, 'name' => $user->name));
 
+  //Cast $partner_share as boolean for easier handling downstream
+  $partner_share_mode = (boolean) $form_state["values"]["export_mode"];
+
   //Start
   if ($form_state["clicked_button"]["#attributes"]["data-op"] == 1) {
-    cals_importer_all_exporter_query_queue_setup();
+    cals_importer_all_exporter_query_queue_setup($partner_share_mode);
     drupal_set_message("Started All Export job at 
     {$form_state['timestamp']}", 'status');
   }
@@ -550,7 +579,7 @@ function cals_importer_cron_queue_info() {
   return $queues;
 }
 
-function cals_importer_all_exporter_query_queue_setup(){
+function cals_importer_all_exporter_query_queue_setup($partner_share_mode = FALSE){
 
   $queue = (DrupalQueue::get(ALL_EXPORT_QUEUE_NAME));
 
@@ -584,6 +613,7 @@ function cals_importer_all_exporter_query_queue_setup(){
             array(
               'nodes' => $chunk,
               'record_set' => $set_name . "_{$k}",
+              'partner_share' => $partner_share_mode,
             )
           );
         }
@@ -591,7 +621,8 @@ function cals_importer_all_exporter_query_queue_setup(){
         $queue->createItem(
           array(
             'nodes' => $found_nodes["node"],
-            'record_set' => $set_name
+            'record_set' => $set_name,
+            'partner_share' => $partner_share_mode,
           )
         );
       }
@@ -618,7 +649,8 @@ function cals_importer_all_exporter_query_queue_setup(){
       $queue->createItem(
         array(
           'nodes' => $result_chunk,
-          'record_set' => "loose_records_{$n}"
+          'record_set' => "loose_records_{$n}",
+          'partner_share' => $partner_share_mode,
         )
       );
     }
@@ -661,9 +693,12 @@ function cals_importer_all_exporter_process($items) {
       $stub = _cals_importer_exporter_stub_generator($parsed_wrapped);
       foreach ($parsed_wrapped->field_file_resource->getIterator() as $delta
         => $file_resource_wrapper) {
-        $record_generated = _cals_importer_exporter_snippet_generator
-        (entity_load_single('field_collection_item', $file_resource_wrapper->getIdentifier()),
-        $parsed_wrapped, $stub);
+        $record_generated = _cals_importer_exporter_snippet_generator(
+          entity_load_single('field_collection_item', $file_resource_wrapper->getIdentifier()),
+          $parsed_wrapped,
+          $stub,
+          $items['partner_share']
+        );
         if ($record_generated) $records .= $record_generated;
         else break; //Record to be generated was missing Partner Sharing flag
       }
