@@ -411,6 +411,7 @@ function _cals_importer_exporter_stub_generator($host_wrapped){
 
   return $stub;
 }
+
 class MarcXmlFileBuilder {
 
   public function __construct($node, $xml) {
@@ -459,11 +460,7 @@ class MarcXmlFileBuilder {
       drupal_set_message($e->getMessage());
       watchdog('my_error', $e->getMessage());
     }
-
-
   }
-
-
 }
 
 function cals_importer_marcxml_all_exporter_form($form, &$form_state) {
@@ -790,4 +787,3 @@ function cals_importer_all_exporter_queue_notify($notify_path) {
       drupal_set_message($e->getMessage(), 'error');
     }
 }
-

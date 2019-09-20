@@ -388,7 +388,9 @@ function _cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$rec
         $val = $record->getLeader();
         break;
       case '001':
-        $val = 'BVNNELS' . $node->nid; //see https://github.com/BCLibCoop/nnels/issues/130
+        //see https://github.com/BCLibCoop/nnels/issues/130
+        //and https://github.com/BCLibCoop/nnels/issues/193
+        $val = 'BVNNELS' . $node->nid;
         break;
 
       case '003':
@@ -396,9 +398,8 @@ function _cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$rec
         break;
 
       case '005':
-        $val = $node->changed;
         //yyyymmddhhmmss.f
-        $val = date('YmdHis.0', $val);
+        if (is_numeric($node->changed)) $val = date('YmdHis.0', $node->changed);
         break;
       case '008':
        // $val = _cals_importer_export_callback_008($node, $node_wrapper, $xml);
@@ -417,7 +418,15 @@ function _cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$rec
 }
 //_cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$record, $tags) {
 
-
+/**
+ * DEPRECATED
+ * @param $node
+ * @param $node_wrapper
+ * @param $record
+ * @param $tags
+ * @param $xml
+ * @return array
+ */
 function _cals_importer_exporter_parse_datafields($node, $node_wrapper, &$record, $tags, $xml) {
   //$xml = _cals_get_marc_xml_string($node);
 
@@ -476,6 +485,7 @@ function _cals_importer_exporter_parse_datafields($node, $node_wrapper, &$record
 }
 
 /**
+ * DEPRECATED
  * @param $tagset
  * @param $wrapper
  * @param $record

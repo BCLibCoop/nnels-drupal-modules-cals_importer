@@ -69,6 +69,7 @@ function _cals_importer_exporter_build_file_resource_snippet
     '306',
     'GMD',
     '008',
+    '035',
     '511',
     '506',
   );
@@ -363,6 +364,20 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   $final_008[39] = 'd';
 
   return array( 'value' => $final_008);
+}
+
+function _cals_importer_exporter_snippet_callback_035($fc_wrapped, $stubdata) {
+  $unique_id = $fc_wrapped->getIdentifier();
+  //Nix old 035 for our SCN
+  if (isset($stubdata['datafields']['035'])) unset($stubdata['datafields']['035']);
+  $workable_array = array(
+    'ind1' => '',
+    'ind2' => ''
+  );
+
+  $workable_array['subfields'][] = array('a' =>$unique_id);
+
+  return $workable_array;
 }
 
 function _cals_importer_exporter_snippet_callback_264($fc_wrapped) {
