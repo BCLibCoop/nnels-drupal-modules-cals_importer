@@ -563,6 +563,11 @@ function cals_importer_marcxml_all_exporter_form($form, &$form_state) {
   //Store queue reference for submit callback
   $form_state['queue'] = $queue;
 
+  if (isset($check)) {
+    $form['export_mode']['#disabled'] = TRUE;
+    $form['start_all_export']['#disabled'] = TRUE;
+  }
+
   return $form;
 }
 
