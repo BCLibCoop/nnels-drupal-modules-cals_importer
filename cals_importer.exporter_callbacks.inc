@@ -190,10 +190,9 @@ function _cals_importer_exporter_callback_240($vars) {
   $tag = $vars['tag'];
 
   $wrapper = $vars['node_wrapper'];
+  //$lang = reset($wrapper->field_iso_language->value()) ?: LANGUAGE_NONE;
   $lang = reset($wrapper->field_iso_language->value());
   $subfields = array();
-  $lang = reset(entity_metadata_wrapper('node', $node)
-    ->field_iso_language->value());
 
   $term = $wrapper->field_uniform_title->value();
   if(is_object($term)) {
