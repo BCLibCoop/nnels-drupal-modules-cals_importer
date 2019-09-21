@@ -73,6 +73,8 @@ function _cals_importer_get_marcxml_wrapper($string) {
 }
 
 /**
+ * DEPRECATED
+ *
  * Invokes Drupal's batch api to generate new marc xml files with 856 tags, etc.
  * Unlike _cals_importer_generate_marcxml_files, this function generates an
  * un-managed file called "nnels_marcxml_all_records.xml".
@@ -121,6 +123,8 @@ function _cals_importer_generate_marcxml_files_all_records_old(&$entity,
 
 }
 
+/** @todo Clean up this file */
+
 function _cals_importer_generate_marcxml_files_search_interface_form($settings, &$form_state) {
   $form = array();
   //dpm($form_state['values']);
@@ -155,10 +159,27 @@ function _cals_importer_generate_marcxml_files_search_interface_form($settings, 
   return $form;
 }
 
-function _cals_importer_generate_marcxml_files_search_interface_submit($form, $form_state) {
+function _cals_importer_generate_marcxml_files_search_interface_validate
+($form, &$form_state) {
+  //Check for Partner Share mode, selection contradiction
+  $partner_filter = (int) $form_state["build_info"]["args"][0]->exposed_data["field_partner_sharing_value"];
+  $partner_mode = (int) $form_state["input"]["export_mode"];
+
+  if ($partner_filter === 0 && $partner_mode === 1) {
+    form_set_error('export_mode',
+      'Checkout failed due to consisting of only Non-permitted files in Partner Sharing mode.'
+    );
+  }
+}
+
+function _cals_importer_generate_marcxml_files_search_interface_submit($form,
+                                                                       &$form_state) {
+  //Setup
   $return = array();
   $title = $form_state['values']['title'];
   $body = $form_state['values']['body'];
+
+  //Build Export set node
   $node = new StdClass();
   $node->type = 'marc_export_set';
   $node->language = LANGUAGE_NONE;
@@ -166,6 +187,7 @@ function _cals_importer_generate_marcxml_files_search_interface_submit($form, $f
   $node->title = $title;
   $node->body[LANGUAGE_NONE][0]['value'] = $form_state['values']['body'];
   node_save($node);
+
   //Prepare folder
   $dir = 'public://marc_exports';
   file_prepare_directory($dir, FILE_CREATE_DIRECTORY);
@@ -185,10 +207,11 @@ function _cals_importer_generate_marcxml_files_search_interface_submit($form, $f
 
 
 /**
- * Generates marc xml sets with attached marc xml file.
+* Generates marc xml sets with attached marc xml file.
  * See: https://github.com/BCLibCoop/nnels/issues/124
  * @param $entity
  * @param array $context
+ * @return bool
  * @throws \Exception
  */
 function _cals_importer_generate_marcxml_files_search_interface(&$entity, $context = array() ) {
@@ -241,7 +264,7 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
           "@format" => entity_metadata_wrapper('field_collection_item',
             $entity->item_id)->field_file_format->label(),
         ),
-        WATCHDOG_NOTICE
+        'notice'
       );
     }
   }
@@ -265,6 +288,7 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
     drupal_set_message(t("File saved: please download via <a href='@url'>@url</a>",
       array("@url" => url("node/" . $pnode->nid) ) ) );
   }
+  return TRUE;
 }
 
 
@@ -539,6 +563,11 @@ function cals_importer_marcxml_all_exporter_form($form, &$form_state) {
   //Store queue reference for submit callback
   $form_state['queue'] = $queue;
 
+  if (isset($check)) {
+    $form['export_mode']['#disabled'] = TRUE;
+    $form['start_all_export']['#disabled'] = TRUE;
+  }
+
   return $form;
 }
 
@@ -705,6 +734,13 @@ function cals_importer_all_exporter_process($items) {
 
   //$records is populated, write to local file
   $content = simplexml_load_string(MARC_HEADER . "\n" . $records . "\n" . "</collection>")->asXML();
+
+ /**
+  * Just shy of 500 bytes, abort the process function with success to
+  * avoid empty collections being written.
+  * MARCXML boilerplate = 258 bytes, Leader + Control Fields ~280 bytes
+  */
+  if (strlen($content) < 499) return TRUE;
 
   //Set up filenames and path conventions
   $set_filename = $items["record_set"];
