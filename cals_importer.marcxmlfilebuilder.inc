@@ -730,6 +730,13 @@ function cals_importer_all_exporter_process($items) {
   //$records is populated, write to local file
   $content = simplexml_load_string(MARC_HEADER . "\n" . $records . "\n" . "</collection>")->asXML();
 
+ /**
+  * Just shy of 500 bytes, abort the process function with success to
+  * avoid empty collections being written.
+  * MARCXML boilerplate = 258 bytes, Leader + Control Fields ~280 bytes
+  */
+  if (strlen($content) < 499) return TRUE;
+
   //Set up filenames and path conventions
   $set_filename = $items["record_set"];
   $public_path = "temporary://{$set_filename}.xml";
