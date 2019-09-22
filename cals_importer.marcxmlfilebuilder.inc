@@ -516,8 +516,8 @@ function cals_importer_marcxml_all_exporter_form($form, &$form_state) {
          by <strong>{$owner}</strong></p>
         <p><strong>{$number}</strong> items remaining to process.</p>
         <p>Check individual queue items <a href='{$queue_link}'> here.</a></p>
-        <p>Server-side cron runs every <strong>15 minutes</strong></p>
-        <p>Upon job completion a message will be dispatched to your account email.</p>
+        <p>Server-side cron runs every <strong>10 minutes</strong></p>
+        <p>A message will be dispatched to your account email upon job completion.</p>
         ";
     }
 
@@ -800,12 +800,12 @@ function cals_importer_all_exporter_queue_notify($notify_path) {
     $message = array(
       'id' => "cals_importer_all_exporter_notify",
       'from' => $from,
-      'to' => '$user->mail',
+      'to' => $user['email'],
       'subject' => 'NNELS System: All Export Job Finished',
       'body' =>
-        "Greetings, {$user->name}:\r\n
+        "Greetings, {$user['name']}:\r\n
         Your requested all-export job has completed.\r\n
-        The final payload is deposited {$notify_path} here.
+        The final payload is deposited in S3 at: {$notify_path}.
         ",
       'headers' => array(
         'From' => $from,
@@ -818,6 +818,7 @@ function cals_importer_all_exporter_queue_notify($notify_path) {
       $system = drupal_mail_system("cals_importer_exporter", "cals_importer_all_exporter_notify");
       $system->mail($message);
       variable_del('latest_all_export_timestamp');
+      variable_del(ALL_EXPORT_QUEUE_NAME . "_notify_user");
     }
     catch (Exception $e) {
       drupal_set_message($e->getMessage(), 'error');
