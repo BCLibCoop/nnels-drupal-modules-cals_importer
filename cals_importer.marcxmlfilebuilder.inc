@@ -429,7 +429,7 @@ function _cals_importer_exporter_stub_generator($host_wrapped){
     if ( empty( unserialize(
         $host_wrapped->field_xml_stub->value() ) )
       || function_exists('dpm') //Debug mode is on, so rebuild fresh each time
-      || variable_get("nnels_importer_rebuild_stubs" === TRUE)
+      || variable_get("nnels_importer_rebuild_stubs") === TRUE
     )
       _cals_importer_create_marc_stub($host_wrapped);
 
