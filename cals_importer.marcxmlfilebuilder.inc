@@ -162,7 +162,9 @@ function _cals_importer_generate_marcxml_files_search_interface_form($settings, 
 function _cals_importer_generate_marcxml_files_search_interface_validate
 ($form, &$form_state) {
   //Check for Partner Share mode, selection contradiction
-  $partner_filter = (int) $form_state["build_info"]["args"][0]->exposed_data["field_partner_sharing_value"];
+  $partner_filter = is_numeric
+  ($form_state["build_info"]["args"][0]->exposed_data
+  ["field_partner_sharing_value"]) ?: NULL ;
   $partner_mode = (int) $form_state["input"]["export_mode"];
 
   if ($partner_filter === 0 && $partner_mode === 1) {
