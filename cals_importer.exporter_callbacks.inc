@@ -218,9 +218,9 @@ function _cals_importer_exporter_callback_240($vars) {
  */
 function _cals_importer_exporter_callback_245($vars) {
   //if vocab, $term = 'field_subject';
-  $node = $vars['node'];
+
   $tag = $vars['tag'];
-  $values = _cals_importer_exporter_field_value($node, 'title_field');
+  $values = _cals_importer_exporter_field_value($vars['node_wrapper'], 'title_field'); //compatibility
   //field_view_field('node', $node, 'title_field', array('default'));
   $safe_values = array();
   if(is_array($values)) {
@@ -233,12 +233,11 @@ function _cals_importer_exporter_callback_245($vars) {
   $subfield = 'a';
   $ind2 = 0;
 
-  $lang = reset(entity_metadata_wrapper('node', $node)
-    ->field_iso_language->value());
+  $base_lang = reset($vars['node_wrapper']->field_iso_language->value());
 
   foreach($safe_values as $value) {
     normalize_title($value);
-    $ind2 = _cals_importer_exporter_filing_characters($value, $lang, 0, 0);
+    $ind2 = _cals_importer_exporter_filing_characters($value, $base_lang, 0, 0);
     $arr[245]['subfields'][]['a'] = $value;
   }
   $arr[245]['ind1'] = 0;
@@ -674,9 +673,9 @@ function _cals_importer_exporter_callback_720($vars) {
  */
 function _cals_importer_exporter_callback_856($vars) {
   $tag = $vars['tag'];
-  $node = $vars['node'];
+//  $node = $vars['node'];
   //field_publisher
-  $nid = $node->nid;
+  $nid = $vars['node_wrapper']->getIdentifier();
   $arr[856] = array(
     'ind1' => 4,
     'ind2' => 0,
