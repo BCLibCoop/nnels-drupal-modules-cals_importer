@@ -680,7 +680,15 @@ function _cals_importer_exporter_callback_856($vars) {
     'ind1' => 4,
     'ind2' => 0,
   );
-  $arr[856]['subfields'][0]['u'] = 'http://nnels.ca/node/' . $nid;
+
+  $arr[856]['subfields'][0]['u'] = url(
+    'node/' . $nid,
+    array(
+      'absolute' => true,
+      'https' => true,
+      'alias' => true
+    )
+  );
 
   return $arr;
 }
