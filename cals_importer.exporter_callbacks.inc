@@ -360,7 +360,6 @@ function _cals_importer_exporter_callback_511($vars) {
  * Include if present in Abstract (body) field in Drupal
  * @param $vars
  * @return array
- * @todo - review the proper way to extract body values.
  */
 function _cals_importer_exporter_callback_520($vars) {
 
@@ -368,8 +367,8 @@ function _cals_importer_exporter_callback_520($vars) {
   $tag = $vars['tag'];
   $wrapper = $vars['node_wrapper'];
   $subfields = array();
-  if(!isset($wrapper->body)) {
-    return;
+  if(! $wrapper->body->value() ){
+    return array();
   }
   $values = $wrapper->body->value->value(array('decode' => TRUE));
 
