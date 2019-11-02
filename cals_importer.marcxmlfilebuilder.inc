@@ -166,8 +166,8 @@ function _cals_importer_generate_marcxml_files_search_interface_validate
   ($form_state["build_info"]["args"][0]->exposed_data
   ["field_partner_sharing_value"]) ?: NULL ;
   $partner_mode = (int) $form_state["input"]["export_mode"];
-
-  if ($partner_filter === 0 && $partner_mode === 1) {
+  //Partner filter is 0 (Non-permit) or Null (Any) and Partner Mode active.
+  if ($partner_filter == FALSE && $partner_mode === 1) {
     form_set_error('export_mode',
       'Checkout failed due to consisting of only Non-permitted files in Partner Sharing mode.'
     );
