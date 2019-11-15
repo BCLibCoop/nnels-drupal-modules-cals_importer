@@ -1,11 +1,18 @@
 <?php
 /**
  * @file
- * Generates basic marc xml files
+ * Generates MARCXML files from Drupal entities for export and exchange.
  */
 
 use \Drupal\amazons3\S3Client;
 define('ALL_EXPORT_QUEUE_NAME', 'marcxml_generate_all_files');
+
+/*
+ * Allow a wider but not infinite execution window when running this script
+ * as part of admin interface VBO.
+ * Usual NNELS VM default is 60.
+ */
+ini_set('max_execution_time', '240');
 
 /**
  * Invokes Drupal's batch api to generate new marc xml files with 856 tags, etc.
@@ -518,7 +525,7 @@ function cals_importer_marcxml_all_exporter_form($form, &$form_state) {
          by <strong>{$owner}</strong></p>
         <p><strong>{$number}</strong> items remaining to process.</p>
         <p>Check individual queue items <a href='{$queue_link}'> here.</a></p>
-        <p>Server-side cron runs every <strong>10 minutes</strong></p>
+        <p>Server-side cron runs every <strong>20 minutes</strong></p>
         <p>A message will be dispatched to your account email upon job completion.</p>
         ";
     }
@@ -601,7 +608,7 @@ function cals_importer_cron_queue_info() {
   $queues = array();
   $queues[ALL_EXPORT_QUEUE_NAME] = array(
     'worker callback' => 'cals_importer_all_exporter_process', //function to call for each item
-    'time' => 60, //seconds to spend working on the queue
+    'time' => 120, //seconds to spend working on the queue
     'skip on cron' => FALSE
   );
   return $queues;
