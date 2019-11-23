@@ -56,7 +56,7 @@ function _cals_importer_create_marc_stub($node) {
 
   $tags = _cals_importer_get_tag_array(); //tag mappings
   $lint = new File_MARC_Lint();
-  $xml_string = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
+  $xml_string = $node->field_xml_string->value();
   $xml_string = MARC_HEADER . $xml_string . '</collection>';
   $records = new File_MARCXML($xml_string, File_MARC::SOURCE_STRING, "http://www.loc.gov/MARC21/slim");
   $n = 0;
@@ -68,7 +68,7 @@ function _cals_importer_create_marc_stub($node) {
     $marcfields = _cals_importer_exporter_get_marc_fields($node, $record, $tags);
 
     //Serialized Stub
-    $node->field_xml_stub[LANGUAGE_NONE][0]['value'] = serialize($marcfields);
+    $node->field_xml_stub->set(serialize($marcfields));
 
     //with new datafields, generate the new record
     _cals_importer_exporter_build_new_record($record, $marcfields);
@@ -90,7 +90,7 @@ function _cals_importer_create_marc_stub($node) {
     //$node->field_xml_stub_xml[LANGUAGE_NONE][0]['value'] = $new_xml_stub;
     //_cals_importer_update_admin_audit($node,  $action);
 
-    node_save($node);
+    $node->save();
   }
 
 
@@ -226,6 +226,11 @@ function _cals_importer_get_tag_array() {
  * @return mixed
  */
 function _cals_importer_exporter_field_value($node, $fieldname) {
+  // Ensure what is passed here is a stdClass node and not an
+  // EntityDrupalWrapper or other wrapper as used elsewhere.
+  // This causes deep break in entity_translation module.
+  if (is_a($node, 'EntityDrupalWrapper')) $node = node_load($node->getIdentifier());
+
   $values = field_view_field('node', $node, $fieldname, array('default'));
   return $values;
 }
@@ -254,7 +259,6 @@ function _cals_importer_exporter_field_value_taxonomy_term($node, $fieldname) {
  * @param $wrapper
  * @return array
  */
-
 function _cals_importer_exporter_get_subfield_array_from_drupal_fields($code, $fieldname, $wrapper, $enumerations = NULL) {
   $arr = array();
   if(!empty($wrapper->{$fieldname}->value())) {
@@ -337,11 +341,14 @@ function _cals_importer_exporter_marcxml_remove_tags(&$record, $tags) {
     $n = $record->deleteFields($tag);
   }
 }
+
 /**
  * Parses the original marc file to find values associated w/ specific tag / indicators
+ * @param $tagset
+ * @param $code
  * @param $record
- * @param $tags
  * @param $xml
+ * @return array|void
  */
 function _cals_importer_exporter_parse_original_marc($tagset, $code, $record, $xml) {
   $ind1 = $tagset['ind1'];
@@ -356,15 +363,23 @@ function _cals_importer_exporter_parse_original_marc($tagset, $code, $record, $x
 }
 
 /**
- * Placeholder function
+ * @param $node_wrapper
  * @param $record
+ * @param $tags
+ * @return array
  */
-function _cals_importer_exporter_get_marc_fields($node, &$record, $tags) {
-  $node_wrapper = entity_metadata_wrapper('node', $node);
+function _cals_importer_exporter_get_marc_fields($node_wrapper, &$record, $tags) {
+
   $fields = array();
-  $xml = _cals_get_marc_xml_string($node);
-  //_cals_importer_exporter_parse_controlfields or
-  // _cals_importer_exporter_parse_datafields
+  $xml = _cals_get_marc_xml_string($node_wrapper);
+  //Load the stdClass node in case of legacy calls
+  $node = node_load($node_wrapper->getIdentifier());
+
+  /* Note:
+   * _cals_importer_exporter_parse_(controlfields|datafields) called below
+   * $function($node_wrapper, $record, $tagset, $xml)
+   */
+
   foreach ($tags as $type => $tagset) {
     $function = '_cals_importer_exporter_parse_' . $type;
     $tmp = $function($node, $node_wrapper, $record, $tagset, $xml);
@@ -372,12 +387,19 @@ function _cals_importer_exporter_get_marc_fields($node, &$record, $tags) {
       $fields = $fields + $tmp;
   }
   ksort($fields);
-  //printAndDie($fields);
   return $fields;
 }
 
+/**
+ * @param $node
+ * @param $node_wrapper
+ * @param $record
+ * @param $tags
+ * @param $xml
+ * @return mixed
+ */
 function _cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$record, $tags, $xml) {
-  //$xml = _cals_get_marc_xml_string($node);
+
   foreach($tags as $tag => $arr) {
 
     switch($tag) {
@@ -387,7 +409,9 @@ function _cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$rec
         $val = $record->getLeader();
         break;
       case '001':
-        $val = 'BVNNELS' . $node->nid; //see https://github.com/BCLibCoop/nnels/issues/130
+        //see https://github.com/BCLibCoop/nnels/issues/130
+        //and https://github.com/BCLibCoop/nnels/issues/193
+        $val = 'BVNNELS' . $node_wrapper->getIdentifier();
         break;
 
       case '003':
@@ -395,12 +419,13 @@ function _cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$rec
         break;
 
       case '005':
-        $val = $node->changed;
         //yyyymmddhhmmss.f
-        $val = date('YmdHis.0', $val);
+        if (is_numeric($node_wrapper->changed->value())) $val = date('YmdHis.0', $node_wrapper->changed->value());
         break;
       case '008':
-       // $val = _cals_importer_export_callback_008($node, $node_wrapper, $xml);
+        // Not in use
+        // $xml = _cals_get_marc_xml_string($node);
+        // $val = _cals_importer_export_callback_008($node, $node_wrapper, $xml);
         break;
 
     }
@@ -414,10 +439,16 @@ function _cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$rec
   return $tmp;
 
 }
-//_cals_importer_exporter_parse_controlfields($node, $node_wrapper, &$record, $tags) {
 
-
-function _cals_importer_exporter_parse_datafields($node, $node_wrapper, &$record, $tags, $xml) {
+/**
+ * @param $node
+ * @param $node_wrapper
+ * @param $record
+ * @param $tags
+ * @param $xml
+ * @return array
+ */
+function _cals_importer_exporter_parse_datafields($node ,$node_wrapper, &$record, $tags, $xml) {
   //$xml = _cals_get_marc_xml_string($node);
 
   $arr = array();
@@ -445,7 +476,7 @@ function _cals_importer_exporter_parse_datafields($node, $node_wrapper, &$record
           $ind2 = $tagset['ind2'];
           //if($ind1 = "''") $ind1 = '';
           if($ind2 = "''") $ind2 = '';
-          if ($ind1 == 'use MarcXML indicators') {
+           if ($ind1 == 'use MarcXML indicators') {
             $ind1 = _cals_importer_get_marc_indicators($xml, $tag, 1);
           }
           if ($ind2 == 'use MarcXML indicators') {
@@ -560,12 +591,16 @@ function _cals_importer_exporter_iterate_controlfields(&$record, $controlfields)
     _cals_importer_exporter_insert_field($record, $field, $tag);
   }
 }
+
 /**
  * Iterate thru array of datafields to insert xml datafields
  * @param $record
  * @param $datafields
+ * @throws \File_MARC_Exception
  */
 function _cals_importer_exporter_iterate_datafields(&$record, $datafields) {
+  $marc_subfields = array();
+
   foreach($datafields as $tag => $arr) {
     $subfields = $arr['subfields'];
     if(empty($subfields)) {
@@ -577,8 +612,6 @@ function _cals_importer_exporter_iterate_datafields(&$record, $datafields) {
       //if($code == 720) printAndDie($marc_subfields);
       if($tag != 7200) {
         foreach($subfields as $subfield) {
-
-          $marc_subfields = array();
 
           $marc_subfields = _cals_importer_exporter_get_marc_subfield($subfield);
           $field = new File_MARC_Data_Field($tag, $marc_subfields, 0, null);
@@ -602,7 +635,7 @@ function _cals_importer_exporter_iterate_datafields(&$record, $datafields) {
         }
 
       }
-      else { //old method
+      else { //old method - does this get called?
         $field = new File_MARC_Data_Field($tag, $marc_subfields, 0, null);
         $field->setIndicator(1, "{$arr['ind1']}");
         $field->setIndicator(2, "{$arr['ind2']}");
@@ -643,6 +676,8 @@ function _cals_importer_exporter_insert_field(&$record, $field, $id) {
 /**
  * View marc-xml stub for repository item
  * @param $node
+ * @return array|mixed|string|null
+ * @throws \Exception
  */
 function _cals_importer_view_marcxml_stub($node) {
 

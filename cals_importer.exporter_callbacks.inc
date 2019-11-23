@@ -190,6 +190,8 @@ function _cals_importer_exporter_callback_240($vars) {
   $tag = $vars['tag'];
 
   $wrapper = $vars['node_wrapper'];
+  //$lang = reset($wrapper->field_iso_language->value()) ?: LANGUAGE_NONE;
+  $lang = reset($wrapper->field_iso_language->value());
   $subfields = array();
 
   $term = $wrapper->field_uniform_title->value();
@@ -198,7 +200,8 @@ function _cals_importer_exporter_callback_240($vars) {
     $code = 240;
     $subfield = 'a';
     $ind2 = 0;
-    $ind2 = _cals_importer_exporter_filing_characters($value);
+    $ind2 = _cals_importer_exporter_filing_characters($value, $lang, 0, 0);
+
     $arr[240]['subfields'][]['a'] = $value;
     $arr[240]['ind1'] = 0;
     $arr[240]['ind2'] = $ind2;
@@ -215,9 +218,9 @@ function _cals_importer_exporter_callback_240($vars) {
  */
 function _cals_importer_exporter_callback_245($vars) {
   //if vocab, $term = 'field_subject';
-  $node = $vars['node'];
+
   $tag = $vars['tag'];
-  $values = _cals_importer_exporter_field_value($node, 'title_field');
+  $values = _cals_importer_exporter_field_value($vars['node_wrapper'], 'title_field'); //compatibility
   //field_view_field('node', $node, 'title_field', array('default'));
   $safe_values = array();
   if(is_array($values)) {
@@ -230,12 +233,11 @@ function _cals_importer_exporter_callback_245($vars) {
   $subfield = 'a';
   $ind2 = 0;
 
-  $lang = reset(entity_metadata_wrapper('node', $node)
-    ->field_iso_language->value());
+  $base_lang = reset($vars['node_wrapper']->field_iso_language->value());
 
   foreach($safe_values as $value) {
     normalize_title($value);
-    $ind2 = _cals_importer_exporter_filing_characters($value, $lang, 0, 0);
+    $ind2 = _cals_importer_exporter_filing_characters($value, $base_lang, 0, 0);
     $arr[245]['subfields'][]['a'] = $value;
   }
   $arr[245]['ind1'] = 0;
@@ -255,6 +257,7 @@ function _cals_importer_exporter_callback_264($vars) {
   $tag = $vars['tag'];
   $wrapper = $vars['node_wrapper'];
   $values = _cals_importer_exporter_field_value($node, 'field_publisher');
+  $lang = reset($wrapper->field_iso_language->value());
 
   $arr[264] = array(
     'ind1' => '',
@@ -272,8 +275,8 @@ function _cals_importer_exporter_callback_264($vars) {
 
     $subcode = ($k == 0) ? 'a' : 'b';
     $v = trim($v);
-
-    //$ind2 = _cals_importer_exporter_filing_characters($value);
+    //Why was this disabled?
+    //$ind2 = _cals_importer_exporter_filing_characters($value, $lang);
     $arr[264]['subfields'][0][$subcode] = $v;
   }
   $pubdate = NULL;
@@ -357,7 +360,6 @@ function _cals_importer_exporter_callback_511($vars) {
  * Include if present in Abstract (body) field in Drupal
  * @param $vars
  * @return array
- * @todo - review the proper way to extract body values.
  */
 function _cals_importer_exporter_callback_520($vars) {
 
@@ -365,8 +367,8 @@ function _cals_importer_exporter_callback_520($vars) {
   $tag = $vars['tag'];
   $wrapper = $vars['node_wrapper'];
   $subfields = array();
-  if(!isset($wrapper->body)) {
-    return;
+  if(! $wrapper->body->value() ){
+    return array();
   }
   $values = $wrapper->body->value->value(array('decode' => TRUE));
 
@@ -670,14 +672,22 @@ function _cals_importer_exporter_callback_720($vars) {
  */
 function _cals_importer_exporter_callback_856($vars) {
   $tag = $vars['tag'];
-  $node = $vars['node'];
+//  $node = $vars['node'];
   //field_publisher
-  $nid = $node->nid;
+  $nid = $vars['node_wrapper']->getIdentifier();
   $arr[856] = array(
     'ind1' => 4,
     'ind2' => 0,
   );
-  $arr[856]['subfields'][0]['u'] = 'http://nnels.ca/node/' . $nid;
+
+  $arr[856]['subfields'][0]['u'] = url(
+    'node/' . $nid,
+    array(
+      'absolute' => true,
+      'https' => true,
+      'alias' => true
+    )
+  );
 
   return $arr;
 }

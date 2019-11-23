@@ -301,7 +301,13 @@ function cals_importer_menu() {
     'description' => 'Add MARC-ready file snippet',
   );
 
-
+  $items['admin/content/nnels_all_export'] = array(
+    'page callback' => 'drupal_get_form',
+    'title' => 'NNELS All Record Exporter', //page title
+    'description' => 'Trigger export of all records in NNELS to AWS S3.',
+    'page arguments' => array('cals_importer_marcxml_all_exporter_form'),
+    'access arguments' => array('parse s3 paths'),
+  );
 
   return $items;
 
@@ -462,15 +468,6 @@ function cals_importer_action_info() {
       'label' => t('5. Update Publisher and Publisher Source'),
       'type' => 'node',
       'configurable' => TRUE,
-      'triggers' => array('any'),
-    ),
-
-
-    //batch generate MARC XML files from all files that include 856 tag
-    '_cals_importer_generate_marcxml_files_all_records' => array(
-      'label' => t('CALS: Generate downloadable MARC XML files (entire recordset)'),
-      'type' => 'node',
-      'configurable' => FALSE,
       'triggers' => array('any'),
     ),
 
