@@ -5,7 +5,7 @@
  */
 
 /**
- * Simple wrapper to call main parser; if preferred, can invoke batch api instead. 
+ * Simple wrapper to call main parser; if preferred, can invoke batch api instead.
  * @param $node
  */
 function _cals_importer_update_repository_item($node) {
@@ -24,12 +24,12 @@ function _cals_importer_update_repository_item($node) {
  * @param $entity
  *   the node passed to the parser
  *
- */  
- 
+ */
+
 function _cals_importer_update_repository_items(&$entity, $context = array()) {
   if (isset($entity->nid)) {
     $node = node_load($entity->nid);
-    //safety check to make sure we're parsing repos items!!    
+    //safety check to make sure we're parsing repos items!!
     $content_types = array('repository_item');
     if (in_array($node->type, $content_types)  ) {
       _cals_parse_record_details($node, $fields=array());
@@ -41,9 +41,9 @@ function _cals_importer_update_repository_items(&$entity, $context = array()) {
     }
 
   }//end main if
- 
+
   return "";
-  
+
 }
 
 
@@ -56,7 +56,7 @@ function _cals_importer_update_repository_items(&$entity, $context = array()) {
  * @param $field
  *   the $node->{field} acted on
  *
- */ 
+ */
 function _cals_importer_normalize_node_field(&$node, $field) {
   //drupal_set_message(__FUNCTION__ . ": " . $field);
 	switch($field) {
@@ -196,6 +196,7 @@ function _cals_reparse_record_details_submit($form, $form_state) {
 
   //Pass along our settings
   $return = array();
+  $error = array();
   $return['fields_to_parse'] = $form_state['values']['fields_to_parse'];
   $return['scope_of_reparse'] = $form_state['values']['scope_of_reparse'];
 
