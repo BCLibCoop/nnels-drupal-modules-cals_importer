@@ -104,19 +104,17 @@ function cals_importer_find_mapped_genre($xpathvalue, $fieldname, &$map) {
 
   /**
    * Interprets messy query result data into boolean
-   * @param $result
-   * @return bool
+   * @param EntityDrupalWrapper $result
+   * @return mixed
    */
 
 function cals_importer_term_parse_process($result) {
   $anchor = 0;
-  if (isset($result['taxonomy_term'])) {
+  //@todo
+  if ($result->type() == 'taxonomy_term') {
 
     //Take first result
-    $key = key($result["taxonomy_term"]);
-
-    //Return the matching tids
-    return $result["taxonomy_term"][$key]->tid;
+    return $result->value()->tid;
 
   }
   else {
