@@ -231,7 +231,9 @@ function _cals_reparse_record_details_submit($form, $form_state) {
       drupal_goto(check_url($_SERVER['REDIRECT_URL'])); //Go back to the record
     }
 
-    $indexed_collection = array();
+    //initialize
+    $candidate_index = array();
+    $semi_indexed_collection = array();
 
     //For each record in the record set
     foreach ($xml->children(NAME_SPACE) as $record) {
@@ -244,19 +246,23 @@ function _cals_reparse_record_details_submit($form, $form_state) {
           'a'),
         '001' => _cals_importer_xpath_value($record, 'controlfield', '001')
       );
-      $found_switch = FALSE;
 
-      foreach ($candidate_SCN_positions as $code) {
-        if (! empty($code) && $found_switch != TRUE) $index = (string) $code[0];
-        $found_switch = TRUE;
+      foreach ($candidate_SCN_positions as $tag => $ids) { //all tags
+        if (!empty($tag)) {
+          $candidate_index = array_merge($ids, $candidate_index);
+        }
       }
 
-      $indexed_collection[$index] = $record->asXML(); //store as string,
-      // gets serialized when passed to bulk action function
-    }
+      //We need a semi-indexed collection for when another instance of the SCN
+      // field is added, otherwise it will never match.
+      $semi_indexed_collection[] = array(
+        'keys' => $candidate_index,
+        'record' => $record->asXML()
+      );
 
-    ksort($indexed_collection);
-    $return['indexed_collection'] = $indexed_collection;
+      $candidate_index = []; //reset
+    } //end per-record foreach
+    $return['semi_indexed_collection'] = $semi_indexed_collection;
   }//end scope of reparse mode 1
 
   return $return; //Note, return value here must be an array.
@@ -271,8 +277,7 @@ function _cals_reparse_record_details_submit($form, $form_state) {
 function _cals_reparse_record_details(&$node, $context) {
   $arr_fields = _cals_get_fields_repository_item();
 
-  //Initialize up the field map with target fields that are valid for
-  // RepositoryItem
+  //Initialize the field map with target fields valid for RepositoryItems
   $reparse_field_map = array_intersect_key($arr_fields['map'], $context['fields_to_parse']);
 
   //Reparse Mode 0 - default: use only the repo item's MARCXML record
@@ -284,36 +289,44 @@ function _cals_reparse_record_details(&$node, $context) {
     $SCNs = entity_metadata_wrapper('node', $node)
       ->field_system_control_number->value();
 
-    //Catch if we are dealing with an unparsed or node lacking SCN at
-    // all
+    //Catch if we are dealing with an unparsed or node lacking any SCN
     if (empty($SCNs)) {
       drupal_set_message("There were not any SCNs in the selected nodes to match on.");
       return FALSE;
     }
 
-    $parsed = '';
+    $parsed_flag = FALSE;
+    $key_match = NULL;
 
-    foreach ($SCNs as $SCN) {
-      if (
-        //Find a match between the node in context and our index collection of
-        // records
-        array_key_exists($SCN, $context['indexed_collection']) &&
-        !$parsed
-      ) {
-        //Load the matched record as a single-item SimpleXML collection for field
-        // map iterator
-        $loaded = MARC_HEADER . "\n" . $context['indexed_collection'][$SCN] . "</collection>";
-        $prepared_simplexml_record = simplexml_load_string($loaded);
+    if (!$key_match) { //Stops searching once a match is found
+      foreach ($SCNs as $SCN) {
 
-        _cals_importer_iterate_field_map(
-          $node,
-          $prepared_simplexml_record,
-          $reparse_field_map, //the fields to reparse
-          "parse"
-        );
-        $parsed = TRUE; //Don't reparse in case of SCN duplicate in index
-      }
-    } //end foreach
+        $match_found = array_walk(
+          $context['semi_indexed_collection'],
+          function ($item, $key) use (&$key_match, $SCN) {
+            //Actual local key doesn't matter since we are walking over each
+            // instance
+            if (array_search($SCN, $item['keys'])) {
+              $key_match = $item['record'];
+            }
+          });
+      } //end foreach
+    }
+
+    if ( ! empty($key_match) && ! $parsed_flag ) {
+      //Load the matched record as a single-item SimpleXML collection for field
+      // map iterator
+      $loaded = MARC_HEADER . "\n" . $key_match . "</collection>";
+      $prepared_simplexml_record = simplexml_load_string($loaded);
+
+      _cals_importer_iterate_field_map(
+        $node,
+        $prepared_simplexml_record,
+        $reparse_field_map, //the fields to reparse
+        "parse"
+      );
+      $parsed_flag = TRUE; //Don't reparse in case of SCN duplicate in index
+    }
   } //end scope of reparse mode 1
 
   $message = t('Reparsed: (%fields) on Title: "%title"',
