@@ -37,7 +37,7 @@ function cals_importer_find_mapped_genre($xpathvalue, $fieldname, &$map) {
       $loaded_term = taxonomy_term_load((int) key($results['results']));
 
       //break early if nothing to apply.
-      if ( empty($loaded_term->field_genre_mapped)) break;
+      if ( empty($loaded_term->field_genre_harmonized)) break;
 
       //Load conditional terms - Multiple values!
       $must_have_fragment = $loaded_term->field_must_have_subject
@@ -52,7 +52,8 @@ function cals_importer_find_mapped_genre($xpathvalue, $fieldname, &$map) {
 
       if ($must && !$exclude) {
         //Apply Genre term
-        $map[$fieldname]['values'][] = $loaded_term->field_genre_mapped["und"][0]["tid"];
+        $map[$fieldname]['values'][] =
+          $loaded_term->field_genre_harmonized["und"][0]["tid"];
       }
       else {
         //No match found from entry_subject query

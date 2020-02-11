@@ -40,7 +40,8 @@ function _cals_importer_repo_field_callback($fieldname) {
 
     "field_subject" => array("function" => '_cals_get_subject_from_marc'),
     "field_genre" => array("function" => '_cals_get_genre_from_marc'),
-    "field_genre_mapped" => array("function" => '_cals_get_mapped_genre_from_marc'),
+    "field_genre_mapped" => array("function" => '_cals_get_mapped_genre_from_marc'), //@todo remove
+    "field_genre_harmonized" => array("function" => '_cals_get_mapped_genre_from_marc'),
 
     //'field_uri' => array('function' => '_cals_importer_get_uri_from_marc'),
     'field_urls_external' => array('function' => '_cals_importer_get_urls_from_marc',
