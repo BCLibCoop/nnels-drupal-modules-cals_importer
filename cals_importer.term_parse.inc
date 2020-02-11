@@ -2,48 +2,12 @@
 
 /**
  * Attempts to find an appropriate genre term to apply
- * First iteration
  * @param $xpathvalue
  * @param $fieldname
  * @param $map
+ * @throws \SearchApiException
  */
-function _cals_importer_find_mapped_genre_test($xpathvalue, $fieldname,
-                                                &$map) {
-  $anchor = 0;
-  foreach ($xpathvalue as $term) {
 
-    $candidate = trim( rtrim( $term, "." ) );
-
-    //Try straight match query
-    $straight_match = (new EntityFieldQuery)
-      ->entityCondition('entity_type', 'taxonomy_term')
-      ->entityCondition('bundle', 'genre_mapped')
-      ->propertyCondition('name', $candidate )
-      ->execute();
-
-    //Try related match query
-    $related_match = (new EntityFieldQuery)
-      ->entityCondition('entity_type', 'taxonomy_term')
-      ->entityCondition('bundle', 'genre_mapped')
-      ->fieldCondition('field_related_terms', 'value', $candidate, 'CONTAINS')
-      ->execute();
-
-    if ( $match = cals_importer_term_parse_process($straight_match) ) {
-      $map[$fieldname]['values'][] = $match;
-      break;
-    } elseif ( $match = cals_importer_term_parse_process($related_match) ) {
-      $map[$fieldname]['values'][] = $match;
-    }
-  }
-}
-
-/**
- * Attempts to find an appropriate genre term to apply
- * @param $xpathvalue
- * @param $fieldname
- * @param $map
- * @return bool
- */
 function cals_importer_find_mapped_genre($xpathvalue, $fieldname, &$map) {
 
   //Load freshly parsed 650 values
@@ -54,31 +18,31 @@ function cals_importer_find_mapped_genre($xpathvalue, $fieldname, &$map) {
 
   foreach ($candidate_subjects as $subject) {
     //Knock out bogus entries early
-    if (empty($subject->value())) continue;
-    $subject_name = strtolower($subject->value()->name);
-    //$candidate_genre = trim(rtrim($term, "."));
+    if (empty($subject->value())) {
+      continue;
+    }
+    $subject_name = rtrim(explode("--", strtolower($subject->value()->name))[0]);
 
-    //Find genre term with matching subject
-    $subject_match = (new EntityFieldQuery)
-      ->entityCondition('entity_type', 'taxonomy_term')
-      ->entityCondition('bundle', 'genre_mapped')
-      //@todo try LIKE partial matching?
-      ->fieldCondition('field_entry_subject', 'value', "%".$subject_name."%", "LIKE")
-      //@todo remove
-      ->addTag('debug')
+    //Attempt Solr query on Subject Stems
+    $results = search_api_query('mapped_subject_stems')
+      ->condition('name', $subject_name, '=')
       ->execute();
 
     //Query yields a loadable term
-    if (! empty($subject_match['taxonomy_term'])) {
+    if (!empty($results['results'])) {
 
-      $loaded_term = entity_metadata_wrapper(
-        'taxonomy_term', (key($subject_match['taxonomy_term']))
-      );
+      /** Cannot use EMWs for fields added manually, without hook_field_info
+       * https://drupal.stackexchange.com/a/162400
+       **/
+      $loaded_term = taxonomy_term_load((int) key($results['results']));
+
+      //break early if nothing to apply.
+      if ( empty($loaded_term->field_genre_mapped)) break;
 
       //Load conditional terms - Multiple values!
-      $must_have_fragment = $loaded_term->field_must_have_subject->value()
+      $must_have_fragment = $loaded_term->field_must_have_subject
         ?: array();
-      $avoid_subject_fragment = $loaded_term->field_avoid_subject->value()
+      $avoid_subject_fragment = $loaded_term->field_avoid_subject
         ?: array();
 
       //check against conditions across all parsed subjects
@@ -87,37 +51,13 @@ function cals_importer_find_mapped_genre($xpathvalue, $fieldname, &$map) {
       $exclude = in_array($avoid_subject_fragment, $candidate_subjects);
 
       if ($must && !$exclude) {
-        //Apply subject term
-        if ($term = cals_importer_term_parse_process($loaded_term)) {
-          $map[$fieldname]['values'][] = $term;
-          break;
-        }
+        //Apply Genre term
+        $map[$fieldname]['values'][] = $loaded_term->field_genre_mapped["und"][0]["tid"];
       }
-
-    } else {
-      //No match found from entry_subject query
-      continue;
+      else {
+        //No match found from entry_subject query
+        continue;
+      }
     }
-  }
-}
-
-
-  /**
-   * Interprets messy query result data into boolean
-   * @param EntityDrupalWrapper $result
-   * @return mixed
-   */
-
-function cals_importer_term_parse_process($result) {
-  $anchor = 0;
-  //@todo
-  if ($result->type() == 'taxonomy_term') {
-
-    //Take first result
-    return $result->value()->tid;
-
-  }
-  else {
-    return FALSE;
   }
 }
