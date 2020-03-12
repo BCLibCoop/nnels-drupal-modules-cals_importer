@@ -744,7 +744,16 @@ function _cals_get_subject_from_marc($xml, $k, &$map){
   foreach ($codes as $code) $paths[] = "//marc:datafield[@tag='650']/marc:subfield[@code='" . $code . "']";
   $path = implode("|", $paths);
   $xpathvalue = $xml->xpath($path);
-  _cals_get_taxonomy_terms_from_xpath($xpathvalue, $k, $map);
+
+  //Collapse on duplicates across a given subfield code
+  $deduped_xpath_values = array();
+  foreach($xpathvalue as $val) {
+    if (! in_array($val->__toString(), $deduped_xpath_values)) $deduped_xpath_values[] =
+      $val;
+  }
+  //Requires SimpleXMLElements passed in first parameter
+  _cals_get_taxonomy_terms_from_xpath($deduped_xpath_values, $k, $map);
+
 }
 
 /**

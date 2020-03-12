@@ -21,12 +21,20 @@ function cals_importer_find_mapped_genre($xpathvalue, $fieldname, &$map) {
     if (empty($subject->value())) {
       continue;
     }
-    $subject_name = rtrim(explode("--", strtolower($subject->value()->name))[0]);
+
+    //split off geographic subdivisions and date starts
+    $subject_processed = preg_split( "/(--|,\s\d\d+)/",rtrim($subject->value()
+      ->name));
+
+    $subject_name = (string) $subject_processed[0];
 
     //Attempt Solr query on Subject Stems
     $results = search_api_query('mapped_subject_stems')
       ->condition('name', $subject_name, '=')
       ->execute();
+
+    //@todo remove
+    dpm($results, "Results found: ");
 
     //Query yields a loadable term
     if (!empty($results['results'])) {
