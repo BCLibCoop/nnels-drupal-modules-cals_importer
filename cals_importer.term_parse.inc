@@ -16,6 +16,12 @@ function cals_importer_find_mapped_genre($xpathvalue, $fieldname, &$map) {
     $candidate_subjects[] = entity_metadata_wrapper('taxonomy_term', $v);
   }
 
+  //Prepare a simple array of values for later intersection
+  $simple_array_subjects = array();
+  foreach ($candidate_subjects as $candidate){
+    $simple_array_subjects[] = $candidate->value()->name;
+  }
+
   foreach ($candidate_subjects as $subject) {
     //Knock out bogus entries early
     if (empty($subject->value())) {
@@ -33,9 +39,6 @@ function cals_importer_find_mapped_genre($xpathvalue, $fieldname, &$map) {
       ->condition('name', $subject_name, '=')
       ->execute();
 
-    //@todo remove
-    dpm($results, "Results found: ");
-
     //Query yields a loadable term
     if (!empty($results['results'])) {
 
@@ -48,15 +51,31 @@ function cals_importer_find_mapped_genre($xpathvalue, $fieldname, &$map) {
       if ( empty($loaded_term->field_genre_harmonized)) break;
 
       //Load conditional terms - Multiple values!
-      $must_have_fragment = $loaded_term->field_must_have_subject
+      $must_have_fragments = $loaded_term->field_must_have_subject
         ?: array();
-      $avoid_subject_fragment = $loaded_term->field_avoid_subject
+      $avoid_fragments = $loaded_term->field_avoid_subject
         ?: array();
 
-      //check against conditions across all parsed subjects
-      $must = empty($must_have_fragment) ? TRUE : in_array($must_have_fragment,
-        $candidate_subjects);
-      $exclude = in_array($avoid_subject_fragment, $candidate_subjects);
+      $must_haves = array();
+      foreach($must_have_fragments['und'] as $m) {
+        $must_haves[] = $m['safe_value'];
+      }
+
+      $to_avoid = array();
+      foreach($avoid_fragments['und'] as $a) {
+        $to_avoid[] = $a['safe_value'];
+      }
+
+      //use array_intersect iterate over $must_haves, set as true default,
+      // flip if any intersect call fails
+      $must = TRUE;
+      if (! empty($must_haves)) {
+        foreach ($must_haves as $mh) {
+          $must = (bool) in_array($mh, $simple_array_subjects);
+        }
+      }
+      //True if present: don't pass-through. No match: proceed.
+      $exclude = (bool) array_intersect($to_avoid, $simple_array_subjects);
 
       if ($must && !$exclude) {
         //Apply Genre term
@@ -68,5 +87,5 @@ function cals_importer_find_mapped_genre($xpathvalue, $fieldname, &$map) {
         continue;
       }
     }
-  }
+  } //end foreach
 }
