@@ -649,7 +649,15 @@ function _cals_get_genre_from_marc($xml, $k, &$map) {
 function _cals_get_mapped_genre_from_marc($xml, $k, &$map) {
   $xpathvalue = $xml->xpath("//marc:datafield[@tag='655'][@ind1=' ']/marc:subfield[@code='a']|//marc:datafield[@tag='655'][@ind2=' ']/marc:subfield[@code='a']");
   module_load_include('inc', 'cals_importer', 'cals_importer.term_parse');
-  cals_importer_find_mapped_genre($xpathvalue, $k, $map);
+  try {
+    cals_importer_find_mapped_genre($xpathvalue, $k, $map);
+  }
+  catch (Exception $e){
+    drupal_set_message(
+      "cals_import_find_mapped_genre encountered critical 
+      error: " . $e->getMessage(), 'error', FALSE
+    );
+  }
 }
 
 /**
