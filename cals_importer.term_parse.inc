@@ -16,6 +16,9 @@ function cals_importer_find_mapped_genre($xpathvalue, $field_name, &$map) {
     'Non-fiction',
     'Nonfiction',
     'Stories',
+    'Science',
+    'Language',
+    'Studies'
   );
 
   //Load freshly parsed 650 values
@@ -54,7 +57,7 @@ function cals_importer_find_mapped_genre($xpathvalue, $field_name, &$map) {
 
     if (empty($results['results'])) {
       $second_pass_query = search_api_query('mapped_subject_stems')
-        ->keys($subject_name);
+        ->condition('search_api_aggregation_1', $subject_name, '=');
       if (! empty($results = $second_pass_query->execute()))
         $map[$field_name]['values'][] = map_harmonized_terms($results,
           $simple_array_subjects);
@@ -68,11 +71,13 @@ function cals_importer_find_mapped_genre($xpathvalue, $field_name, &$map) {
 }
 
 /**
- * @param $results
- * @param $simple_array_subjects
- * @return mixed
+ * @param $results array
+ * @param $simple_array_subjects array
+ * @return mixed bool|int
  */
-function map_harmonized_terms($results, $simple_array_subjects){
+
+function map_harmonized_terms($results, $simple_array_subjects) {
+
   /** Cannot use EMWs for fields added manually, without hook_field_info
    * https://drupal.stackexchange.com/a/162400
    **/
