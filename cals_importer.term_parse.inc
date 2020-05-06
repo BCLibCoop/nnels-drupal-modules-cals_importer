@@ -10,6 +10,8 @@
 
 function cals_importer_find_mapped_genre($xpathvalue, $field_name, &$map) {
 
+  $index = 'mapped_subject_stems'; //default
+
   //Too ambiguous for full-text
   $terms_too_generic = array(
     'Fiction',
@@ -45,7 +47,7 @@ function cals_importer_find_mapped_genre($xpathvalue, $field_name, &$map) {
     $subject_name = (string) $subject_processed[0];
 
     //Attempt Solr query on Subject Stems
-    $initial_query = search_api_query('mapped_subject_stems')
+    $initial_query = search_api_query($index)
       ->condition('name', $subject_name, '=');
       // if field is fulltext, the default '=' operator is interpreted as 'contains'.
       // to search over all fulltext fields: $query->keys('keywords')
@@ -56,7 +58,7 @@ function cals_importer_find_mapped_genre($xpathvalue, $field_name, &$map) {
     //@todo cleanup
 
     if (empty($results['results'])) {
-      $second_pass_query = search_api_query('mapped_subject_stems')
+      $second_pass_query = search_api_query($index)
         ->condition('search_api_aggregation_1', $subject_name, '=');
       if (! empty($results = $second_pass_query->execute()))
         $map[$field_name]['values'][] = map_harmonized_terms($results,
@@ -85,7 +87,7 @@ function map_harmonized_terms($results, $simple_array_subjects) {
   dpm($loaded_term, "Loaded term from result: ");
 
   //break early if nothing to apply.
-  if ( empty($loaded_term->field_genre_mapped)) return NULL;
+  if ( empty($loaded_term->field_genre_harmonized)) return NULL;
 
   //Load conditional terms - Multiple values!
   $must_have_fragments = $loaded_term->field_must_have_subject
@@ -116,7 +118,7 @@ function map_harmonized_terms($results, $simple_array_subjects) {
 
   if ($must && !$exclude) {
     //Return Genre term
-    return $loaded_term->field_genre_mapped["und"][0]["tid"];
+    return $loaded_term->field_genre_harmonized["und"][0]["tid"];
   } else {
     return NULL;
   }
