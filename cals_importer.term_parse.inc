@@ -35,11 +35,18 @@ function cals_importer_find_mapped_genre($xpathvalue, $field_name, &$map) {
     $simple_array_subjects[] = $candidate->value()->name;
   }
 
+  //@todo Merge candidate_subjects, simple_array_subjects redundancies
+
   foreach ($simple_array_subjects as $subject) {
 
     //Knock out bogus entries early
     if (empty($subject) || in_array($subject, $terms_too_generic)) {
       continue;
+    }
+
+    //determine BISAC status
+    if ( determine_bisac_term($subject) ) {
+      //@todo override $index with BISAC index name
     }
 
     //split off geographic subdivisions and date starts
@@ -84,7 +91,7 @@ function map_harmonized_terms($results, $simple_array_subjects) {
    * https://drupal.stackexchange.com/a/162400
    **/
   $loaded_term = taxonomy_term_load((int) key($results['results']));
-  dpm($loaded_term, "Loaded term from result: ");
+  dpm($name = $loaded_term->name, "Considering fragment from result: ");
 
   //break early if nothing to apply.
   if ( empty($loaded_term->field_genre_harmonized)) return NULL;
@@ -122,4 +129,27 @@ function map_harmonized_terms($results, $simple_array_subjects) {
   } else {
     return NULL;
   }
+}
+
+/**
+ * @param $subject_term
+ * @return bool
+ */
+function determine_bisac_term($subject_term) {
+
+  //check if BISAC tid cache has been set recently
+  if ($available = cache_get('bisac_subject_tids')) {
+    $current_BISAC_tagged = $available->data;
+    if ( in_array($subject_term, $current_BISAC_tagged) ) return TRUE;
+  } else {
+
+    //BISAC regex pattern, could be improved
+    //E.g. YOUNG ADULT FICTION / Magical Realism, DRAMA /
+    $BISAC_pattern = "/^[A-Z]{2,}\s?.*\s\/\s?/";
+    if (preg_match($BISAC_pattern, $subject_term, $found) )
+      $matched = $found[0];
+      return TRUE;
+  }
+
+  return FALSE; //default
 }
