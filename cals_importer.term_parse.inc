@@ -117,7 +117,10 @@ function map_harmonized_terms($results, $simple_array_subjects) {
   $must = TRUE;
   if (! empty($must_haves)) {
     foreach ($must_haves as $mh) {
+      //In multi-value runs, presence of the last musthave can flip the whole
+      //Addd a check for a false value that breaks out of loop
       $must = (bool) in_array($mh, $simple_array_subjects);
+      if ($must === FALSE) break;
     }
   }
   //True if present: don't pass-through. No match: proceed.
@@ -125,6 +128,9 @@ function map_harmonized_terms($results, $simple_array_subjects) {
 
   if ($must && !$exclude) {
     //Return Genre term
+    //@todo remove
+    dpm(taxonomy_term_load((int)
+    $loaded_term->field_genre_harmonized["und"][0]["tid"])->name, "Applied harmonized genre: ");
     return $loaded_term->field_genre_harmonized["und"][0]["tid"];
   } else {
     return NULL;
