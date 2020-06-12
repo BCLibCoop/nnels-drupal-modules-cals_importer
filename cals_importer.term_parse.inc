@@ -66,7 +66,7 @@ function cals_importer_find_mapped_genre($xpathvalue, $field_name, &$map) {
 
     if (empty($results['results'])) {
       //Count potential tokens, no secondary query if < 2
-      if (count(explode(' ', $subject_name)) < 2) break;
+      //if (count(explode(' ', $subject_name)) < 2) break;
       $second_pass_query = search_api_query($index)
         ->condition('search_api_aggregation_1', $subject_name, '=');
       if (! empty($results = $second_pass_query->execute()))
