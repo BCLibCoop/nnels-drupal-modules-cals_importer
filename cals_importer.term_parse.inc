@@ -12,7 +12,7 @@ function cals_importer_find_mapped_genre($xpathvalue, $field_name, &$map) {
 
   $index = 'mapped_subject_stems'; //default
 
-  //Too ambiguous for full-text
+  //Too ambiguous on their own for full-text consideration
   $terms_too_generic = array(
     'Fiction',
     'Non-fiction',
@@ -39,7 +39,7 @@ function cals_importer_find_mapped_genre($xpathvalue, $field_name, &$map) {
 
   foreach ($simple_array_subjects as $subject) {
 
-    //Knock out bogus entries early
+    //Knock out ambiguous entries from loop early
     if (empty($subject) || in_array($subject, $terms_too_generic)) {
       continue;
     }
@@ -65,6 +65,8 @@ function cals_importer_find_mapped_genre($xpathvalue, $field_name, &$map) {
     //@todo cleanup
 
     if (empty($results['results'])) {
+      //Count potential tokens, no secondary query if < 2
+      if (count(explode(' ', $subject_name)) < 2) break;
       $second_pass_query = search_api_query($index)
         ->condition('search_api_aggregation_1', $subject_name, '=');
       if (! empty($results = $second_pass_query->execute()))
@@ -118,9 +120,13 @@ function map_harmonized_terms($results, $simple_array_subjects) {
   if (! empty($must_haves)) {
     foreach ($must_haves as $mh) {
       //In multi-value runs, presence of the last musthave can flip the whole
-      //Addd a check for a false value that breaks out of loop
-      $must = (bool) in_array($mh, $simple_array_subjects);
-      if ($must === FALSE) break;
+      //@todo use levenshtein distance check
+      //$must = (bool) in_array($mh, $simple_array_subjects);
+      foreach ($simple_array_subjects as $sma)
+        $components = explode(' ', $sma);
+        if (!empty($components)) {
+          $must = (bool) in_array($mh, $components);
+        }
     }
   }
   //True if present: don't pass-through. No match: proceed.
@@ -149,8 +155,9 @@ function determine_bisac_term($subject_term) {
     if ( in_array($subject_term, $current_BISAC_tagged) ) return TRUE;
   } else {
 
-    //BISAC regex pattern, could be improved
-    //E.g. YOUNG ADULT FICTION / Magical Realism, DRAMA /
+    // BISAC regex pattern, could be improved
+    // e.g. YOUNG ADULT FICTION / Magical Realism
+    // YOUNG ADULT FICTION / Science Fiction / Dystopias
     $BISAC_pattern = "/^[A-Z]{2,}\s?.*\s\/\s?/";
     if (preg_match($BISAC_pattern, $subject_term, $found) )
       $matched = $found[0];
