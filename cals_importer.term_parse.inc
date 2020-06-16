@@ -119,14 +119,16 @@ function map_harmonized_terms($results, $simple_array_subjects) {
   $must = TRUE;
   if (! empty($must_haves)) {
     foreach ($must_haves as $mh) {
-      //In multi-value runs, presence of the last musthave can flip the whole
-      //@todo use levenshtein distance check
+      $test = $mh;
+      //In multi-value runs, presence of the last MustHave can flip the whole
       //$must = (bool) in_array($mh, $simple_array_subjects);
-      foreach ($simple_array_subjects as $sma)
+      foreach ($simple_array_subjects as $sma) {
         $components = explode(' ', $sma);
         if (!empty($components)) {
           $must = (bool) in_array($mh, $components);
+          unset($components);
         }
+      }
     }
   }
   //True if present: don't pass-through. No match: proceed.
