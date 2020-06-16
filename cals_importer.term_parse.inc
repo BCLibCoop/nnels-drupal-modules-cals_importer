@@ -117,22 +117,29 @@ function map_harmonized_terms($results, $simple_array_subjects) {
   //use array_intersect iterate over $must_haves, set as true default,
   // flip if any intersect call fails
   $must = TRUE;
-  if (! empty($must_haves)) {
-    foreach ($must_haves as $mh) {
-      $test = $mh;
-      //In multi-value runs, presence of the last MustHave can flip the whole
-      //$must = (bool) in_array($mh, $simple_array_subjects);
-      foreach ($simple_array_subjects as $sma) {
-        $components = explode(' ', $sma);
-        if (!empty($components)) {
-          $must = (bool) in_array($mh, $components);
-          unset($components);
-        }
+  $exclude = FALSE;
+
+  foreach ($must_haves as $mh) {
+    //In multi-value runs, presence of the last MustHave can flip the whole
+    foreach ($simple_array_subjects as $sma) {
+      $components = explode(' ', $sma);
+      if (!empty($components)) {
+        $must = (bool) in_array($mh, $components);
+        unset($components);
       }
     }
   }
+
   //True if present: don't pass-through. No match: proceed.
-  $exclude = (bool) array_intersect($to_avoid, $simple_array_subjects);
+  foreach ($to_avoid as $av) {
+    foreach ($simple_array_subjects as $sma) {
+      $components = explode(' ', $sma);
+      if (!empty($components)) {
+        $exclude = (bool) array_intersect($av, $simple_array_subjects);
+        unset($components);
+      }
+    }
+  }
 
   if ($must && !$exclude) {
     //Return Genre term
