@@ -127,6 +127,7 @@ function map_harmonized_terms($results, $simple_array_subjects) {
       if (!empty($components)) {
         $must = (bool) in_array($mh, $components);
         unset($components);
+        if ($must) break; //return to must_haves loop
       }
     }
   }
