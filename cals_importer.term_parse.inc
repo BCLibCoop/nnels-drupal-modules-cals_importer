@@ -55,28 +55,29 @@ function cals_importer_find_mapped_genre($xpathvalue, $field_name, &$map) {
 
     //Attempt Solr query on Subject Stems
     $initial_query = search_api_query($index)
-      ->condition('name', $subject_name, '=');
-      // if field is fulltext, the default '=' operator is interpreted as 'contains'.
-      // to search over all fulltext fields: $query->keys('keywords')
-      //->condition('search_api_aggregation_1', $subject_name, '=');
+      /**
+       * Previously used straight string search:
+       * condition('name', $subject_name, '=');
+       * To search over all fulltext fields: $query->keys('keywords')
+       * To search only the aggregation field
+       * ->condition('search_api_aggregation_1', $subject_name, '=');
+       * N.B. if field is fulltext as above, default '=' operator is
+       * interpreted as 'contains'.
+       **/
+      ->keys($subject_name);
     $results = $initial_query->execute();
 
     //Query yields a loadable term
     //@todo cleanup
 
     if (empty($results['results'])) {
-      //Count potential tokens, no secondary query if < 2
-      //if (count(explode(' ', $subject_name)) < 2) break;
-      $second_pass_query = search_api_query($index)
-        ->condition('search_api_aggregation_1', $subject_name, '=');
-      if (! empty($results = $second_pass_query->execute()))
-        $map[$field_name]['values'][] = map_harmonized_terms($results,
-          $simple_array_subjects);
-      else return; //Come back empty-handed
+      continue;
     }
     else {  //Straight match on string map and harmonize
-      $map[$field_name]['values'][] = map_harmonized_terms($results,
-        $simple_array_subjects);
+      $mapped_term_id = map_harmonized_terms($results, $simple_array_subjects);
+      //avoid duplicates
+      if ( ! in_array( $mapped_term_id, $map[$field_name]['values'] ) )
+        $map[$field_name]['values'][] = $mapped_term_id;
     }
   } //end foreach
 }
