@@ -44,17 +44,15 @@ function cals_importer_find_mapped_genre($xpathvalue, $field_name, &$map) {
       continue;
     }
 
-    //determine BISAC status
-    if ( determine_bisac_term($subject) ) {
-      //@todo override $index with BISAC index name
-    }
+    //@todo if "Fiction" or "Literature" present, pad out the
+    //$simple_array_subjects here so it can clear Required condition
 
     //split off geographic subdivisions and date starts
     $subject_processed = preg_split( "/(--|,\s\d\d+)/",rtrim($subject));
     $subject_name = (string) $subject_processed[0];
 
     //Attempt Solr query on Subject Stems
-    $initial_query = search_api_query($index)
+    $query = search_api_query($index);
       /**
        * Previously used straight string search:
        * condition('name', $subject_name, '=');
@@ -64,14 +62,26 @@ function cals_importer_find_mapped_genre($xpathvalue, $field_name, &$map) {
        * N.B. if field is fulltext as above, default '=' operator is
        * interpreted as 'contains'.
        **/
-      ->keys($subject_name);
-    $results = $initial_query->execute();
 
-    //Query yields a loadable term
-    //@todo cleanup
+    //determine BISAC status
+    if ( determine_bisac_term($subject_name) ) {
+      $bisac_mode = TRUE;
+      //Ensures we only use BISAC flagged Subject Stems when mapping
+      $query
+        ->condition('field_bisac_flag', 1, '=')
+        ->condition('search_api_aggregation_1', $subject_name, '=');
+    } else {
+      $query
+        ->condition('field_bisac_flag', 0, '=')
+        ->keys($subject_name);
+    }
+
+    $results = $query->execute();
+
+    /* Query yields a loadable term */
 
     if (empty($results['results'])) {
-      continue;
+      continue; //check next
     }
     else {  //Straight match on string map and harmonize
       $mapped_term_id = map_harmonized_terms($results, $simple_array_subjects);
@@ -159,7 +169,7 @@ function map_harmonized_terms($results, $simple_array_subjects) {
  * @return bool
  */
 function determine_bisac_term($subject_term) {
-
+  $test = 0;
   //check if BISAC tid cache has been set recently
   if ($available = cache_get('bisac_subject_tids')) {
     $current_BISAC_tagged = $available->data;
@@ -170,9 +180,9 @@ function determine_bisac_term($subject_term) {
     // e.g. YOUNG ADULT FICTION / Magical Realism
     // YOUNG ADULT FICTION / Science Fiction / Dystopias
     $BISAC_pattern = "/^[A-Z]{2,}\s?.*\s\/\s?/";
-    if (preg_match($BISAC_pattern, $subject_term, $found) )
-      $matched = $found[0];
+    if ( (bool) preg_match($BISAC_pattern, $subject_term) ) {
       return TRUE;
+    }
   }
 
   return FALSE; //default
