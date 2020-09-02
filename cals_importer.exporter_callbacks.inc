@@ -179,6 +179,17 @@ function _cals_importer_exporter_callback_040($vars) {
 }
 
 /**
+ * @param $vars
+ * @return mixed
+ */
+function _cals_importer_exporter_callback_084($vars) {
+  //copy baseline $vars
+  $arr['084']['subfields'][0]['a'] = 'af101fs';
+  $arr['084']['subfields'][0]['2'] = 'lacc';
+  return $arr;
+}
+
+/**
  * Primary title, a bit tricky due to nonfiling characters.
  *
  * @param $node
