@@ -69,7 +69,7 @@ function cals_importer_find_mapped_genre($xpathvalue, $field_name, &$map) {
       //Ensures we only use BISAC flagged Subject Stems when mapping
       $query
         ->condition('field_bisac_flag', 1, '=')
-        ->condition('search_api_aggregation_1', $subject_name, '=');
+        ->keys($subject_name);
     } else {
       $query
         ->condition('field_bisac_flag', 0, '=')
@@ -169,7 +169,7 @@ function map_harmonized_terms($results, $simple_array_subjects) {
  * @return bool
  */
 function determine_bisac_term($subject_term) {
-  $test = 0;
+
   //check if BISAC tid cache has been set recently
   if ($available = cache_get('bisac_subject_tids')) {
     $current_BISAC_tagged = $available->data;
