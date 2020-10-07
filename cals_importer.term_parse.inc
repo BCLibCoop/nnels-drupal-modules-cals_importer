@@ -54,6 +54,7 @@ function cals_importer_find_mapped_genre($supplement_subjects, $field_name, &$ma
     //split off geographic subdivisions and date starts
     $subject_processed = preg_split( "/(--|,\s\d\d+)/",rtrim($subject));
     $subject_name = (string) $subject_processed[0];
+    dpm($subject_name, "For candidate term: ");
 
     //Attempt Solr query on Subject Stems
     $query = search_api_query($index);
@@ -85,6 +86,8 @@ function cals_importer_find_mapped_genre($supplement_subjects, $field_name, &$ma
     /* Query yields a loadable term */
 
     if (empty($results['results'])) {
+      dpm("No result found.");
+      dpm("======\n");
       continue; //check next
     }
     else {  //Straight match on string map and harmonize
@@ -161,9 +164,13 @@ function map_harmonized_terms($results, $simple_array_subjects) {
     //Return Genre term
     //@todo remove
     dpm(taxonomy_term_load((int)
-    $loaded_term->field_genre_harmonized["und"][0]["tid"])->name, "Applied harmonized genre: ");
+    $loaded_term->field_genre_harmonized["und"][0]["tid"])->name,
+    "Applied harmonized genre: ");
+    dpm("======\n");
     return $loaded_term->field_genre_harmonized["und"][0]["tid"];
   } else {
+    dpm("Nothing applicable.");
+    dpm("======\n");
     return NULL;
   }
 }
