@@ -2,13 +2,13 @@
 
 /**
  * Attempts to find an appropriate genre term to apply
- * @param $xpathvalue
+ * @param $supplement_subjects array
  * @param $field_name
  * @param $map
  * @throws \SearchApiException
  */
 
-function cals_importer_find_mapped_genre($xpathvalue, $field_name, &$map) {
+function cals_importer_find_mapped_genre($supplement_subjects, $field_name, &$map) {
 
   $index = 'mapped_subject_stems'; //default
 
@@ -34,6 +34,10 @@ function cals_importer_find_mapped_genre($xpathvalue, $field_name, &$map) {
   foreach ($candidate_subjects as $candidate){
     $simple_array_subjects[] = $candidate->value()->name;
   }
+
+  //Consider supplemental subjects from unparsed 655, 946 (BISAC)
+  if (! empty($supplement_subjects))
+    $simple_array_subjects = array_merge($supplement_subjects, $simple_array_subjects);
 
   //@todo Merge candidate_subjects, simple_array_subjects redundancies
 
