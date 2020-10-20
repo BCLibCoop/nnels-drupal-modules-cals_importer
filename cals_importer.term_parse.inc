@@ -15,8 +15,13 @@ function cals_importer_find_mapped_genre($supplement_subjects, $field_name, &$ma
   //Too ambiguous on their own for full-text consideration
   $terms_too_generic = array(
     'Fiction',
+    'FICTION',
+    'FICTION ',
     'Non-fiction',
     'Nonfiction',
+    'NON-FICTION',
+    'NONFICTION',
+    'NONFICTION ',
     'Stories',
     'Science',
     'Language',
@@ -41,7 +46,7 @@ function cals_importer_find_mapped_genre($supplement_subjects, $field_name, &$ma
 
   //@todo Merge candidate_subjects, simple_array_subjects redundancies
 
-  foreach ($simple_array_subjects as $subject) {
+  foreach ($simple_array_subjects as &$subject) {
 
     //Knock out ambiguous entries from loop early
     if (empty($subject) || in_array($subject, $terms_too_generic)) {
@@ -83,12 +88,26 @@ function cals_importer_find_mapped_genre($supplement_subjects, $field_name, &$ma
 
     $results = $query->execute();
 
-    /* Query yields a loadable term */
-
+    //Check for results and handle retries
     if (empty($results['results'])) {
-      dpm("No result found.");
-      dpm("======\n");
-      continue; //check next
+      if (isset($bisac_mode)) {
+        //Trim off last most specific component
+        $exploded = explode( " / ", $subject_name );
+        array_pop($exploded);
+
+        //Reassemble and reload
+        $bisac_retry_subj = implode( " / ",
+          $exploded );
+        if ( ! in_array($bisac_retry_subj, $simple_array_subjects) )
+          $simple_array_subjects[] = $bisac_retry_subj;
+
+        dpm("Retrying with a more general term: {$bisac_retry_subj}");
+        dpm("======\n");
+      } else {
+        dpm("No result found.");
+        dpm("======\n");
+        continue; //@todo remove?
+      }
     }
     else {  //Straight match on string map and harmonize
       $mapped_term_id = map_harmonized_terms($results, $simple_array_subjects);
