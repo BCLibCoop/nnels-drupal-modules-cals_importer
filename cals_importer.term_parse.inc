@@ -87,16 +87,26 @@ function cals_importer_find_mapped_genre($supplement_subjects, $field_name, &$ma
     if (empty($results['results'])) {
       if (isset($bisac_mode)) {
         //Trim off last most specific component
-        $exploded = explode( " / ", $subject_name );
-        array_pop($exploded);
+        $exploded = explode( " /", $subject_name );
+        if ( count($exploded) > 1 ) {
+          array_pop($exploded);
 
-        //Reassemble and reload
-        $bisac_retry_subj = implode( " / ",
-          $exploded );
-        if ( ! in_array($bisac_retry_subj, $simple_array_subjects) ) {
-          $simple_array_subjects[] = $bisac_retry_subj;
-          dpm("Retrying with a more general term: {$bisac_retry_subj}");
-          dpm("======\n");
+          //Reassemble
+          $bisac_retry_subj = implode(" / ",
+            $exploded);
+
+          //Reload/retry if we got a new term not already queued and
+          // not one of our generics without valid BISAC root
+          if (! in_array($bisac_retry_subj, $simple_array_subjects) &&
+            ! in_array($bisac_retry_subj, $terms_too_generic) ) {
+
+            $simple_array_subjects[] = $bisac_retry_subj;
+            dpm("Derived root {$bisac_retry_subj} added to queue for retry.");
+            dpm("======\n");
+          } else {
+              dpm("No match and root ({$bisac_retry_subj}) is generic or already queued.");
+              dpm("======\n");
+          }
         }
       } else {
         dpm("No result found.");
