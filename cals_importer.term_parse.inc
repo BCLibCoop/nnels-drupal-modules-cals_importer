@@ -44,17 +44,12 @@ function cals_importer_find_mapped_genre($supplement_subjects, $field_name, &$ma
   if (! empty($supplement_subjects))
     $simple_array_subjects = array_merge($supplement_subjects, $simple_array_subjects);
 
-  //@todo Merge candidate_subjects, simple_array_subjects redundancies
-
   foreach ($simple_array_subjects as &$subject) {
 
     //Knock out ambiguous entries from loop early
     if (empty($subject) || in_array($subject, $terms_too_generic)) {
       continue;
     }
-
-    //@todo if "Fiction" or "Literature" present, pad out the
-    //$simple_array_subjects here so it can clear Required condition
 
     //split off geographic subdivisions and date starts
     $subject_processed = preg_split( "/(--|,\s\d\d+)/",rtrim($subject));
@@ -98,11 +93,11 @@ function cals_importer_find_mapped_genre($supplement_subjects, $field_name, &$ma
         //Reassemble and reload
         $bisac_retry_subj = implode( " / ",
           $exploded );
-        if ( ! in_array($bisac_retry_subj, $simple_array_subjects) )
+        if ( ! in_array($bisac_retry_subj, $simple_array_subjects) ) {
           $simple_array_subjects[] = $bisac_retry_subj;
-
-        dpm("Retrying with a more general term: {$bisac_retry_subj}");
-        dpm("======\n");
+          dpm("Retrying with a more general term: {$bisac_retry_subj}");
+          dpm("======\n");
+        }
       } else {
         dpm("No result found.");
         dpm("======\n");
@@ -209,7 +204,7 @@ function determine_bisac_term($subject_term) {
     // BISAC regex pattern, could be improved
     // e.g. YOUNG ADULT FICTION / Magical Realism
     // YOUNG ADULT FICTION / Science Fiction / Dystopias
-    $BISAC_pattern = "/^[A-Z]{2,}\s?.*\s\/\s?/";
+    $BISAC_pattern = "/^[A-Z\,\-]{2,}\s?.*[\/\s]?/";
     if ( (bool) preg_match($BISAC_pattern, $subject_term) ) {
       return TRUE;
     }
