@@ -1124,8 +1124,7 @@ function _cals_importer_get_contributor_from_marc($xml, $k, &$map, $tags) {
  * @param $tags
  *   the marcxml fields that are parsed
  *
- * @return
- *   $map is returned by reference with values appended
+ * $map appended by reference.
  */
 function _cals_importer_get_dc_relations_from_marc($xml, $k, &$map, $tags) {
   foreach($tags as $tag) {
@@ -1147,18 +1146,36 @@ function _cals_importer_get_dc_relations_from_marc($xml, $k, &$map, $tags) {
     foreach ($tmp as $val) {
       $val = _cals_importer_strip_square_brackets_value($val);
       $val = _cals_importer_strip_trailing_periods_value($val);
+
+      //Set defaults
+      $target_relation_field = 'field_dc_relation_value';
+      $val_key = 'value';
+      $final_val = $val;
+
+      //Special tag + subfield for populating Relations taxonomy
+      if ($t == '760' && $c == 'a') {
+        //Look for a taxonomy term matching $val
+        $target_relation_field = 'field_dc_relation_term_value';
+        $val_key = 'tid';
+        $vocabulary = taxonomy_vocabulary_machine_name_load('relations');
+        $tid = _cals_get_tid_by_name($vocabulary->vid, $val);
+        if (isset($tid)) $final_val = (int) $tid;
+        else continue; //hopefully avoids empty field collection entities
+      }
+
       $map[$k]['values'][] = array(
-        'field_name' =>  "field_dc_relation",
-        'field_dc_relation_value' => array(
-          LANGUAGE_NONE => array(array('value' => $val) ),
+        "field_name" =>  "field_dc_relation",
+        "{$target_relation_field}"  => array(
+          LANGUAGE_NONE => array(array("{$val_key}" => $final_val) ),
         ),
-        'field_dc_relation_qualifiers' => array(
-          LANGUAGE_NONE => array(array('value' => $e) ),
+        "field_dc_relation_qualifiers" => array(
+          LANGUAGE_NONE => array(array("value" => $e) ),
         ),
       );
     }
   }
 }
+
 /**
  * Parses cataloguing agency from 003 and 040
  * @param $xml

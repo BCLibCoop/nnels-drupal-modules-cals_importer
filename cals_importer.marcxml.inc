@@ -409,6 +409,8 @@ function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
         _cals_importer_normalize_node_field($node, $k); //normalizes various field values
       }
       if($type == 'field_collection') {
+        //N.B. Deletes and delegates field collection population to
+        // _cals_importer_populate_repos_item_fieldcollections
         _cals_importer_delete_field_collection($node, $k);
         $fc_fields[$k] = $map[$k];
       }
