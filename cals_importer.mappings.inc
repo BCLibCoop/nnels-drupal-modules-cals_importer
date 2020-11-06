@@ -40,6 +40,7 @@ function _cals_importer_repo_field_callback($fieldname) {
 
     "field_subject" => array("function" => '_cals_get_subject_from_marc'),
     "field_genre" => array("function" => '_cals_get_genre_from_marc'),
+    "field_genre_harmonized" => array("function" => '_cals_get_mapped_genre_from_marc'),
 
     //'field_uri' => array('function' => '_cals_importer_get_uri_from_marc'),
     'field_urls_external' => array('function' => '_cals_importer_get_urls_from_marc',
@@ -644,6 +645,38 @@ function _cals_get_genre_from_marc($xml, $k, &$map) {
   _cals_get_taxonomy_terms_from_xpath($xpathvalue, $k, $map);
 }
 
+function _cals_get_mapped_genre_from_marc($xml, $k, &$map) {
+  $supplement_subjects = [];
+
+  $supplement_tags = array(
+    655 => 'a', //takeover from field_genre (defunct).
+    946 => 'a',
+  );
+
+  foreach ($supplement_tags as $tag => $code) {
+    $supplement_subjects[] = $xml->xpath("//marc:datafield[@tag='{$tag}'][@ind1=' ']/marc:subfield[@code='{$code}']
+    |//marc:datafield[@tag='{$tag}'][@ind2=' ']/marc:subfield[@code='{$code}']");
+  }
+  //Filter if only empties returned.
+  $supplement_subjects = array_filter($supplement_subjects);
+
+  //Convert from SimpleXMlElement objects to strings for searching.
+  foreach($supplement_subjects as $key => $sxe) {
+    $supplement_subjects[$key] = $sxe[0]->__toString();
+  }
+
+  module_load_include('inc', 'cals_importer', 'cals_importer.term_parse');
+  try {
+    cals_importer_find_mapped_genre($supplement_subjects, $k, $map);
+  }
+  catch (Exception $e){
+    drupal_set_message(
+      "cals_import_find_mapped_genre encountered critical 
+      error: " . $e->getMessage(), 'error', FALSE
+    );
+  }
+}
+
 /**
  * To be deprecated
  * @param $xml
@@ -736,7 +769,16 @@ function _cals_get_subject_from_marc($xml, $k, &$map){
   foreach ($codes as $code) $paths[] = "//marc:datafield[@tag='650']/marc:subfield[@code='" . $code . "']";
   $path = implode("|", $paths);
   $xpathvalue = $xml->xpath($path);
-  _cals_get_taxonomy_terms_from_xpath($xpathvalue, $k, $map);
+
+  //Collapse on duplicates across a given subfield code
+  $deduped_xpath_values = array();
+  foreach($xpathvalue as $val) {
+    if (! in_array($val->__toString(), $deduped_xpath_values)) $deduped_xpath_values[] =
+      $val;
+  }
+  //Requires SimpleXMLElements passed in first parameter
+  _cals_get_taxonomy_terms_from_xpath($deduped_xpath_values, $k, $map);
+
 }
 
 /**
