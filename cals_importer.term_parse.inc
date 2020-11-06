@@ -54,7 +54,7 @@ function cals_importer_find_mapped_genre($supplement_subjects, $field_name, &$ma
     //split off geographic subdivisions and date starts
     $subject_processed = preg_split( "/(--|,\s\d\d+)/",rtrim($subject));
     $subject_name = (string) $subject_processed[0];
-    dpm($subject_name, "For candidate term: ");
+    drupal_set_message("For candidate term: {$subject_name}");
 
     //Attempt Solr query on Subject Stems
     $query = search_api_query($index);
@@ -101,16 +101,16 @@ function cals_importer_find_mapped_genre($supplement_subjects, $field_name, &$ma
             ! in_array($bisac_retry_subj, $terms_too_generic) ) {
 
             $simple_array_subjects[] = $bisac_retry_subj;
-            dpm("Derived root {$bisac_retry_subj} added to queue for retry.");
-            dpm("======\n");
+            drupal_set_message("Derived root {$bisac_retry_subj} added to queue for retry.");
+            drupal_set_message("======\n");
           } else {
-              dpm("No match and root ({$bisac_retry_subj}) is generic or already queued.");
-              dpm("======\n");
+              drupal_set_message("No match and root ({$bisac_retry_subj}) is generic or was already queued.");
+              drupal_set_message("======\n");
           }
         }
       } else {
-        dpm("No result found.");
-        dpm("======\n");
+        drupal_set_message("No result found.");
+        drupal_set_message("======\n");
         continue; //@todo remove?
       }
     }
@@ -135,7 +135,7 @@ function map_harmonized_terms($results, $simple_array_subjects) {
    * https://drupal.stackexchange.com/a/162400
    **/
   $loaded_term = taxonomy_term_load((int) key($results['results']));
-  dpm($name = $loaded_term->name, "Considering fragment from result: ");
+  drupal_set_message("Considering fragment from result: {$loaded_term->name}");
 
   //break early if nothing to apply.
   if ( empty($loaded_term->field_genre_harmonized)) return NULL;
@@ -187,14 +187,15 @@ function map_harmonized_terms($results, $simple_array_subjects) {
   if ($must && !$exclude) {
     //Return Genre term
     //@todo remove
-    dpm(taxonomy_term_load((int)
-    $loaded_term->field_genre_harmonized["und"][0]["tid"])->name,
-    "Applied harmonized genre: ");
-    dpm("======\n");
+    $term_name = taxonomy_term_load((int)
+    $loaded_term->field_genre_harmonized["und"][0]["tid"])->name;
+    drupal_set_message(
+    "Applied harmonized genre: {$term_name} ");
+    drupal_set_message("======\n");
     return $loaded_term->field_genre_harmonized["und"][0]["tid"];
   } else {
-    dpm("Nothing applicable.");
-    dpm("======\n");
+    drupal_set_message("Nothing applicable.");
+    drupal_set_message("======\n");
     return NULL;
   }
 }
