@@ -746,7 +746,12 @@ function _cals_get_literary_form_from_marc($xml, $k, &$map) {
     if(is_array($tmp) && count($tmp)) {
       foreach($tmp as $val) {
         $str = substr($val, $pos, 1);
-        if(!empty($str) && array_key_exists($str, $allowed_values)) {
+        //Careful here, string "0" is the MARC code.
+        //Fixes https://github.com/BCLibCoop/nnels/issues/201
+        if ($str === "0") $str = 'zero';
+        if(isset($str) && //substr() fails or finds empty char
+          $str !== '' &&
+          array_key_exists($str, $allowed_values)) {
           $litform = $str;
           break;
         }
