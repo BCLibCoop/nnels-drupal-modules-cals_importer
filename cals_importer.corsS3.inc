@@ -503,25 +503,25 @@ function _cals_importer_populate_field_file_resource($node) {
     $fc_item->field_s3_file_upload[LANGUAGE_NONE][0]  =  (array)$file;
   }
 
-  $fc_item->field_user[LANGUAGE_NONE][0]['value'] = 1;
-  //$fc_item->field_performer[LANGUAGE_NONE][0]['value'] = "TEST";
-  //$arr['fc_files']['field_performer']['values'][] = trim($val2);
-
-  if(isset($arr['fc_files']['field_performer']))
-   $fc_item->field_performer[LANGUAGE_NONE] = $arr['fc_files']['field_performer'];
-
-  if(isset($arr['fc_files']['field_running_time'][0]))
-    $fc_item->field_running_time[LANGUAGE_NONE] = $arr['fc_files']['field_running_time'];
-
-  if(isset($arr['fc_files']['field_file_format'][0]))
-    $fc_item->field_file_format[LANGUAGE_NONE] = $arr['fc_files']['field_file_format'];
-
   //hard-coded values (for now):
-	$fc_item->field_availability_status[LANGUAGE_NONE][0]['value'] = 1;
+  $fc_item->field_user[LANGUAGE_NONE][0]['value'] = 1;
+  $fc_item->field_availability_status[LANGUAGE_NONE][0]['value'] = 1;
 
-  //printAndDie($arr, $fc_item);
+  //set values from file resource field callbacks
+  $resource_fields_to_process = array(
+    'field_performer',
+    'field_running_time',
+    'field_file_format',
+    'field_accessibility_tags',
+    'field_accessibility_summary',
+  );
 
+  foreach ( $resource_fields_to_process as $field ) {
+    if ( count($arr['fc_files'][$field]) > 0 ) $fc_item->$field[LANGUAGE_NONE]
+      = $arr['fc_files'][$field];
+  }
 
+  /** begin administrative metadata */
 
   global $user;
   $acct = user_load($user->uid);
@@ -571,9 +571,10 @@ function _cals_importer_parse_marcxml_cors3($node) {
 	  //get running time
 	  _cals_importer_get_runningtime_from_marcxml($arr, $xml);
 	  //get performer
-	 	_cals_importer_get_performer_from_marcxml($arr, $xml);
-	  //_cals_importer_get_performer_from_marcxml($xml, $k, $map); 
-
+      _cals_importer_get_performer_from_marcxml($arr, $xml);
+	  //_cals_importer_get_performer_from_marcxml($xml, $k, $map);
+      //get accessibility tags and summary
+      _cals_importer_get_a11y_metadata($arr, $xml);
 	}
   return $arr;
 }
