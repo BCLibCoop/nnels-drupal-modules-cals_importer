@@ -1392,7 +1392,7 @@ function _cals_importer_get_running_time_from_marcxml(&$arr, $xml) {
         if ( isset( $matches[1] ) ) {
 
           //Discard string counting files early
-          if ( isset($matches[2] ) )preg_match("/\(?[\s\w]+[files]\)?/",
+          if ( isset($matches[2] ) )preg_match("/\(?[\s\w]+files\)?/",
             $matches[2], $filter);
           if ( isset($filter[0]) ) break;
 
