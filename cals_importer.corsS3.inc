@@ -569,7 +569,7 @@ function _cals_importer_parse_marcxml_cors3($node) {
   //skip this running times and performer updates.
   if($xml !== 0) { 
 	  //get running time
-	  _cals_importer_get_runningtime_from_marcxml($arr, $xml);
+	  _cals_importer_get_running_time_from_marcxml($arr, $xml);
 	  //get performer
       _cals_importer_get_performer_from_marcxml($arr, $xml);
 	  //_cals_importer_get_performer_from_marcxml($xml, $k, $map);
