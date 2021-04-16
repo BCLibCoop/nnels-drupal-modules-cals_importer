@@ -105,16 +105,10 @@ function _cals_importer_exporter_calc_ldr_length($raw_record) {
  */
 function _cals_importer_exporter_build_final_leader($supplied_bytes) {
 
-  //Initialize with string type
-  $ldr = (string) '';
-
-  //In case there are new format-dependent bytes in future
-  //Currently only byte 6
-  foreach ($supplied_bytes['value'] as $byte => $value) {
-    $ldr[$byte] = $value;
-  }
-
+  $ldr = array_fill(0, 23, MARC_SPACE);
   $ldr[5] = 'n';
+  //@todo: Re-check byte 6 in case new format-dependent bytes in future
+  $ldr[6] = $supplied_bytes[6] ? $supplied_bytes[6] : MARC_SPACE;
   $ldr[7] = 'm';
   $ldr[8] = MARC_SPACE;
   $ldr[9] = MARC_SPACE;
@@ -124,9 +118,18 @@ function _cals_importer_exporter_build_final_leader($supplied_bytes) {
   $ldr[18] = 'u';
   $ldr[19] = MARC_SPACE;
 
+  //Initialize with string type
+  $ldr_out = (string) '';
+
+  //Process into string
+  //PHP 5.6 casts this as array if using the string pos notation so we append.
+  foreach ($ldr as $key => $char) {
+    $ldr_out .= $char;
+  }
+
   //Byte positions 00-04, 06, 12-16 and 20-23 handled by
   //_cals_importer_exporter_calc_{ldr_length/dir_length}
-  $returned['value'] = $ldr;
+  $returned['value'] = $ldr_out;
   return $returned;
 }
 
@@ -146,30 +149,43 @@ function _cals_importer_exporter_callback_040($vars) {
   $value = $wrapper->field_dc_creator->value();
   //$label = ($value == 0) ? "no restrictions" : "restrictions";
 
+  //initialize
   $arr['040'] = array(
     'ind1' => '',
     'ind2' => '',
-    'subfields' => array(
-      array(
-        'c' => 'BVNNELS',
-        'd' => 'BVNNELS',
-      ),
-      //array('value' => $label, 'subfield' => 'a'),
-      //array('value' => 'BVNNELS', 'subfield' => 'b'),
-    ),
+    'subfields' => array()
   );
 
   $tmp = $xml->xpath("//marc:datafield[@tag='040']/marc:subfield[@code='a']");
-  if (count($tmp) >= 1) {
+  if ( !empty ( (string) $tmp[0] ) ) {
     $a = (string) $tmp[0];
-    $arr['040']['subfields'][0]['a'] = trim($a);
   }
+  else { //Required default for subfield a
+    $a = 'BVNNELS';
+  }
+  //Add found subfield or default
+  $arr['040']['subfields'][0]['a'] = trim($a);
 
   $tmp = $xml->xpath("//marc:datafield[@tag='040']/marc:subfield[@code='b']");
-  if (count($tmp) >= 1) {
+  if ( !empty ( (string) $tmp[0] ) ) {
     $b = (string) $tmp[0];
     $arr['040']['subfields'][0]['b'] = trim($b);
   }
+  //Remaining non-variable identifiers for subfields c, d
+  $arr['040']['subfields'][0]['c'] = 'BVNNELS';
+  $arr['040']['subfields'][0]['d'] = 'BVNNELS';
+
+  return $arr;
+}
+
+/**
+ * @param $vars
+ * @return mixed
+ */
+function _cals_importer_exporter_callback_084($vars) {
+  //copy baseline $vars
+  $arr['084']['subfields'][0]['a'] = 'af101fs';
+  $arr['084']['subfields'][0]['2'] = 'lacc';
   return $arr;
 }
 
@@ -185,6 +201,8 @@ function _cals_importer_exporter_callback_240($vars) {
   $tag = $vars['tag'];
 
   $wrapper = $vars['node_wrapper'];
+  //$lang = reset($wrapper->field_iso_language->value()) ?: LANGUAGE_NONE;
+  $lang = reset($wrapper->field_iso_language->value());
   $subfields = array();
 
   $term = $wrapper->field_uniform_title->value();
@@ -193,7 +211,8 @@ function _cals_importer_exporter_callback_240($vars) {
     $code = 240;
     $subfield = 'a';
     $ind2 = 0;
-    $ind2 = _cals_importer_exporter_filing_characters($value);
+    $ind2 = _cals_importer_exporter_filing_characters($value, $lang, 0, 0);
+
     $arr[240]['subfields'][]['a'] = $value;
     $arr[240]['ind1'] = 0;
     $arr[240]['ind2'] = $ind2;
@@ -210,9 +229,9 @@ function _cals_importer_exporter_callback_240($vars) {
  */
 function _cals_importer_exporter_callback_245($vars) {
   //if vocab, $term = 'field_subject';
-  $node = $vars['node'];
+
   $tag = $vars['tag'];
-  $values = _cals_importer_exporter_field_value($node, 'title_field');
+  $values = _cals_importer_exporter_field_value($vars['node_wrapper'], 'title_field'); //compatibility
   //field_view_field('node', $node, 'title_field', array('default'));
   $safe_values = array();
   if(is_array($values)) {
@@ -224,9 +243,12 @@ function _cals_importer_exporter_callback_245($vars) {
   $code = 245;
   $subfield = 'a';
   $ind2 = 0;
+
+  $base_lang = reset($vars['node_wrapper']->field_iso_language->value());
+
   foreach($safe_values as $value) {
     normalize_title($value);
-    $ind2 = _cals_importer_exporter_filing_characters($value);
+    $ind2 = _cals_importer_exporter_filing_characters($value, $base_lang, 0, 0);
     $arr[245]['subfields'][]['a'] = $value;
   }
   $arr[245]['ind1'] = 0;
@@ -246,6 +268,7 @@ function _cals_importer_exporter_callback_264($vars) {
   $tag = $vars['tag'];
   $wrapper = $vars['node_wrapper'];
   $values = _cals_importer_exporter_field_value($node, 'field_publisher');
+  $lang = reset($wrapper->field_iso_language->value());
 
   $arr[264] = array(
     'ind1' => '',
@@ -263,8 +286,8 @@ function _cals_importer_exporter_callback_264($vars) {
 
     $subcode = ($k == 0) ? 'a' : 'b';
     $v = trim($v);
-
-    //$ind2 = _cals_importer_exporter_filing_characters($value);
+    //Why was this disabled?
+    //$ind2 = _cals_importer_exporter_filing_characters($value, $lang);
     $arr[264]['subfields'][0][$subcode] = $v;
   }
   $pubdate = NULL;
@@ -348,7 +371,6 @@ function _cals_importer_exporter_callback_511($vars) {
  * Include if present in Abstract (body) field in Drupal
  * @param $vars
  * @return array
- * @todo - review the proper way to extract body values.
  */
 function _cals_importer_exporter_callback_520($vars) {
 
@@ -356,8 +378,8 @@ function _cals_importer_exporter_callback_520($vars) {
   $tag = $vars['tag'];
   $wrapper = $vars['node_wrapper'];
   $subfields = array();
-  if(!isset($wrapper->body)) {
-    return;
+  if(! $wrapper->body->value() ){
+    return array();
   }
   $values = $wrapper->body->value->value(array('decode' => TRUE));
 
@@ -406,34 +428,181 @@ function _cals_importer_exporter_callback_521($vars) {
  * @return array
  */
 function _cals_importer_exporter_callback_534($vars) {
+
   $node = $vars['node'];
   $tag = $vars['tag'];
   $wrapper = $vars['node_wrapper'];
+
   //loop thru the following to build up the 534 tag
   $tmp = array(
     'field_publisher_source' => 'c',
     'field_isbn' => 'z',
     'field_isbn_audio' => 'z',
   );
+
   $subfields = array();
 
   $i = 0;
   foreach($tmp as $fieldname => $code) {
     //printAndDie($code, $fieldname, $wrapper);
-    $me = _cals_importer_exporter_get_subfield_array_from_drupal_fields($code, $fieldname, $wrapper);
+    $stored_subfield_array =
+      _cals_importer_exporter_get_subfield_array_from_drupal_fields($code, $fieldname, $wrapper);
 
-    if(!empty($me) ) {
+    if(!empty($stored_subfield_array) ) {
       //if(count($me) == 1) $subfields[$i] = $me[0];
-      if(count($me) >= 1) $subfields = array_merge($subfields, $me);
+      if(count($stored_subfield_array) >= 1) $subfields = array_merge
+      ($subfields, $stored_subfield_array);
+      //Now $subfields is populated.
       $i++;
     }
   }
 
-  $arr =  _cals_build_marc_subfield_array($tag, $subfields);
+  //Concat subfield $z since it can only come from Drupal field
+  foreach ($subfields as $sub => $key) {
+    if (key($key) == 'z') {
+      $take[] = $subfields[$sub]['z'];
+      unset($subfields[$sub]);
+    }
+  }
+  if (isset($take) && count($take) > 1) $subfields[]['z'] = implode(' ; ',
+    $take);
+  else $subfields[]['z'] = $take[0];
+
+  //Default to MARCXML value for 534c
+  $xml_534c = reset(_cals_importer_get_xpath_values($tag, NULL, NULL, 'c',
+    $vars['xml']->record));
+
+  //If we don't have it from MARCXML, build of it from Drupal fields
+  if ( empty( $xml_534c ) ) {
+
+    $pub_parts = array(
+      0 => '',
+      1 => '',
+      2 => '',
+    );
+
+    //Cleanup values and then filter our repeats
+    $test_values = array();
+    foreach ($subfields as $instance => $subfield) {
+      if ( isset($subfield['c']) ) {
+        //Remove leading spaces, square brackets and
+        $subfield['c'] =
+          _cals_importer_strip_square_brackets_value(
+          trim( $subfield['c'] )
+        );
+        if ( in_array( $subfield['c'], $test_values ) ) {
+          unset($subfields[$instance]);
+          $subfield['c'] = NULL;
+        }
+        if ($subfield['c']) $subfields[$instance]['c'] = $test_values[] =
+          $subfield['c'];
+      }
+    }
+    //Rekey in case we filtered out any repeat values above
+    $subfields = array_values( $subfields );
+
+    //0 => publisher, 1 => location
+    //if there's already two instances of publisher_source
+    if ( isset( $subfields[1]['c']) ) {
+      $pub_parts[0] = $subfields[0]['c'];
+      $pub_parts[1] = $subfields[1]['c'];
+      unset($subfields[1]); //No repeat instances of subfield c allowed.
+    }
+    else {
+      //Single in old form Englewood Cliffs, N.J. : Prentice Hall, 1974.
+      //Explode on colon and check for copyright to discard in favour of DC Date
+      $exploded = explode(':', $subfields[0]['c']);
+      if (! isset($exploded[1])) {
+        $exploded_retry = explode('.,', $subfields[0]['c']);
+        if (isset($exploded_retry[1])) {
+          //Add the exploded period (.) back for abbreviation
+          $exploded_retry[0] .= '.';
+          //Replace if we tried second method
+          $exploded = $exploded_retry;
+        }
+      } else {
+        $exploded[1] = preg_replace(
+          "/([\w\s]+?),?\s?[\©c\[\]\d]+\.?/",
+          "$1",
+          $exploded[1]
+        );
+      }
+      foreach ($exploded as $instance => $piece) {
+        $pub_parts[$instance] = $piece;
+      }
+    } //end else
+
+    //Attempt to backfill for empty values
+    $placeholders = array(
+      0 => '[place of publication not identified]',
+      1 => '[publisher not identified]',
+      2 => '[date of publication not identified]',
+    );
+
+    $j = -1;
+    foreach ($pub_parts as $key => $value) {
+      if (empty($value)) {
+        $pub_parts[$key] = $placeholders[$key];
+        $j++;
+      }
+      //All three were empty, produce no 534
+      if ($j == 2) {
+        return;
+      }
+    }
+
+    //Re-glue the parts, name + location
+    $subfields[0]['c'] = $pub_parts[0] . ' : ' . $pub_parts[1];
+
+    //Date published, ensure appends with a comma and ends with period.
+    //Find an Issued or Copyrighted DC Date to append
+    $qualifiers = array(
+      'Created',
+      'Copyrighted'
+    );
+    foreach ( $wrapper->field_date->getIterator() as $delta => $fc_instance) {
+      if (in_array($fc_instance->field_qualifier_date->value(), $qualifiers)) {
+        $pub_parts[2] = $fc_instance->field_dc_date->value();
+        break 1;
+      }
+    }
+    if (isset($pub_parts[2])) {
+      $subfields[0]['c'] .= ', ' . $pub_parts[2];
+    }
+    $subfields[0]['c'] .= '.';
+  }
+  else {
+    //Otherwise replace C instances
+    foreach ($subfields as $sub => $key) {
+      if (key($subfields[$sub]) == 'c') unset($subfields[$sub]);
+    }
+    $subfields[]['c'] = $xml_534c;
+  }
+
+  //Rekey for middle C
+  $subfields[]['c'] = $subfields[0]['c'];
+  unset($subfields[0]['c']);
+
+  //Set subfield p. Required.
+  $subfields[]['p'] = "Original version: ";
+
+  //Re-key, flatten-merge recursively and slap in an instance
+  //This is to produce a single 534 instance with subfields and $p on top.
+  krsort($subfields);
+  $subfields = array_reduce(
+    array_values($subfields),
+    'array_merge',
+    array()
+  );
+  $subfield_instance[] = $subfields;
+
+  $arr =  _cals_build_marc_subfield_array( $tag, $subfield_instance );
   $arr[$tag]['ind1'] = '';
   $arr[$tag]['ind2'] = '';
+
   return $arr;
 }
+
 /**
  * Subject
  * @param $vars
@@ -514,14 +683,22 @@ function _cals_importer_exporter_callback_720($vars) {
  */
 function _cals_importer_exporter_callback_856($vars) {
   $tag = $vars['tag'];
-  $node = $vars['node'];
+//  $node = $vars['node'];
   //field_publisher
-  $nid = $node->nid;
+  $nid = $vars['node_wrapper']->getIdentifier();
   $arr[856] = array(
     'ind1' => 4,
     'ind2' => 0,
   );
-  $arr[856]['subfields'][0]['u'] = 'http://nnels.ca/node/' . $nid;
+
+  $arr[856]['subfields'][0]['u'] = url(
+    'node/' . $nid,
+    array(
+      'absolute' => true,
+      'https' => true,
+      'alias' => true
+    )
+  );
 
   return $arr;
 }

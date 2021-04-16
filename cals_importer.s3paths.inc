@@ -96,6 +96,8 @@ function _cals_batch_update_s3_paths($nid) {
  */
  
 function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
+  ini_set('max_execution_time', 400); //~6.67 minutes, 1000 paths @ 2.5 a second
+
   $limit = 10; //10;
   // Get Count of products
   if (empty($context['sandbox']['progress']) ) {

@@ -11,10 +11,11 @@
 //the MARC namespace
 define("NAME_SPACE", "http://www.loc.gov/MARC21/slim");
 define("MARC_HEADER",
-  '<marc:collection
+  '<collection
     xmlns:marc="http://www.loc.gov/MARC21/slim"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd">');
+    xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd">'
+);
 //require these files..
 module_load_include('inc', 'cals_importer', 'cals_importer.misc');
 module_load_include('inc', 'cals_importer', 'cals_importer.fieldcollections');
@@ -300,7 +301,13 @@ function cals_importer_menu() {
     'description' => 'Add MARC-ready file snippet',
   );
 
-
+  $items['admin/content/nnels_all_export'] = array(
+    'page callback' => 'drupal_get_form',
+    'title' => 'NNELS All Record Exporter', //page title
+    'description' => 'Trigger export of all records in NNELS to AWS S3.',
+    'page arguments' => array('cals_importer_marcxml_all_exporter_form'),
+    'access arguments' => array('parse s3 paths'),
+  );
 
   return $items;
 
@@ -387,6 +394,14 @@ function cals_importer_action_info() {
       'triggers' => array('any'),
     ),
 
+    //Copy file resource entities between nodes
+    '_cals_transfer_file_resource_entity' => array(
+      'label' => t('Transfer File Resource Entities'),
+      'type' => 'node',
+      'configurable' => TRUE,
+      'triggers' => array('any'),
+    ),
+
     //batch update title field, stripping out trailing slashes, etc.
     '_cals_normalize_record_values' => array(
       'label' => t('2. Normalize Title, Publisher, Creators'),
@@ -453,15 +468,6 @@ function cals_importer_action_info() {
       'label' => t('5. Update Publisher and Publisher Source'),
       'type' => 'node',
       'configurable' => TRUE,
-      'triggers' => array('any'),
-    ),
-
-
-    //batch generate MARC XML files from all files that include 856 tag
-    '_cals_importer_generate_marcxml_files_all_records' => array(
-      'label' => t('CALS: Generate downloadable MARC XML files (entire recordset)'),
-      'type' => 'node',
-      'configurable' => FALSE,
       'triggers' => array('any'),
     ),
 
@@ -550,6 +556,13 @@ function cals_importer_action_info() {
       'configurable' => TRUE,
       'triggers' => array('any'),
     ),
+    //batch amend broken S3 paths in Field Collection "field_file_resource"
+    '_cals_mend_broken_file_resource_s3_paths' => array(
+      'label' => t('Mend Broken S3 paths'),
+      'type' => 'entity',
+      'configurable' => TRUE,
+      'triggers' => array('any'),
+    ),
   );
 }
 
@@ -593,30 +606,30 @@ function _cals_importer_get_block_items() {
 
   $items = array();
 
-  $items['_cals_importer_update_repository_item'] = array(
-    'access arguments' => array('administer site configuration'),
-    'page callback' => '_cals_importer_update_repository_item',
-    'title' => 'Parse MARC/XML',
-    'file' => "cals_importer.marcxml.inc",
-    'description' => "item parsed",
-  );
+//  $items['_cals_importer_update_repository_item'] = array(
+//    'access arguments' => array('administer site configuration'),
+//    'page callback' => '_cals_importer_update_repository_item',
+//    'title' => 'Parse MARC/XML',
+//    'file' => "cals_importer.marcxml.inc",
+//    'description' => "Item parsed",
+//  );
 
 
-  $items['_cals_reparse_titles_edition'] = array(
-    'access arguments' => array('administer site configuration'),
-    'page callback' => '_cals_reparse_title_edition',
-    'file' => "cals_importer.marcxml.inc",
-    'title' => 'Reparse Titles / Edition',
-    'description' => 'Reparses title fields + dc relation field',
-
-  );
+//  $items['_cals_reparse_titles_edition'] = array(
+//    'access arguments' => array('administer site configuration'),
+//    'page callback' => '_cals_reparse_title_edition',
+//    'file' => "cals_importer.marcxml.inc",
+//    'title' => 'Reparse Titles / Edition',
+//    'description' => 'Reparses title fields + dc relation field',
+//
+//  );
 
 
   $items['_cals_normalize_record_value'] = array(
     'access arguments' => array('administer site configuration'),
     'page callback' => '_cals_normalize_record_value',
     'file' => "cals_importer.clean_up.inc",
-    'title' => 'Normalize',
+    'title' => 'Normalize Title, Creator/Contributor, Publisher',
     'description' => 'Title, author and publisher values normalized',
   );
 
@@ -643,17 +656,17 @@ function _cals_importer_get_block_items() {
     'access arguments' => array('parse s3 paths'),
     'page callback' => '_cals_importer_create_marc_stub_node',
     'file' => "cals_importer.exporter.inc",
-    'title' => "Add MARC-ready stub entry",
-    'description' => 'Add MARC-ready Stub',
+    'title' => "Build Record Stub",
+    'description' => 'Created the MARCXML stub',
   );
 
-  $items['_cals_importer_exporter_build_marcxml_from_array'] = array(
-    'access arguments' => array('parse s3 paths'),
-    'page callback' => '_cals_importer_exporter_build_marcxml_from_array',
-    'file' => "cals_importer.exporter.inc",
-    'title' => "Build / Validate MARC-XML File",
-    'description' => 'Added MARC-XML File',
-  );
+//  $items['_cals_importer_exporter_build_marcxml_from_array'] = array(
+//    'access arguments' => array('parse s3 paths'),
+//    'page callback' => '_cals_importer_exporter_build_marcxml_from_array',
+//    'file' => "cals_importer.exporter.inc",
+//    'title' => "Build / Validate MARC-XML File",
+//    'description' => 'Added MARC-XML File',
+//  );
 
 
   /*
@@ -669,8 +682,8 @@ function _cals_importer_get_block_items() {
     'access arguments' => array('parse s3 paths'),
     'page callback' => '_cals_importer_create_marcxml_snippet_file_resource',
     'file' => "cals_importer.exporter.inc",
-    'title' => "Test MARC XML Snippets",
-    'description' => 'Test MARC-XML snippets per file resource',
+    'title' => "Build File Snippet",
+    'description' => 'Built record snippets per file resource',
   );
 
   /**
@@ -770,7 +783,8 @@ function _cals_importer_block_process_repo_item_submit($form, &$form_state) {
 }
 
 function _cals_importer_update_publisher_and_source_form($options) {
-  if (is_numeric(arg(1)) && arg(0) == 'node') {
+
+  if ( $options['entity_type'] == 'node') {
     $vocabulary = taxonomy_vocabulary_machine_name_load('publisher');
     $terms = entity_load('taxonomy_term', FALSE, array('vid' => $vocabulary->vid));
     //printAndDie($terms);
@@ -1191,37 +1205,6 @@ function cals_importer_views_post_execute(&$view) {
 
 }
 
-function sssss() {
-
-
-  $tmp = $xml->xpath("//marc:datafield[@tag='264']/marc:subfield[@code='c']");
-  if (count($tmp) >= 1) {
-    $str = (string) $tmp[0];
-    $dates['264'] = $str;
-  }
-  else {
-    $tmp = $xml->xpath("//marc:datafield[@tag='260']/marc:subfield[@code='c']");
-    if (count($tmp) >= 1) {
-      $str = (string) $tmp[0];
-      $dates['260'] = $str;
-    }
-  }
-
-  $tmp = $xml->xpath("//marc:datafield[@tag='533']/marc:subfield[@code='d']");
-  if (count($five_thirty3) >= 1) {
-    if(!isset($dates['533'])) $dates['533'] = '';
-    $str = (string) $five_thirty3[0];
-    $dates['533'] .= $str;
-  }
-
-  $tmp = $xml->xpath("//marc:datafield[@tag='534']/marc:subfield[@code='c']");
-  if (count($tmp) >= 1) {
-    if(!isset($dates['534'])) $dates['534'] = '';
-    $dates['534'] .= (string) $tmp[0];
-  }
-
-}
-
 /**
  * Implements hook_views_query_alter().
  */
@@ -1415,11 +1398,28 @@ WHERE f1.bundle =  :b1 AND  f2.bundle = :b2 ", array(":b1" => 'repository_item',
 
       break;
     case "repository_items_publisher_listing":
-      //formats
-      //1|DAISY 202, 2|DAISY 3, 4|MP3, 6|PDF, 5|e-text, 7|EPUB 2, 8|EPUB 3, 9|AZW3, 3|Braille
+      /**  formats
+      1|DAISY 202 - Full Text and Audio
+      2|DAISY 3 - Full Text and Audio
+      3|Braille
+      4|MP3
+      5|DOC
+      6|PDF
+      7|EPUB 2
+      8|EPUB 3
+      9|AZW3
+      10|EPUB 3 - Full Text and Audio
+      11|DAISY 202 - Audio
+      12|DAISY 202 - Full Text
+      13|DAISY 3 - Audio
+      14|DAISY 3 - Full Text
+      15|RTF
+       **/
+
       $msg = TRUE;
 
       //see: https://github.com/BCLibCoop/nnels/issues/103
+      //@todo update this if still in use
       $arr = array(
         "page" => array(1, 2, 4, 5, 3), //no e-text, no braille
         "page_1" => array(1, 2, 4, 3), //no braille but includes e-text
@@ -1834,15 +1834,18 @@ function _cals_importer_update_licensed_access(&$entity, $context = array()) {
 function _cals_parse_licensed_access($node) {
   $xml = _cals_get_marc_xml_string($node);
   if ($xml === 0) return;
-  $str = 'xyz';//placeholder string
-  $tmp = $xml->xpath("//marc:datafield[@tag='506']/marc:subfield[@code='a']");
-  if (!count($tmp)) {
-    drupal_set_message(t('%string  Access Restriction not updated (no 506 element).'), array('%string' => $node->title));
-    return '';
-  }
-  $str = (string) $tmp[0];
-  $tmp = strpos(strtolower($str), "restricted");
-  $node->field_access_restrictions[LANGUAGE_NONE][0]['value'] = (is_numeric($tmp)) ? 1 : 0;
+//  $str = 'xyz';//placeholder string
+//  $tmp = $xml->xpath("//marc:datafield[@tag='506']/marc:subfield[@code='a']");
+//  if (!count($tmp)) {
+//    drupal_set_message(t('%string  Access Restriction not updated (no 506 element).'), array('%string' => $node->title));
+//    return '';
+//  }
+//  $str = (string) $tmp[0];
+//  $tmp = strpos(strtolower($str), "restricted");
+//  $node->field_access_restrictions[LANGUAGE_NONE][0]['value'] = (is_numeric($tmp)) ? 1 : 0;
+
+  //Default Requires Login see: https://github.com/BCLibCoop/nnels/issues/187
+  $node->field_access_restrictions[LANGUAGE_NONE][0]['value'] = 1;
 
   node_save($node);
   drupal_set_message(t('%string  Access Restriction updated.'), array('%string' => $node->title));

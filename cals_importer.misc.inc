@@ -76,7 +76,7 @@ function _cals_get_message_invalid_xml($node) {
 
 	drupal_set_message(
 		t('Invalid XML. Please review: <a href="@url">@title</a>.', 
-			array('@url' => url('node/' . $node->nid . "/edit"), '@title' => $node->title )
+			array('@url' => url('node/' . $node->nid->value() . "/edit"), '@title' => $node->title->value() )
 		),
 		'error'
 	);
@@ -121,11 +121,14 @@ function _cals_importer_get_xpath_values($tag, $ind1, $ind2, $code, $xml) {
  * @param $node
  * @return int|\SimpleXMLElement
  */
-function _cals_get_marc_xml_string($node) {
+function _cals_get_marc_xml_string($node_wrapper) {
   libxml_use_internal_errors(true);
   $value = '<xyz>'; //set to something that will fail by default
-	if (isset($node->field_xml_string[LANGUAGE_NONE]) )
-		$value = $node->field_xml_string[LANGUAGE_NONE][0]['value'];
+
+  if (is_a($node_wrapper, 'stdClass') ) $node_wrapper =
+    entity_metadata_wrapper('node', $node_wrapper);
+	if (isset($node_wrapper->field_xml_string ) )
+		$value = $node_wrapper->field_xml_string->value();
   $str = '<?xml version="1.0" encoding="UTF-8"?>
 <marc:collection xmlns:marc="http://www.loc.gov/MARC21/slim" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd">' .
   $value .
@@ -133,7 +136,7 @@ function _cals_get_marc_xml_string($node) {
 
   $xml = simplexml_load_string($str, null, 0, 'marc', true);
 	if(!$xml) {
-		_cals_get_message_invalid_xml($node);
+		_cals_get_message_invalid_xml($node_wrapper);
 		return 0; // return 0, allows individual calling functions to do their own thing
 	}
   $xml->registerXPathNamespace("marc", NAME_SPACE);
@@ -198,19 +201,18 @@ function _cals_get_set_xml_snippet($fc_wrapper, $str) {
       foreach ($snippet_context->getFields() as $tag => $value) {
         $record->appendField($value);
       }
+
       //Adjust byte 6 of leader to reflect added format since ingest
       $ldr_arr = str_split($record->getLeader());
       $format = $fc_wrapper->field_file_format->value();
-      switch($format) {
-        case 4:
-          //Nonmusical Sound Recording (i) for MP3
-          $ldr_arr[6] = 'i';
-          break;
-        default:
-          //Language Material (a) for all other formats
-          $ldr_arr[6] = 'a';
-          break;
+      $format_keys = variable_get('nnels_importer_exporter_format_map');
+      foreach ($format_keys as $key) {
+        if ( $key['media_pattern'] == 'audio' ) $audio_keys[] = $key;
       }
+      //Nonmusical Sound Recording (i) for audio-based formats like MP3
+      if ( in_array( $format, $audio_keys ) ) $ldr_arr[6] = 'i';
+      //Language Material (a) for all other formats
+      else $ldr_arr[6] = 'a';
 
       //Restore string and set
       $ldr_arr = implode("", $ldr_arr);
@@ -261,7 +263,8 @@ function _cals_importer_normalize_indicators($str) {
  * @return int
  */
 
-function _cals_importer_exporter_filing_characters($value, $start = 0, $count = 0) {
+function _cals_importer_exporter_filing_characters($value, $lang, $start = 0,
+$count = 0) {
   $value = strtolower($value);
   $count++;
   $first = substr($value, 0, 1);
@@ -284,22 +287,33 @@ function _cals_importer_exporter_filing_characters($value, $start = 0, $count = 
     "ton ", "tōn ", "tou ", "um ", "uma ", "un ", "un'", "una ", "une ",
     "unei ", "unha ", "uno ", "uns ", "unui ", "us ", "y ", "ye ", "yr "); */
   $str = variable_get('cals_importer_non_filing_characters');
+
   $str = str_replace('\s', ' ', $str);
   $arr = explode("\r\n", $str);
+
+  //Filter out homonyms based on known collisions between
+  // languages
+  if ($lang == 'eng') $filter = $eng_filter = array(
+    "die ", "bat ", "hen ", "he ",
+    "lou ", "i ", "in ", "it ", "to ", "um ",
+    "uno ", "us ", "ye ", "yr ");
+  if ($lang == 'fre') $filter = $fr_filter = array("de ", "il ","lou ", "y ");
+
+  if(isset($filter)) $arr = array_diff($arr, $filter);
 
   foreach($arr as $char) {
     $len = strlen($char);
     $substr = substr($value, $start, $len);
     if($substr == $char) {
       $new_start = $start + $len;
-      //printPre("CHAR =  $char| SUBSTR = $substr| NEW Start = $new_start |
-      // LEN = $len | VALUE = $value");
-      return _cals_importer_exporter_filing_characters($value, $new_start, $count);
+      return _cals_importer_exporter_filing_characters($value, $lang,
+        $new_start, $count);
     }
   }
   //if returns false on first iteration, then reset start to 0;
   if($count == 1 && $start == 1 && $first == '"') $start = 0;
   return $start;
+
 }
 
 /**

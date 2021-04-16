@@ -108,8 +108,8 @@ function _cals_importer_exporter_update_publisher_and_datecreated_vbo(&$entity, 
 function _cals_importer_exporter_update_publisher($wrapper, $node, $fieldname = NULL) {
   $values = $node->{$fieldname}[LANGUAGE_NONE];
   if(empty($values)) return;
-  if(!($fieldname)) $fieldname = 'field_publisher';
-  if($fieldname == 'field_publisher') {
+  if(!($fieldname)) $fieldname = 'field_publisher_source';
+  if($fieldname == 'field_publisher_source') {
     _cals_importer_exporter_update_publisher_field_publisher($values, $wrapper);
   }
   else {
@@ -139,33 +139,80 @@ function _cals_importer_exporter_update_publisher_field_publisher($values, $wrap
     }
   }
   elseif($count > 1) {
-    foreach($values as $k => $v) {
-      $value = $v['value'];
-      if($k == 0)
-        $place = $value;
-      elseif($k == 1)
-        $pub = $value;
-    }
-    if(empty($pub) && !empty($place)) {
-      $pub = $place;
-      $place = '';
-    }
+    //More than one value, loop through and use first index as place, later
+    // as pub
 
+    //Need some way of tagging the subfields a's and b's in earlier function
+
+    //2 subfields = a:Place b:Pub
+    //3 subfields = a:Place b:Pub, a:Place b:NULL
+    //4 subfields = a:Place b:Pub, a:Place, b:Pub
+    //Ignore > 4
+
+    switch($count) {
+      case 2:
+        $place = $values[0]['value'];
+        $pub = $values[1]['value'];
+      break;
+
+      case 3:
+        $place .= $values[0]['value'];
+        $place .= ', ' . $values[1]['value'];
+        $pub .= $values[2]['value'];
+        break;
+
+      default:
+      case 4:
+        $place .= $values[0]['value'];
+        $place .= ', ' . $values[1]['value'];
+        $pub .= $values[2]['value'];
+        $pub .= ', ' . $values[3]['value'];
+        break;
+    }
   }
   else {
     return;
   }
-  if( !empty($pub)  ) {
-    $wrapper->field_publisher_format = $pub;
-    if(!empty($place)) $wrapper->field_place_of_publication = $place;
-    $wrapper->save();
-    //$url = url(drupal_get_path_alias('node/' . $node->nid));
-    _cals_importer_set_message($node, t('Publisher updated'));
-    //drupal_set_message(t('Publisher updated for <a href="@url">@title</a>@title', array('@url' => $url, '@title' => $node->title)));
-  }
-
+  if( !empty($pub)  ) $wrapper->field_publisher_format = str_replace( array('[',']'), '', $pub );
+  if( !empty($place) ) $wrapper->field_place_of_publication = str_replace(
+    array('[',']'), '', $place );
+  //Don't use _cals_importer_strip_square_brackets, it bakes in node-level field
+  $wrapper->save();
+  //$url = url(drupal_get_path_alias('node/' . $node->nid));
+  _cals_importer_set_fileres_message($wrapper, t('Publisher fields updated for file: '));
+  //drupal_set_message(t('Publisher updated for <a href="@url">@title</a>@title', array('@url' => $url, '@title' => $node->title)));
 }
 
+/**
+ * Messaging function for wrapped Resource entities
+ * @param $wrapper
+ * @param null $message
+ */
+function _cals_importer_set_fileres_message($wrapper, $message = NULL) {
+  if (! $wrapper->getBundle() == 'field_file_resource') {
+    drupal_set_message("The bulk operation used called the wrapper message function without passing a File Resource entity ", 'warning');
+    //Trickle down to generic messaging for nodes
+    cals_importer_set_message($wrapper, $message);
+    return;
+  }
+
+  $url = url(drupal_get_path_alias('field-collection/field-file-resource/' .
+    $wrapper->getIdentifier() . '/edit'));
+  if($message)
+    $msg = $message . ": " . t('<a href="@url">@title</a>', array('@url' =>
+        $url, '@title' => $wrapper->host_entity->title->value() . " (" .
+        $wrapper->field_file_format->label() . ") "));
+  else
+    $msg = t('Title updated: <a href="@url">@title</a>', array('@url' =>
+      $url, '@title' => $wrapper->host_entity->title->value()));
+  drupal_set_message($msg);
+}
+
+/**
+ * Messsaging function for nodes
+ * @param $node
+ * @param null $message
+ */
 function _cals_importer_set_message($node, $message = NULL) {
   $url = url(drupal_get_path_alias('node/' . $node->nid));
   if($message)
@@ -304,7 +351,7 @@ function _cals_importer_exporter_update_fc_date($wrapper, $node, $date_qualifier
  */
 function _cals_importer_exporter_get_date_by_type($wrapper, $node, $date_qualifier) {
   $dates = $node->field_date[LANGUAGE_NONE];
-  $timestamp = $wrapper->field_s3_file_upload->file->timestamp->value();
+  $timestamp = $wrapper->field_s3_file_upload[0]->file->value()->timestamp;
   if($date_qualifier == '_none') $date_qualifier = '';
   foreach($dates as $k => $v) {
     $id = $v['value'];
@@ -534,7 +581,7 @@ function _cals_normalize_record_entry($node) {
           _cals_importer_strip_square_brackets($node, $field);
           _cals_importer_normalize_creators($node, $field);
           break;
-        case "field_publisher":
+        case "field_publisher_source":
           //_cals_importer_strip_square_brackets($node, "title");
           //_cals_importer_normalize_publisher($node);
           _cals_importer_strip_trailing_periods($node, $field);

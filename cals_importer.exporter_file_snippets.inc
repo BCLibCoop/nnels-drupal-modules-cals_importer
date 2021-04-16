@@ -40,16 +40,24 @@ function _cals_importer_exporter_build_marcxml_file_vbo(&$entity, $context = arr
  *
  * @param \FieldCollectionItemEntity $field_collection_item
  *   the FC entity passed to VBO action
+ * @param boolean $partner_share
+ *   the export mode, FALSE : All Export, TRUE : Partner Share only
  * @return array $buildable_snippet_array
  */
 function _cals_importer_exporter_build_file_resource_snippet
-($field_collection_item) {
+($field_collection_item, $partner_share = FALSE) {
   //$tags = _cals_importer_get_tag_array_file_attach(); //tag mappings
-
 
   //Wrapper
   $fc_wrapper = _cals_wrap_fc($field_collection_item);
 
+  //Check for shareable flag (Y/N) in partner share mode (TRUE), return early
+  if ($partner_share) {
+    $share_flag = $fc_wrapper->field_partner_sharing->value();
+    if ( ! $share_flag ) { //Not Permitted
+      return array(FALSE);
+    } //Continue
+  }
   //Temporary access to stub if needed
   $node = $fc_wrapper->host_entity->value();
   $stubfields = unserialize($node->field_xml_stub[LANGUAGE_NONE][0]['value']);
@@ -61,7 +69,9 @@ function _cals_importer_exporter_build_file_resource_snippet
     '306',
     'GMD',
     '008',
+    '035',
     '511',
+    '506',
   );
 
   $buildable_snippet_array = array();
@@ -72,10 +82,10 @@ function _cals_importer_exporter_build_file_resource_snippet
       $tag;
 
     if ( function_exists($callable) )
-      $result = call_user_func($callable, $fc_wrapper);
+      $result = call_user_func($callable, $fc_wrapper, $stubfields);
 
     //@todo log bad callbacks instead
-    if ($result == FALSE) {
+    if ($result === FALSE) {
       drupal_set_message(t("Something went wrong in $callable. Please check its field definitions."), 'error');
       continue;
     }
@@ -163,14 +173,17 @@ function _cals_importer_create_marcxml_snippet_file_resource($node) {
  * @return string $byte
  */
 function _cals_importer_exporter_snippet_callback_LDR($format) {
-  switch($format) {
-    case 4:
-      //Nonmusical Sound Recording (i) for MP3
-      return $byte = 'i';
-    default:
-      //Language Material (a) for all other formats
-      return $byte = 'a';
+
+  $format_keys = variable_get('nnels_importer_exporter_format_map');
+  foreach ($format_keys as $key => $value) {
+    if ( $value['media_pattern'] == 'audio' ) $audio_keys[] = $key;
   }
+
+  //Nonmusical Sound Recording (i) for audio-based formats like MP3
+  if ( in_array( $format, $audio_keys ) ) return $byte = 'i';
+
+  //Language Material (a) for all other formats
+  else return $byte = 'a';
 }
 
 /**
@@ -196,8 +209,8 @@ function _cals_importer_exporter_snippet_callback_LDR($format) {
  */
 function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
 
-  define("MARC_SPACE", chr(32) );
-  define("MARC_FILL", chr(124) );
+  defined("MARC_SPACE") or define("MARC_SPACE", chr(32) );
+  defined("MARC_FILL") or define("MARC_FILL", chr(124) );
 
   $final_008 = '';
 
@@ -208,8 +221,13 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   //Obtain original 008
   if (! empty($xml)) {
     $element_008 = $xml->xpath("//marc:controlfield[@tag='008']");
-    if ($element_008) $original_008 = $element_008[0]->__toString();
-  } else $original_008 = '';
+    if ($element_008) {
+      $original_008 = $element_008[0]->__toString();
+    }
+    else {
+      $original_008 = '';
+    }
+  }
 
   //Keep 00-05 if exists
   //yymmdd format
@@ -224,7 +242,7 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   //07-10 Date Created
 
   //default to timestamp of file creation
-  $created= date("Y", $fc_wrapped->field_s3_file_upload->value()
+  $created= date("Y", $fc_wrapped->field_s3_file_upload[0]->value()
   ['timestamp']);
 
   //Loop through all field_date instances and find an Created year
@@ -268,7 +286,11 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   $audience = $fc_wrapped->host_entity->field_audience->value();
   $lang = $fc_wrapped->host_entity->field_iso_language->value()[0];
 
-  if ($format == 'MP3') {
+  //Check all MP3/audio-only formats
+  //$formats = variable_get('nnels_importer_exporter_format_map');
+  //@todo array_filter to get only those formats with 'media_pattern' == 'audio'
+  if ( in_array( $format,  array('MP3', 'DAISY 202 - Audio', 'DAISY 3 - Audio' )
+  )) {
     //18-21 nnnn
     foreach (range(18,21) as $key ) {
       $final_008[$key] = 'n';
@@ -296,7 +318,12 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
     );
 
     if ( $label ) $final_008[30] = $lit_forms[$label];
-    else $final_008[30] = 'z';
+    else {
+      $final_008[30] = 'z';
+      drupal_set_message('Warning: Literary Format was missing for NID: ' .
+        $node->nid
+        . " ({$node->title})", 'warning' );
+    }
 
     $final_008[31] = MARC_SPACE;
     $final_008[32] = MARC_FILL;
@@ -321,8 +348,8 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
     }
 
     //33 literary format
-    $litform = $fc_wrapped->host_entity->field_literary_format->value();
-    $final_008[33] = $litform ? $litform : MARC_FILL;
+    $final_008[33] = $fc_wrapped->host_entity->field_literary_format->value() ?: MARC_FILL;
+    if ($final_008[33] == MARC_FILL) drupal_set_message('Warning: Literary Format was missing for NID: ' . $node->nid . " ({$node->title})", 'warning' );
   }
 
   //34 one fill char
@@ -337,6 +364,20 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   $final_008[39] = 'd';
 
   return array( 'value' => $final_008);
+}
+
+function _cals_importer_exporter_snippet_callback_035($fc_wrapped, $stubdata) {
+  $unique_id = $fc_wrapped->getIdentifier();
+  //Nix old 035 for our SCN
+  if (isset($stubdata['datafields']['035'])) unset($stubdata['datafields']['035']);
+  $workable_array = array(
+    'ind1' => '',
+    'ind2' => ''
+  );
+
+  $workable_array['subfields'][] = array('a' =>$unique_id);
+
+  return $workable_array;
 }
 
 function _cals_importer_exporter_snippet_callback_264($fc_wrapped) {
@@ -388,23 +429,37 @@ function _cals_importer_exporter_snippet_callback_264($fc_wrapped) {
  * @param \EntityDrupalWrapper $fc_wrapped
  * @return array $workable_array
  */
-function _cals_importer_exporter_snippet_callback_300($fc_wrapped) {
+function _cals_importer_exporter_snippet_callback_300($fc_wrapped, $stubfields) {
 
   $key = $fc_wrapped->field_file_format->value();
   $field = field_info_field('field_file_format');
   $format_label = $field['settings']['allowed_values'][$key];
+  $extent_stanza = $stubfields['datafields']['300'][0]['a'] ?: NULL;
 
-  $size = format_size($fc_wrapped->field_s3_file_upload->file->size->value());
+  $size = $fc_wrapped->field_s3_file_upload[0]->value() ? format_size
+  ($fc_wrapped->field_s3_file_upload[0]->file->value()
+    ->filesize) : NULL ;
 
   $workable_array = array(
       'ind1' => '',
       'ind2' => '',
   );
 
-  $format_size_stanza = sprintf("1 %s file (%s)", $format_label,
-    $size );
-
-  $workable_array['subfields'][] = array( 'a' => $format_size_stanza);
+  if (! empty($size) ) {
+    $extent_stanza = sprintf("1 %s file (%s)", $format_label,
+      $size);
+  } else { //No filesize, its physical
+      //@todo Use format ID vs label
+      if ( array_key_exists(16, $field["settings"]["allowed_values"]) ) {
+        $extent_stanza = '1 volume braille';
+      } elseif ( array_key_exists(17, $field["settings"]["allowed_values"]) ) {
+        $extent_stanza = '1 volume print/braille';
+      }
+  }
+  //Check for NULL extent and no existing 300$a
+  if ( isset($extent_stanza) ) $workable_array['subfields'][] = array(
+    'a' => $extent_stanza
+  );
 
   return $workable_array;
 }
@@ -415,6 +470,10 @@ function _cals_importer_exporter_snippet_callback_300($fc_wrapped) {
  */
 function _cals_importer_exporter_snippet_callback_306($fc_wrapped) {
   $runtime = $fc_wrapped->field_running_time->value();
+
+  //Zero-pad the hours if we have a HMMSS timestamp
+  if (strlen($runtime) == 5) $runtime = "0" . $runtime;
+
   $snippet_306 = array(
     'ind1' => '',
     'ind2' => '',
@@ -436,21 +495,10 @@ function _cals_importer_exporter_snippet_callback_306($fc_wrapped) {
  * @return mixed $workable_array
  */
 function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
-
-  $format_keys = array(
-    'epub 2' => 'etext',
-    'epub 3' => 'etext',
-    'pdf' => 'etext',
-    'e-text' => 'etext',
-    'azw3' => 'etext',
-    'mp3' => 'mp3',
-    'daisy 202' => 'daisy',
-    'daisy 3' => 'daisy',
-    'braille' => 'etext'
-  );
+  $format_keys = variable_get('nnels_importer_exporter_format_map');
 
   /**
-   * Electronic text (EPUB, PDF, e-text)
+   * Electronic text (EPUB, PDF, e-text(DOC, RTF))
    *  =336 \\$a txt $2 rdacontent
    *  =337 \\$a computer $2 rdamedia
    *  =338 \\$a online resource $2 rdacarrier
@@ -481,7 +529,7 @@ function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
 
 
   /**
-   * MP3 books
+   * Audio/MP3 books
    * =336  \\$a spoken word $b spw $2 rdacontent
    * =337  \\$a audio $b s $2 rdamedia
    * =337  \\$a computer $b c $2 rdamedia
@@ -489,7 +537,7 @@ function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
    * =338  \\$a online resource $b cr $2 rdacarrier
    **/
 
-  $mp3_pattern = array(
+  $audio_pattern = array(
     336 => array (
       0 => array(
         'a' => 'spoken word',
@@ -572,10 +620,42 @@ function _cals_importer_exporter_snippet_callback_GMD($fc_wrapped) {
     ),
   );
 
+
+  /**
+   * Tactile Text (physical braille)
+   * =336  \\$a tactile text $b tct $2 rdacontent
+   * =337  \\$a unmediated $b n $2 rdamedia
+   * =338  \\$a volume $b nc $2 rdacarrier
+   **/
+
+  $tactile_pattern = array(
+    336 => array (
+      0 => array(
+        'a' => 'tactile text',
+        'b' => 'tct',
+        2 => 'rdacontent',
+      ),
+    ),
+    337 => array(
+      0 => array(
+        'a' => 'unmediated',
+        'b' => 'n',
+        2 => 'rdamedia',
+      ),
+    ),
+    338 => array(
+      0 => array(
+        'a' => 'volume',
+        'b' => 'nc',
+        2 => 'rdacarrier',
+      ),
+    ),
+  );
+
   $format = $fc_wrapped->field_file_format->value();
   $format_label = strtolower($fc_wrapped->field_file_format->label());
 
-  $pattern = (string) $format_keys[$format_label] . '_pattern';
+  $pattern = (string) $format_keys[$format]['media_pattern'] . '_pattern';
   $loaded_pattern = $$pattern;
 
   if (empty($loaded_pattern)) {
@@ -624,6 +704,43 @@ function _cals_importer_exporter_snippet_callback_511($fc_wrapped) {
   }
   //Narrator was not found, will be purged
   else $workable_array['subfields'][] = $narrators;
+
+  return $workable_array;
+}
+
+function _cals_importer_exporter_snippet_callback_506($fc_wrapped) {
+
+  $workable_array = array();
+
+  //Check for shareable flag
+  $share_flag = $fc_wrapped->field_partner_sharing->value();
+  $access_flag = $fc_wrapped->value()->hostEntity()
+    ->field_access_restrictions["und"][0]["value"];
+
+  if ($access_flag == 0) { //Suppressed
+
+    $workable_array = array(
+      'ind1' => '1', //Restrictions apply
+      'ind2' => ''
+    );
+
+    switch ($share_flag) {
+      default: //Partner Sharing unset
+        $workable_array = array(); //Re-unset.
+        break;
+      case TRUE: //
+        $workable_array['subfields'][] = array(
+          'a' => "Restricted circulation--item is permitted for exchange with Marrakesh Treaty Contracting Parties."
+        );
+
+        break;
+      case FALSE:
+        $workable_array['subfields'][] = array(
+          'a' => "Restricted circulation--item is not permitted for exchange."
+        );
+        break;
+    }
+  }
 
   return $workable_array;
 }

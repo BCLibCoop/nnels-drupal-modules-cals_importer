@@ -40,6 +40,7 @@ function _cals_importer_repo_field_callback($fieldname) {
 
     "field_subject" => array("function" => '_cals_get_subject_from_marc'),
     "field_genre" => array("function" => '_cals_get_genre_from_marc'),
+    "field_genre_harmonized" => array("function" => '_cals_get_mapped_genre_from_marc'),
 
     //'field_uri' => array('function' => '_cals_importer_get_uri_from_marc'),
     'field_urls_external' => array('function' => '_cals_importer_get_urls_from_marc',
@@ -55,18 +56,13 @@ function _cals_importer_repo_field_callback($fieldname) {
         array('tag' => 540, 'code' => 'd'),
       )
     ),
-    'field_publisher' => array('function' => '_cals_importer_get_basic_values_from_marc',
+    'field_publisher_source' => array('function' => '_cals_importer_get_basic_values_from_marc',
       "tags" => array(
+        array('tag' => 534, 'code' => 'c'),
         array('tag' => 264, 'code' => 'a'),
         array('tag' => 264, 'code' => 'b'),
         array('tag' => 260, 'code' => 'a'),
         array('tag' => 260, 'code' => 'b'),
-
-      )
-    ),
-    'field_publisher_source' => array('function' => '_cals_importer_get_basic_values_from_marc',
-      "tags" => array(
-        array('tag' => 534, 'code' => 'c'),
       )
     ),
     'field_dc_creator' => array('function' => '_cals_importer_get_creator_from_marc',
@@ -144,28 +140,17 @@ function _cals_importer_repo_field_callback($fieldname) {
 /**
  * Returns fields for repository item
  *
- * @return
+ * @return array
  *   an array of flattened field defs
  *
  * @todo
  *   wrap into a static variable?
  *
  */
-function _cals_get_fields_repository_item($fieldnames) {
+function _cals_get_fields_repository_item() {
   $fields = field_info_instances("node", "repository_item");
+  $fieldnames = array_keys($fields);
 
-  //set title as first array element
-  /*
-  $map = array(
-    "title" =>
-      array(
-        'type' => 'text',
-        'required' => 1,
-        'values' => '',
-        'parser' => array("function" => '_cals_get_title_from_marc'),
-      ),
-  );
-  */
   $tmp = array(
     "_autocomplete", "_with_summary", "_hidden", "_buttons", "_select", "_textfield", "_embed", "_textarea",
   );
@@ -215,12 +200,11 @@ function _cals_get_fields_repository_item($fieldnames) {
   }
   $arr = array("types" => $types, "map" => $map);
   return $arr;
-
 }
 
 /**
  * helper function to parse xml path
- * @param $xml
+ * @param $record_xml
  *   the original xml string
  * @param $tag
  *   the tag to parse
@@ -231,15 +215,15 @@ function _cals_get_fields_repository_item($fieldnames) {
  *   an array of values
  *
  */
-function _cals_importer_xpath_value($xml, $fieldname, $tag, $code = NULL) {
+function _cals_importer_xpath_value($record_xml, $fieldname, $tag, $code = NULL) {
   $arr = array();
-  $path = "//marc:{$fieldname}[@tag='" . $tag . "']";
+  $path = ".//marc:{$fieldname}[@tag='" . $tag . "']";
   if(!empty($code) ) $path .= "/marc:subfield[@code='" . $code . "']";
-  $tmp = $xml->xpath($path);
+  $tmp = $record_xml->xpath($path);
   //dpm(__FUNCTION__, $path, $tmp);
   if (count($tmp) >= 1) {
     foreach ($tmp as $me){
-      $str = (string) trim($me[0]);
+      $str = (string) strip_tags( trim($me[0]) );
       if(!empty($str)) $arr[] = $str;
     }
   }
@@ -281,6 +265,9 @@ function _cals_get_title_from_marc($xml, $k, &$map) {
   foreach($tag as $subfield ) {
     $code = (string) $subfield->attributes()->code;
     if($code != 'c') {
+      if($code == 'b' && substr(rtrim($tmp[0]), -1) != ":") {
+        $title[0] .= " :";
+      }
       $tmp = _cals_importer_xpath_value($xml, "datafield", 245, $code);
       foreach ($tmp as $me) $title[] = $me;
     }
@@ -477,38 +464,58 @@ function _cals_importer_get_coverage_marc($xml, $k, &$map){
 }
 
 
-//function _cals_get_date_issued($xml) {
 function _cals_get_date_issued_from_marc($xml, $k, &$map) {
 
   $dates_dupes = array();
   $dates = array();
-  //$me = array(264 => 'c', 260 => 'c', )
-  //see: https://github.com/BCLibCoop/nnels/issues/104#issuecomment-229739259
-  $tmp = _cals_importer_xpath_value($xml, "datafield", 534, "c");
-  if (count($tmp)) {
-    foreach ($tmp as $str) _cals_map_date_qualifiers($str, 534, $dates, TRUE);
-    $tmp1 = _cals_importer_xpath_value($xml, "datafield", 264, "c");
-    $tmp2 = _cals_importer_xpath_value($xml, "datafield", 260, "c");
-    $tmp3 = _cals_importer_xpath_value($xml, "datafield", 533, "d");
-    if (count($tmp1))
-      foreach ($tmp1 as $str) _cals_map_date_qualifiers($str, 264, $dates, TRUE);
-    else if (count($tmp2))
-      foreach ($tmp2 as $str) _cals_map_date_qualifiers($str, 260, $dates, TRUE);
-    else if (count($tmp3))
-      foreach ($tmp3 as $str) _cals_map_date_qualifiers($str, 533, $dates, TRUE);
+
+  //Background: https://github.com/BCLibCoop/nnels/issues/104#issuecomment-229739259
+  //Get common subfields for this section
+
+  $orig_pub_date_534c = _cals_importer_xpath_value($xml, "datafield", 534, "c");
+  $date_pub_264c = _cals_importer_xpath_value($xml, "datafield", 264, "c");
+  $date_pub_260c = _cals_importer_xpath_value($xml, "datafield", 260, "c");
+
+  if ( count ( $orig_pub_date_534c ) ) {
+
+    foreach ($orig_pub_date_534c as $orig_pub_date_part) {
+
+      //There can be more comma-separated parts in
+      //array returned from _cals_importer_xpath_value
+      $orig_pub_date_part = explode(',', trim( $orig_pub_date_part, '.' ) );
+      _cals_map_date_qualifiers
+      ($orig_pub_date_part, 534, $dates, TRUE);
+    }
+
+    $reprod_tag = '533';
+    $reprod_date_533d = _cals_importer_xpath_value($xml, "datafield",
+      $reprod_tag, "d");
+
+  } else {
+    //No 533-4 so fallback is 008
+    $reprod_tag = '008';
+    $reprod_date_008c = _cals_importer_xpath_value($xml, "controlfield",
+      $reprod_tag,
+      NULL);
   }
-  else {
-    //008
-    $tmp1 = _cals_importer_xpath_value($xml, "datafield", 264, "c");
-    $tmp2 = _cals_importer_xpath_value($xml, "datafield", 260, "c");
-    $tmp3 = _cals_importer_xpath_value($xml, "controlfield", "008", NULL);
-    if (count($tmp1))
-      foreach ($tmp1 as $str) _cals_map_date_qualifiers($str, 264, $dates, FALSE);
-    else if (count($tmp2))
-      foreach ($tmp2 as $str) _cals_map_date_qualifiers($str, 260, $dates, FALSE);
-    else if (count($tmp3))
-      foreach ($tmp3 as $str) _cals_map_date_qualifiers($str, '008', $dates, FALSE);
-  }
+
+  $reprod_date_shared = $reprod_date_533d ? $reprod_date_533d :
+    $reprod_date_008c;
+
+  if ( count( $date_pub_264c ) )
+    foreach ( $date_pub_264c as $pub_date_part ) {
+      $pub_date_parts = explode(',', trim( $pub_date_part, '.' ) );
+      foreach ( $pub_date_parts as $part ) _cals_map_date_qualifiers($part, 264, $dates, TRUE);
+    }
+  else if (count($date_pub_260c))
+    foreach ($date_pub_260c as $pub_date_part)
+      _cals_map_date_qualifiers($pub_date_part, 260, $dates, TRUE);
+
+  //Whatever was found for reproduction date
+  else if (count($reprod_date_shared))
+    foreach ($reprod_date_shared as $reprod_date_part)
+      _cals_map_date_qualifiers($reprod_date_part, $reprod_tag, $dates, TRUE);
+
   foreach($dates as $qualifier => $date)
     $map[$k]['values'][] = array(
       'field_name' =>  "field_date",
@@ -537,12 +544,14 @@ function _cals_map_date_qualifiers($str, $tag, &$dates, $is_present) {
     $str = substr($str, 7, 4); // 008/07-10 should be numeric
   }
   else {
+    //Matches against c1999 or p1999 (UTF-8 for Ⓟ, sound recording copyright
+    // symbol)
     $check_copyright = _cals_parse_date_issue_copyright($str);
   }
   $date_value = _cals_get_iso_year($str);
   if(!empty($date_value)) {
     if($check_copyright) {
-      $qualifier = "Copyright";
+      $qualifier = "Copyrighted";
     }
     else {
       if($is_present) //if there's 534 included, it takes "issued" qualifier, otherwise "created"
@@ -564,8 +573,10 @@ function _cals_map_date_qualifiers($str, $tag, &$dates, $is_present) {
  */
 function _cals_parse_date_issue_copyright ($raw_date_value) {
   //$copyright = "/^c\\d{4}/"; - original pattern
-  $copyright = "/c\d{4}/"; //new pattern, modified 2016-06-30 - see: https://github.com/BCLibCoop/nnels/issues/104#issuecomment-229709076
-  preg_match($copyright, $raw_date_value, $matches);
+  $pattern = "/[cp]\d{4}/"; //new pattern, modified
+  // 2016-06-30 - see:
+  // https://github.com/BCLibCoop/nnels/issues/104#issuecomment-229709076
+  preg_match($pattern, $raw_date_value, $matches);
   if (count($matches))
     return TRUE;
 
@@ -632,6 +643,38 @@ function _cals_get_taxonomy_terms_from_xpath($xpathvalue, $fieldname, &$map) {
 function _cals_get_genre_from_marc($xml, $k, &$map) {
   $xpathvalue = $xml->xpath("//marc:datafield[@tag='655'][@ind1=' ']/marc:subfield[@code='a']|//marc:datafield[@tag='655'][@ind2=' ']/marc:subfield[@code='a']");
   _cals_get_taxonomy_terms_from_xpath($xpathvalue, $k, $map);
+}
+
+function _cals_get_mapped_genre_from_marc($xml, $k, &$map) {
+  $supplement_subjects = [];
+
+  $supplement_tags = array(
+    655 => 'a', //takeover from field_genre (defunct).
+    946 => 'a',
+  );
+
+  foreach ($supplement_tags as $tag => $code) {
+    $supplement_subjects[] = $xml->xpath("//marc:datafield[@tag='{$tag}'][@ind1=' ']/marc:subfield[@code='{$code}']
+    |//marc:datafield[@tag='{$tag}'][@ind2=' ']/marc:subfield[@code='{$code}']");
+  }
+  //Filter if only empties returned.
+  $supplement_subjects = array_filter($supplement_subjects);
+
+  //Convert from SimpleXMlElement objects to strings for searching.
+  foreach($supplement_subjects as $key => $sxe) {
+    $supplement_subjects[$key] = $sxe[0]->__toString();
+  }
+
+  module_load_include('inc', 'cals_importer', 'cals_importer.term_parse');
+  try {
+    cals_importer_find_mapped_genre($supplement_subjects, $k, $map);
+  }
+  catch (Exception $e){
+    drupal_set_message(
+      "cals_import_find_mapped_genre encountered critical 
+      error: " . $e->getMessage(), 'error', FALSE
+    );
+  }
 }
 
 /**
@@ -726,7 +769,16 @@ function _cals_get_subject_from_marc($xml, $k, &$map){
   foreach ($codes as $code) $paths[] = "//marc:datafield[@tag='650']/marc:subfield[@code='" . $code . "']";
   $path = implode("|", $paths);
   $xpathvalue = $xml->xpath($path);
-  _cals_get_taxonomy_terms_from_xpath($xpathvalue, $k, $map);
+
+  //Collapse on duplicates across a given subfield code
+  $deduped_xpath_values = array();
+  foreach($xpathvalue as $val) {
+    if (! in_array($val->__toString(), $deduped_xpath_values)) $deduped_xpath_values[] =
+      $val;
+  }
+  //Requires SimpleXMLElements passed in first parameter
+  _cals_get_taxonomy_terms_from_xpath($deduped_xpath_values, $k, $map);
+
 }
 
 /**
@@ -804,13 +856,19 @@ function _cals_get_descriptors_from_marc($xml, $k, &$map) {
 //check w/ Jonathan as to the $flag parameter: can't find elsewhere in code
 function _cals_importer_get_system_numbers_from_marc($xml, $k, &$map) {
   $str = array();
-  $tmp = _cals_importer_xpath_value($xml, "datafield", '037', 'a');
-  foreach($tmp as $value) {
-    $map[$k]['values'][] = $value;
-  }
-  $tmp = _cals_importer_xpath_value($xml, "datafield", '028', 'a');
-  foreach($tmp as $value) {
-    $map[$k]['values'][] = $value;
+
+  $scn_targets = array(
+    '028' => 'a',
+    '035' => 'a',
+    '037' => 'a',
+  );
+
+  foreach ($scn_targets as $tag => $subfield) {
+    $tmp = _cals_importer_xpath_value($xml, "datafield", $tag, $subfield);
+    foreach($tmp as $value) {
+      $map[$k]['values'][] = $value;
+    }
+    unset($tmp);
   }
 }
 
@@ -828,20 +886,26 @@ function _cals_importer_get_oclc_number_from_marc($xml, $k, &$map) {
 }
 
 function _cals_importer_get_access_restrictions($xml, $k, &$map) {
-  $codes = array("a", "d");
-  $title = array();
-  $vals = array();
-  foreach($codes as $code) {
-    $tmp = _cals_importer_xpath_value($xml, "datafield", '506', $code);
-    if (count($tmp) >= 1) {
-      $vals[] = (string) trim($tmp[0]);
-      if(count($vals)) {
-        $str = implode(" ", $vals);
-        $pos = strpos(strtolower($str),"restricted");
-        $map[$k]['values'][] = (is_numeric($pos)) ? 1 : 0;
-      }
-    }
-  }
+
+  //Default Requires Login see: https://github.com/BCLibCoop/nnels/issues/187
+  $map[$k]['values'][] = 1;
+
+  //Obsolete processing based on restricted string in MARCXML 506 a,d subfields
+
+//  $codes = array("a", "d");
+//  $title = array();
+//  $vals = array();
+//  foreach($codes as $code) {
+//    $tmp = _cals_importer_xpath_value($xml, "datafield", '506', $code);
+//    if (count($tmp) >= 1) {
+//      $vals[] = (string) trim($tmp[0]);
+//      if(count($vals)) {
+//        $str = implode(" ", $vals);
+//        $pos = strpos(strtolower($str),"restricted");
+//        $map[$k]['values'][] = (is_numeric($pos)) ? 1 : 0;
+//      }
+//    }
+//  }
 }
 
 
@@ -909,22 +973,36 @@ function _cals_importer_get_isbn_sysnums_from_marc($xml, $k, &$map) {
  * @param $xml
  *   the original xml string
  *
- * @return
- *   an array of Drupal-ready fields
  *
  */
 function _cals_importer_get_performer_from_marcxml(&$arr, $xml) {
 
-  $tmp = _cals_importer_xpath_value($xml, "datafield", 511, "a");
+  $raw_511_a = _cals_importer_xpath_value( $xml, "datafield", 511, "a" );
+  $prepared_narrator_values = array();
 
-  foreach ($tmp as $val) {
-    $val = str_replace("Narrated by ", "", $val);
-    $val = _cals_importer_strip_trailing_periods_value($val);
-    //$val = rtrim($val, ".");
-    $val = _cals_importer_get_normalized_performer($val);
-    $tmp2 = explode(",", $val);
-    foreach ($tmp2 as $val2)
-      $arr['fc_files']['field_performer'][]['value'] = trim($val2);
+  foreach ($raw_511_a as $value) {
+
+    //Transform raw string and obtain normalized Performer value(s)
+    $normalized_narrator_values = _cals_importer_get_normalized_performer(
+      _cals_importer_strip_trailing_periods_value(
+        str_replace("Narrated by ", "", $value
+        )
+      )
+    );
+
+    //Loop through our normalized values and breakdown any lists
+    foreach ( $normalized_narrator_values as $key => $candidate ) {
+      $exploded = explode(",", $candidate);
+      $de_listed_values = array_values(
+        ( $exploded ? $exploded : $candidate )
+      );
+      $prepared_narrator_values = array_merge($prepared_narrator_values,
+        $de_listed_values);
+    }
+
+    //Trim values and add to file resource fields
+    foreach ($prepared_narrator_values as $prepared_value)
+      $arr['fc_files']['field_performer'][]['value'] = trim( $prepared_value );
   }
 }
 function xmlToArray($xml, $options = array()) {
@@ -1020,11 +1098,14 @@ function xmlToArray($xml, $options = array()) {
  *   $map is returned by reference with values appended
  */
 function _cals_importer_get_creator_from_marc($xml, $k, &$map, $tags) {
+  _cals_importer_get_basic_values_from_marc($xml, $k, $map, $tags);
+
+  $tmp = '';
   if(count($map[$k]['values'])) {
     $tmp = $map[$k]['values']; //from 700 series, see: https://github.com/BCLibCoop/nnels/issues/116
     $map[$k]['values'] = array();
   }
-  _cals_importer_get_basic_values_from_marc($xml, $k, $map, $tags);
+
   if(count($tmp)) $map[$k]['values'] = array_merge($map[$k]['values'],  $tmp);
 }
 
@@ -1085,8 +1166,7 @@ function _cals_importer_get_contributor_from_marc($xml, $k, &$map, $tags) {
  * @param $tags
  *   the marcxml fields that are parsed
  *
- * @return
- *   $map is returned by reference with values appended
+ * $map appended by reference.
  */
 function _cals_importer_get_dc_relations_from_marc($xml, $k, &$map, $tags) {
   foreach($tags as $tag) {
@@ -1108,18 +1188,36 @@ function _cals_importer_get_dc_relations_from_marc($xml, $k, &$map, $tags) {
     foreach ($tmp as $val) {
       $val = _cals_importer_strip_square_brackets_value($val);
       $val = _cals_importer_strip_trailing_periods_value($val);
+
+      //Set defaults
+      $target_relation_field = 'field_dc_relation_value';
+      $val_key = 'value';
+      $final_val = $val;
+
+      //Special tag + subfield for populating Relations taxonomy
+      if ($t == '760' && $c == 'a') {
+        //Look for a taxonomy term matching $val
+        $target_relation_field = 'field_dc_relation_term_value';
+        $val_key = 'tid';
+        $vocabulary = taxonomy_vocabulary_machine_name_load('relations');
+        $tid = _cals_get_tid_by_name($vocabulary->vid, $val);
+        if (isset($tid)) $final_val = (int) $tid;
+        else continue; //hopefully avoids empty field collection entities
+      }
+
       $map[$k]['values'][] = array(
-        'field_name' =>  "field_dc_relation",
-        'field_dc_relation_value' => array(
-          LANGUAGE_NONE => array(array('value' => $val) ),
+        "field_name" =>  "field_dc_relation",
+        "{$target_relation_field}"  => array(
+          LANGUAGE_NONE => array(array("{$val_key}" => $final_val) ),
         ),
-        'field_dc_relation_qualifiers' => array(
-          LANGUAGE_NONE => array(array('value' => $e) ),
+        "field_dc_relation_qualifiers" => array(
+          LANGUAGE_NONE => array(array("value" => $e) ),
         ),
       );
     }
   }
 }
+
 /**
  * Parses cataloguing agency from 003 and 040
  * @param $xml
@@ -1199,16 +1297,22 @@ function _cals_importer_get_basic_values_from_marc($xml, $k, &$map, $tags) {
 /**
  *
  * @param $string
- *   the peformer value to normalize
+ *   the performer value to normalize
  *
  * @return
  *   the normalized value
  *
  */
 function _cals_importer_get_normalized_performer($string) {
+
   $prefixes = variable_get('cals_importer_prefix_stopwords_narrators');
   $arr = explode("\r\n", $prefixes );
-  return trim(str_replace($arr, "", $string));
+
+  $filtered_string = trim(str_replace($arr, "", $string));
+  //Split potential narrator list on conjunctions
+  $filtered_split_string = preg_split( "/ (and|&) /", $filtered_string);
+
+  return $filtered_split_string;
 }
 
 /**
@@ -1218,19 +1322,69 @@ function _cals_importer_get_normalized_performer($string) {
  * @param $xml
  *   the original xml string
  *
- * @return
- *   an array of Drupal-ready fields
- *
  * see: http://www.loc.gov/marc/bibliographic/bd306.html
  */
 function _cals_importer_get_runningtime_from_marcxml(&$arr, $xml) {
-  if(!isset($arr['fc_files'])) $arr['fc_files'] = array();
+
+  if (!isset($arr['fc_files'])) {
+    $arr['fc_files'] = array();
+  }
+
   //look for 306 tag code a
-  $tmp = _cals_importer_xpath_value($xml, "datafield", 306, 'a');
-  foreach ($tmp as $val){
-    $val = trim($val);
-    if(is_numeric(trim($val)))
-      $arr['fc_files']['field_running_time'][]['value'] = trim($val);
+  $runtime_306a = _cals_importer_xpath_value($xml, "datafield", 306, 'a');
+
+  if (!empty($runtime_306a)) { //empty array from xpath_value if not found
+    foreach ($runtime_306a as $val) {
+      $val = trim($val);
+      if (is_numeric(trim($val))) {
+        $arr['fc_files']['field_running_time'][]['value'] = trim($val);
+      }
+    }
+    return;
+  }
+
+  //Try 300 $a - more common?
+  $runtime_300a = _cals_importer_xpath_value($xml, "datafield", 300, 'a');
+
+  //If we have a runtime from 300$a and lacks "page as a substring"
+  if ( ! empty( $runtime_300a ) && ( ! strpos( $runtime_300a[0], "page" ) ) ) {
+
+    //Match possible running times with units...oy vey
+    preg_match("/\((\d+.?[\d\s]?\/?\d*\s?[hr]*[min]*)\.*[\,\s]*([\w\s]*)\.*\)/",
+      $runtime_300a[0], $matches);
+
+    if ($matches[1]) {
+      preg_match("/(\d+).*/", $matches[1], $whole_hour);
+      $hours = trim($whole_hour[1]);
+      $minutes = '00'; //may get replaced
+
+      //Check for a decimal number or fraction, should not be mixed
+      preg_match("/\d+\s(\d*\/?\d*)/", $matches[1], $fractional_min);
+      preg_match("/\d\.(\d*)/", $matches[1], $decimal_min);
+
+      if ((string) $fractional_min[1] == '1/2') $minutes = 30;
+      if ((string) $fractional_min[1] == '1/4') $minutes = 15;
+
+      if ($decimal_min[1]) {
+        //count digits
+        $count = strlen((string) $decimal_min[1]);
+        $divisor = pow(10, $count);
+        $minutes = (int) (60 * ($decimal_min[1] / $divisor) );
+      }
+      //otherwise whole minutes
+      if ($matches[2]) {
+        $min = explode(" ", $matches[2]);
+        $minutes = $min[0];
+      }
+    }
+    //Format in hhmmss for field
+    $timestamp = sprintf('%02d%02d00', $hours, (int) $minutes);
+    $arr['fc_files']['field_running_time'][]['value'] = $timestamp;
+  }
+  else {
+    /* No useable runtime value found.
+     * Leaves $arr['fc_files'] empty for next field callback
+     */
   }
 }
 

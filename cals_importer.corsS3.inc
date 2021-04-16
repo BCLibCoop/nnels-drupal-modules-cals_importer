@@ -50,10 +50,11 @@ function _cals_run_batch_update_field_collection_s3_filesizes(&$entity, $context
  */
 function _cals_update_filesize_from_s3_value($file) {
 	//instantiate class
-	$wrapper = new NNELSStreamWrapper;
+    module_load_include('inc', 'cals_s3', 'cals_s3.NNELSStreamWrapper.class');
+	$wrapper = new \Drupal\cals_s3\NNELSStreamWrapper;
 	$uri = $file->uri;
 	$wrapper->setUri($uri);
-	$filesize = $wrapper->get_filesize();
+	$filesize = $wrapper->get_filesize($wrapper->getUri());
   //dpm($file);
 	if( $filesize != $file->filesize || empty($file->filesize) ) {
 		if(empty($filesize)) $filesize = 1;
@@ -116,9 +117,10 @@ function _cals_update_filecollection_file_filesize($node, $item_id) {
  *   the node passed to the parser
  */
 function _cals_importer_batch_update_filesizes($node) {
-  global $user;
-	$wrapper = new NNELSStreamWrapper;
-	$ObjectsListResponse = $wrapper->list_objects();
+    global $user;
+    module_load_include('inc', 'cals_s3', 'cals_s3.NNELSStreamWrapper.class');
+    $wrapper = new \Drupal\cals_s3\NNELSStreamWrapper;
+    $ObjectsListResponse = $wrapper->list_objects();
 	$arr = array();
 	$Objects = $ObjectsListResponse->body->Contents;
 	foreach ($Objects as $Object) {
@@ -150,7 +152,7 @@ function _cals_importer_batch_update_filesizes($node) {
  */
  
 function _cals_importer_filesizes_batch($node, &$context) {
-  //$limit = 400; //10;
+  $limit = 400; //10;
   if (empty($context['sandbox']['progress']) ) {
   	
     $context['sandbox']['progress'] = 0;
@@ -316,7 +318,8 @@ function _cals_importer_get_file_from_filepath($filepath) {
       'filename' => $filepath, 
       'filemime' => "application/zip",    //application/zip or multipart/x-zip
       'status' => 1,
-      'display' => 1
+      'display' => 1,
+      'type' => 'document',
     );
     try {
 			file_save($file);
@@ -428,8 +431,13 @@ function _cals_importer_populate_field_file_resource($node) {
   $filepath = '';
   if(!empty($node->field_s3_path[LANGUAGE_NONE]) ) $filepath = trim($node->field_s3_path[LANGUAGE_NONE][0]['value']);
 
-  $filepath = str_replace("download.nnels.ca/", "", $filepath);
-  $filepath = str_replace("download2.nnels.ca/", "", $filepath);
+    // Bucket is now baked into the file_managed path by Field File Path
+    // module with differing environment defaults.
+    // E.g. dev : nnels-data-dev, prod : nnels-data-prod
+    $filepath = str_replace("download.nnels.ca/", "nnels-data-prod/",
+      $filepath);
+    $filepath = str_replace("download2.nnels.ca/", "nnels-data-dev/",
+      $filepath);
 
   //We need to check if the current file exists in the file_managed table
   //drush sqlq "select * from file_managed limit 0, 100"
@@ -568,4 +576,155 @@ function _cals_importer_parse_marcxml_cors3($node) {
 
 	}
   return $arr;
+}
+
+function _cals_mend_broken_file_resource_s3_paths_form($settings,
+  &$form_state) {
+
+  $form = array();
+
+  $options = array(
+    0 => t('Local Path Only'),
+    1 => t('Full Mode')
+  );
+
+  $form['mend_mode'] = array(
+    '#type' => 'radios',
+    '#title' => t('Select Mend Mode'),
+    '#required' => TRUE,
+    '#description' => t("Local Path Only cleans faulty object path or prefix in Drupal only.
+    <br><br>Full Mode attempts all methods on field_s3_path, file resource and upstream S3 object"),
+    '#options' => $options,
+  );
+
+  return $form;
+}
+
+
+/**
+ * @param $form
+ * @param $form_state
+ * @return array
+ */
+
+function _cals_mend_broken_file_resource_s3_paths_submit($form, &$form_state) {
+  $returnable = array();
+  $returnable['mode'] = $form_state['values']['mend_mode'];
+  return $returnable;
+}
+
+/**
+* The main batch process to amend broken S3 paths in File Resources
+*
+ * @param $nid
+*   the node id
+*
+ * @return
+ *   $val, a string
+*/
+function _cals_mend_broken_file_resource_s3_paths(&$entity, $context = array()) {
+
+  if ($entity->type == 'repository_item') {
+    foreach ( entity_metadata_wrapper('node', $entity)->field_file_resource->getIterator() as $delta => $wrapped) {
+      full_mend_s3_path( $wrapped );
+    }
+  }
+  elseif ($entity->type == 'field_collection_item') {
+    $wrapped = entity_metdata_wrapper('field_collection_item', $entity);
+    full_mend_s3_path( $wrapped );
+    }
+  elseif (property_exists($entity, 'filesize') ) {
+    fix_s3_path( $entity );
+  }
+  return TRUE;
+}
+
+/**
+ * @param $entity
+ * Previously, removed the endpoint name (s3.libraries.coop) from S3 Path
+ * which would sometimes occur. Now this seems deprecated against AWS S3,
+ * although reverse problems occurs where bucket is now needed explicitly.
+ */
+function fix_s3_path( $entity ) {
+
+  //Find the FC item entity associated with that file
+  $query = new \EntityFieldQuery();
+  $query->entityCondition('entity_type', 'field_collection_item')
+    ->propertyCondition('field_name', 'field_file_resource')
+    ->fieldCondition('field_s3_file_upload', 'fid', $entity->fid);
+  $results = $query->execute();
+  //Proceed with results
+  if (isset($results['field_collection_item']) ) {
+    //Load the entity and wrap
+    $loaded_resource = entity_metadata_wrapper('field_collection_item',
+      entity_load_single('field_collection_item',
+        key($results['field_collection_item'])));
+    //Fix it's field_s3_path first
+    $pattern = '/s3:\/\/[a-z3.]+libraries.coop\//';
+    //@todo Ensure server's default bucket gets inserted where there is NO
+    // match in S3 path?
+    //$pattern = '/s3:\/\/nnels-data-dev|prod\//';
+    $loaded_resource->field_s3_path->set(
+      preg_replace($pattern, "s3://", $loaded_resource->field_s3_path->value())
+    );
+    $loaded_resource->save();
+    //Amend the filename, uri in the File entity directly
+    $entity->filename = preg_replace($pattern, "s3://",
+      $entity->filename);
+    $entity->uri = preg_replace($pattern, "s3://",
+      $entity->uri);
+  } else {
+    drupal_set_message("Aborted. File ID: $entity->fid is not associated with a field_file_resource instance");
+  }
+}
+
+  /**
+   * Clean urlencoded and problematic chars from the S3 Path for both the
+   * file_managed entity and resource in S3
+   * @param \EntityDrupalWrapper $wrapped
+   */
+
+function full_mend_s3_path( $wrapped ) {
+
+  //Remove URL-encoded strings
+  $fixed_s3 = preg_replace("/\%[0-9ABCDEF]{2}/", "",
+    $wrapped->field_s3_path->value() );
+
+  //Prepare problem punctuation
+  $replacements = array(
+    '—' => '-',
+    '―' => '-',
+    "'" => '',
+    "’" => '',
+  );
+  //Replace
+  $fixed_s3 = str_replace(array_keys($replacements), $replacements, $fixed_s3);
+
+  //Map French-accented chars to unadorned equivalents due to S3-signing fail
+  $fixed_s3 = html_entity_decode(
+                preg_replace(
+                  '~&([a-z]{1,2})(
+                    ?:acute|cedil|circ|grave|lig|orn|ring|slash|th|tilde|uml
+                    );~i',
+                  '$1',
+                  htmlentities($fixed_s3, ENT_QUOTES, 'UTF-8')
+                ),
+                ENT_QUOTES,
+                'UTF-8'
+              );
+
+  $wrapped->field_s3_path->set($fixed_s3);
+  $file = file_load((int) $wrapped->field_s3_file_upload->file->getIdentifier());
+  $file->filename = $fixed_s3;
+
+  //Effect changes on file entity and S3 object
+  module_load_include('inc', 'cals_s3', 'cals_s3.NNELSStreamWrapper.class');
+  $stream = new \Drupal\cals_s3\NNELSStreamWrapper;
+  $stream->setUri(urldecode($file->uri));
+  $stream->rename($stream->getUri(), $fixed_s3);
+
+  //Finalize and save
+  $file->uri = $fixed_s3;
+  file_save($file);
+  $wrapped->save();
 }
