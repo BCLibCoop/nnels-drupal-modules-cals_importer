@@ -1020,17 +1020,17 @@ function _cals_importer_get_a11y_metadata(&$arr, $xml) {
 
   $array_341_b = _cals_importer_xpath_value( $xml, "datafield", 341, "b" );
   $array_532_a = _cals_importer_xpath_value( $xml, "datafield", 532, "a" );
-  $vocab = taxonomy_vocabulary_machine_name_load('accessibility_tags');
 
   foreach ($array_341_b as $tag) {
-    $tid = db_query(
-      "SELECT tid FROM {taxonomy_term_data}
-    WHERE vid = :vid and name = :name
-    ORDER BY tid DESC LIMIT 1",
-      array(':vid' => $vocab->vid, ':name' => $tag)
-    )->fetchField();
-    if ( ! empty($tid) )
+    $tid = db_select('field_data_field_source', 's')
+      ->fields('s', ['entity_id'])
+      ->condition('s.field_source_value', $tag)
+      ->execute()
+      ->fetchField();
+
+    if (!empty($tid)) {
       $arr['fc_files']['field_accessibility_tags'][]['tid'] = $tid;
+    }
   }
 
   foreach ($array_532_a as $value) {
