@@ -1021,6 +1021,7 @@ function _cals_importer_get_a11y_metadata(&$arr, $xml) {
   $array_341_b = _cals_importer_xpath_value( $xml, "datafield", 341, "b" );
   $array_532_a = _cals_importer_xpath_value( $xml, "datafield", 532, "a" );
 
+  $tags_added = array();
   foreach ($array_341_b as $tag) {
     $tid = db_select('field_data_field_source', 's')
       ->fields('s', ['entity_id'])
@@ -1029,7 +1030,11 @@ function _cals_importer_get_a11y_metadata(&$arr, $xml) {
       ->fetchField();
 
     if (!empty($tid)) {
-      $arr['fc_files']['field_accessibility_tags'][]['tid'] = $tid;
+      // Do not add duplicates.
+      if (!isset($tags_added[$tid])) {
+        $arr['fc_files']['field_accessibility_tags'][]['tid'] = $tid;
+        $tags_added[$tid] = TRUE;
+      }
     }
   }
 
