@@ -1378,10 +1378,10 @@ function _cals_importer_get_running_time_from_marcxml(&$arr, $xml) {
 
       preg_match("/\d+:\d{2}:\d{2}/", trim($val), $matches); //HH+:MM:SS
       if ( isset( $matches[0] ) ) {
-        //Calculate total
+        //Format total without colons
+        //fixes https://github.com/BCLibCoop/nnels/issues/203
         $raw_runtime = explode(':', $matches[0]);
-        $total_runtime = $raw_runtime[0] * 3600 + $raw_runtime[1] * 60 +
-        $raw_runtime[2];
+        $total_runtime = $raw_runtime[0] . $raw_runtime[1] . $raw_runtime[2];
 
         //store total seconds integer
         $arr['fc_files']['field_running_time'][]['value'] = $total_runtime;
