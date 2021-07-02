@@ -1371,8 +1371,7 @@ function _cals_importer_get_running_time_from_marcxml(&$arr, $xml) {
 
   foreach ($candidates as $tag => $subfield) {
     $parsed = _cals_importer_xpath_value($xml, "datafield", $tag, $subfield);
-    //Return early
-    if (empty($parsed)) break;
+    if ( empty($parsed) ) continue; //Try next candidate
 
     foreach ($parsed as $val) {
 
@@ -1397,7 +1396,7 @@ function _cals_importer_get_running_time_from_marcxml(&$arr, $xml) {
         if ( isset( $matches[1] ) ) {
 
           //Discard string counting files early
-          if ( isset($matches[2] ) )preg_match("/\(?[\s\w]+[files]\)?/",
+          if ( isset($matches[2] ) ) preg_match("/\(?[\s\w]+[files]\)?/",
             $matches[2], $filter);
           if ( isset($filter[0]) ) break;
 
