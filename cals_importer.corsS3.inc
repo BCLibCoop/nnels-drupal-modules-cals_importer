@@ -514,6 +514,7 @@ function _cals_importer_populate_field_file_resource($node) {
     'field_file_format',
     'field_accessibility_tags',
     'field_accessibility_summary',
+    'field_certified_accessible_by',
   );
 
   foreach ( $resource_fields_to_process as $field ) {
