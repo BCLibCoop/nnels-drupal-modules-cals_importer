@@ -210,14 +210,19 @@ function _cals_get_fields_repository_item() {
  *   the tag to parse
  * @param $code
  *   the optional code to parse*
+ * @param $ind1
+ *   The optional ind1 tag for the path.
  *
  * @return
  *   an array of values
  *
  */
-function _cals_importer_xpath_value($record_xml, $fieldname, $tag, $code = NULL) {
+function _cals_importer_xpath_value($record_xml, $fieldname, $tag, $code = NULL, $ind1 = NULL) {
   $arr = array();
   $path = ".//marc:{$fieldname}[@tag='" . $tag . "']";
+  if (!empty($ind1)) {
+    $path .= "[@ind1='" . $ind1 . "']";
+  }
   if(!empty($code) ) $path .= "/marc:subfield[@code='" . $code . "']";
   $tmp = $record_xml->xpath($path);
   //dpm(__FUNCTION__, $path, $tmp);
@@ -1019,7 +1024,8 @@ function _cals_importer_get_performer_from_marcxml(&$arr, $xml) {
 function _cals_importer_get_a11y_metadata(&$arr, $xml) {
 
   $array_341_b = _cals_importer_xpath_value( $xml, "datafield", 341, "b" );
-  $array_532_a = _cals_importer_xpath_value( $xml, "datafield", 532, "a" );
+  $array_532_1_a = _cals_importer_xpath_value( $xml, "datafield", 532, "a", "1" );
+  $array_532_8_a = _cals_importer_xpath_value( $xml, "datafield", 532, "a", "8" );
 
   $tags_added = array();
   foreach ($array_341_b as $tag) {
@@ -1038,7 +1044,12 @@ function _cals_importer_get_a11y_metadata(&$arr, $xml) {
     }
   }
 
-  foreach ($array_532_a as $value) {
+  foreach ($array_532_1_a as $value) {
+    //populate the text field
+    $arr['fc_files']['field_certified_accessible_by'][]['value'] = $value;
+  }
+
+  foreach ($array_532_8_a as $value) {
     //populate the text field
     $arr['fc_files']['field_accessibility_summary'][]['value'] = $value;
   }
