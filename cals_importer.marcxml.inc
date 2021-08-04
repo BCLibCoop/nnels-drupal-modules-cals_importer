@@ -323,7 +323,7 @@ function _cals_reparse_record_details(&$node, $context) {
         $node,
         $prepared_simplexml_record,
         $reparse_field_map, //the fields to reparse
-        "parse"
+        "reparse"
       );
       $parsed_flag = TRUE; //Don't reparse in case of SCN duplicate in index
     }
@@ -339,6 +339,31 @@ function _cals_reparse_record_details(&$node, $context) {
 }
 
 /**
+ * @param $node
+ * @param $context
+ */
+function _cals_recalc_file_running_time(&$node, $context) {
+  $audio_formats_ids = array(1,2,4,10,11,13);
+  $node_wrap = entity_metadata_wrapper('node', $node->nid);
+  foreach ($node_wrap->field_file_resource->value() as $fc) {
+      $fc_wrap = entity_metadata_wrapper('field_collection_item', $fc);
+      //Check we are dealing with audio format and an existing runtime
+      if ( in_array($fc_wrap->field_file_format->value(), $audio_formats_ids)
+        && ! empty($fc_wrap->field_running_time->value() ) )
+      {
+        //Pass off FC to running time callback
+        $xml = _cals_get_marc_xml_string($node_wrap);
+        $ready = array();
+        _cals_importer_get_running_time_from_marcxml($ready, $xml );
+        $latest_runtime = $ready['fc_files']['field_running_time'][0]['value'];
+        $fc_wrap->field_running_time->set($latest_runtime);
+        $fc_wrap->save();
+        $node_wrap->save();
+      }
+  }
+}
+
+/**
  * Iterates thru mapped fields to parse full node or selected fields
  *
  * @param $node
@@ -348,7 +373,11 @@ function _cals_reparse_record_details(&$node, $context) {
  * @param $map
  *   the field mappings
  * @param $op
- *   the operation, e.g., parse (all fields) or reparse (selected fields)
+ *   the operation:
+ *   parse (all fields) or
+ *   reparse (selected fields),
+ *   merge_fc (reparse but keep edited FC values)
+ *
  *
  * @return
  *   $node
@@ -408,8 +437,9 @@ function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
       if( ($type != 'field_collection' && $type != 'taxonomy' && $type != 'link_field') || $k == 'field_title_uniform') {
         _cals_importer_normalize_node_field($node, $k); //normalizes various field values
       }
-      if($type == 'field_collection') {
-        //N.B. Deletes and delegates field collection population to
+      if( $type == 'field_collection' && $op != 'merge_fc' ) {
+        // N.B. Deletes the collection and delegates new creation from
+        // MARCXML to
         // _cals_importer_populate_repos_item_fieldcollections
         _cals_importer_delete_field_collection($node, $k);
         $fc_fields[$k] = $map[$k];
@@ -417,7 +447,8 @@ function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
 
     }
   }
-  if($op == 'parse') _cals_delete_duplicate_oclc_numbers($node);
+  if( in_array($op, array('parse', 'reparse') ) )
+    _cals_delete_duplicate_oclc_numbers($node);
   //save the populated node
   //$node->status = 1;
   $node->title = $node->title_field[LANGUAGE_NONE][0]['value'];
