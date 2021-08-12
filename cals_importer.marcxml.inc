@@ -347,18 +347,33 @@ function _cals_recalc_file_running_time(&$node, $context) {
   $node_wrap = entity_metadata_wrapper('node', $node->nid);
   foreach ($node_wrap->field_file_resource->value() as $fc) {
       $fc_wrap = entity_metadata_wrapper('field_collection_item', $fc);
-      //Check we are dealing with audio format and an existing runtime
-      if ( in_array($fc_wrap->field_file_format->value(), $audio_formats_ids)
-        && ! empty($fc_wrap->field_running_time->value() ) )
-      {
+      $msg_params = array(
+        '%nid' => $node_wrap->nid->value() . ': ',
+        '%title' => wordwrap($node_wrap->title->value(), 60) . '...',
+        '@filepath' => url('field-collection/field-file-resource/' .
+          $fc_wrap->getIdentifier() . "/edit", array(
+            'query' => array(
+              'destination' => 'node/' . $node_wrap->nid->value(),
+            ) ) ),
+        '%format' => $fc_wrap->field_file_format->label(),
+      );
+
+      //Check we are dealing with audio format, existing runtime not needed
+      if ( in_array($fc_wrap->field_file_format->value(), $audio_formats_ids)) {
         //Pass off FC to running time callback
         $xml = _cals_get_marc_xml_string($node_wrap);
-        $ready = array();
+        $ready = array(); //populated by below method
         _cals_importer_get_running_time_from_marcxml($ready, $xml );
+        if ( empty ($ready['fc_files']) )
+          drupal_set_message(t('Failed to recalculate runtime for NID %nid - %title (<a href="@filepath">%format</a>)', $msg_params), 'warning');
+
         $latest_runtime = $ready['fc_files']['field_running_time'][0]['value'];
         $fc_wrap->field_running_time->set($latest_runtime);
         $fc_wrap->save();
         $node_wrap->save();
+        drupal_set_message(t('Recalculated runtime for NID %nid %title (<a href="@filepath">%format</a>)', $msg_params), 'status');
+      } else {
+        drupal_set_message(t('Skipped non-audio format NID %nid - %title (<a href="@filepath">%format</a>)', $msg_params), 'warning');
       }
   }
 }

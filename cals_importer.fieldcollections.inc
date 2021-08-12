@@ -45,6 +45,7 @@ function _cals_importer_delete_field_collection(&$node, $field) {
 		//collection field values for multiple deletion!
 		foreach( $node->{$field}[LANGUAGE_NONE] as $v) {
 			//$ids[] = $v['value'];
+            // Only loads a value for field_file_resource type FCs
 			$fci = field_collection_item_load($v['value']);
 			if($fci) $fci->delete();
 		}

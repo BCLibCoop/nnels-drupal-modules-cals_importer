@@ -1391,16 +1391,19 @@ function _cals_importer_get_running_time_from_marcxml(&$arr, $xml) {
         //Format total without colons
         //fixes https://github.com/BCLibCoop/nnels/issues/203
         $raw_runtime = explode(':', $matches[0]);
+        //Drupal time-ready format
         $total_runtime = $raw_runtime[0] . $raw_runtime[1] . $raw_runtime[2];
 
-        //store total seconds integer
+        //store
         $arr['fc_files']['field_running_time'][]['value'] = $total_runtime;
         unset($matches); //rest
 
-        //Otherwise warm up the regex for mixed format
+        //Drupal time-ready format match
+      } elseif ( preg_match('/(\d{6})/', $val, $matches) ) {
+        $arr['fc_files']['field_running_time'][]['value'] = $matches[1];
       } elseif ( ! strpos( $val, "page" ) ) {
-
-        //Match possible running times with units...oy vey
+        //Otherwise warm up the regex...oy vey
+        //Match possible running times with units in mixed format
         preg_match("/\([ca. ]*(\d+.?[\d\s]?\/?\d*\s?[hr]*[min]*)\.*[\,\s]*([\w\s]*)\.*\)/",
           $val, $matches);
 
@@ -1409,7 +1412,7 @@ function _cals_importer_get_running_time_from_marcxml(&$arr, $xml) {
           //Discard string counting files early
           if ( isset($matches[2] ) ) preg_match("/\(?[\s\w]+[files]\)?/",
             $matches[2], $filter);
-          if ( isset($filter[0]) ) break;
+          if ( isset($filter[0]) ) continue;
 
           preg_match("/(\d+).*/",
             $matches[1],
