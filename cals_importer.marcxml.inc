@@ -364,8 +364,7 @@ function _cals_recalc_file_running_time(&$node, $context) {
         $xml = _cals_get_marc_xml_string($node_wrap);
         $ready = array(); //populated by below method
         _cals_importer_get_running_time_from_marcxml($ready, $xml );
-        if ( empty ($ready['fc_files']) )
-          drupal_set_message(t('Failed to recalculate runtime for NID %nid - %title (<a href="@filepath">%format</a>)', $msg_params), 'warning');
+        if ( empty ($ready['fc_files']) ) continue; //avoid unneeded save()
 
         $latest_runtime = $ready['fc_files']['field_running_time'][0]['value'];
         $fc_wrap->field_running_time->set($latest_runtime);

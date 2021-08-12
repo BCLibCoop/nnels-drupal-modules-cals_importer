@@ -1401,13 +1401,11 @@ function _cals_importer_get_running_time_from_marcxml(&$arr, $xml) {
         //Drupal time-ready format match
       } elseif ( preg_match('/(\d{6})/', $val, $matches) ) {
         $arr['fc_files']['field_running_time'][]['value'] = $matches[1];
-      } elseif ( ! strpos( $val, "page" ) ) {
+      } elseif ( ! strpos( $val, "page" )
+        && preg_match('/\([ca. ]*(\d+.?[\d\s]?\/?\d*\s?[hr]*[min]*)\.*[\,\s]*([\w\s]*)\.*\)/',
+          $val, $matches) ) {
         //Otherwise warm up the regex...oy vey
         //Match possible running times with units in mixed format
-        preg_match("/\([ca. ]*(\d+.?[\d\s]?\/?\d*\s?[hr]*[min]*)\.*[\,\s]*([\w\s]*)\.*\)/",
-          $val, $matches);
-
-        if ( isset( $matches[1] ) ) {
 
           //Discard string counting files early
           if ( isset($matches[2] ) ) preg_match("/\(?[\s\w]+[files]\)?/",
@@ -1442,12 +1440,12 @@ function _cals_importer_get_running_time_from_marcxml(&$arr, $xml) {
           //Format in hhmmss for field
           $timestamp = sprintf('%02d%02d00', $hours, (int) $minutes);
           $arr['fc_files']['field_running_time'][]['value'] = $timestamp;
-        }
-      } //end non-numeric runtime parsing
+        } //end non-numeric runtime parsing
       else {
         /* No usable runtime value found.
          * Leaves $arr['fc_files'] empty for next field callback
          */
+        drupal_set_message(t("No usable runtime found in 300\$a, 306\$b. Check the runtime formats given."), 'warning');
       }
     } //end loop over instances
   } //end candidates
