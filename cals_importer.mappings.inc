@@ -1445,7 +1445,8 @@ function _cals_importer_get_running_time_from_marcxml(&$arr, $xml) {
         /* No usable runtime value found.
          * Leaves $arr['fc_files'] empty for next field callback
          */
-        drupal_set_message(t("No usable runtime found in 300\$a, 306\$b. Check the runtime formats given."), 'warning');
+        //drupal_set_message(t("No usable runtime found in
+        // {$tag}\${$subfield}. Check the runtime formats given."), 'warning');
       }
     } //end loop over instances
   } //end candidates
