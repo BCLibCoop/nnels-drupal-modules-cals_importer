@@ -339,6 +339,31 @@ function _cals_reparse_record_details(&$node, $context) {
 }
 
 /**
+ * @param $node
+ * @param $context
+ */
+function _cals_reparse_accessibility_details(&$node, $context) {
+  // $audio_formats_ids = array(1,2,4,10,11,13);
+  // $node_wrap = entity_metadata_wrapper('node', $node->nid);
+  // foreach ($node_wrap->field_file_resource->value() as $fc) {
+  //     $fc_wrap = entity_metadata_wrapper('field_collection_item', $fc);
+  //     //Check we are dealing with audio format and an existing runtime
+  //     if ( in_array($fc_wrap->field_file_format->value(), $audio_formats_ids)
+  //       && ! empty($fc_wrap->field_running_time->value() ) )
+  //     {
+  //       //Pass off FC to running time callback
+  //       $xml = _cals_get_marc_xml_string($node_wrap);
+  //       $ready = array();
+  //       _cals_importer_get_running_time_from_marcxml($ready, $xml );
+  //       $latest_runtime = $ready['fc_files']['field_running_time'][0]['value'];
+  //       $fc_wrap->field_running_time->set($latest_runtime);
+  //       $fc_wrap->save();
+  //       $node_wrap->save();
+  //     }
+  // }
+}
+
+/**
  * Iterates thru mapped fields to parse full node or selected fields
  *
  * @param $node

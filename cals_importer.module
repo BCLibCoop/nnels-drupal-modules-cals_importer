@@ -394,6 +394,14 @@ function cals_importer_action_info() {
       'triggers' => array('any'),
     ),
 
+    //Reparse accessibility fields on file_resource field collection.
+    '_cals_reparse_accessibility_details' => array(
+      'label' => t('CALS: Re-parse Accessibility Fields'),
+      'type' => 'node',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),
+
     //Copy file resource entities between nodes
     '_cals_transfer_file_resource_entity' => array(
       'label' => t('Transfer File Resource Entities'),
