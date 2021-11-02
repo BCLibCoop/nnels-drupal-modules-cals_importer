@@ -56,9 +56,12 @@ function _cals_importer_repo_field_callback($fieldname) {
         array('tag' => 540, 'code' => 'd'),
       )
     ),
-    'field_publisher_source' => array('function' => '_cals_importer_get_basic_values_from_marc',
+    'field_publisher_source' => array('function' => '_cals_importer_branch_on_publisher_tags',
       "tags" => array(
         array('tag' => 534, 'code' => 'c'),
+        array('tag' => 533, 'code' => 'a'),
+        array('tag' => 533, 'code' => 'b'),
+        array('tag' => 533, 'code' => 'c'),
         array('tag' => 264, 'code' => 'a'),
         array('tag' => 264, 'code' => 'b'),
         array('tag' => 260, 'code' => 'a'),
@@ -1330,6 +1333,59 @@ function _cals_importer_get_array_cataloging_agency() {
   );
 
 
+}
+
+/**
+ * @param $xml
+ * @param $k
+ * @param $map
+ * @param $tags
+ */
+function _cals_importer_branch_on_publisher_tags($xml, $k, &$map, $tags) {
+
+  /**
+   * if a record has no 264 field or only 264 $c (date)
+   * then check if 533 field exists
+   * & then parse that data into Publisher Source field
+   * The 533 data that we need are subfields b (publisher location),
+   * c (publisher name), d (date of publication)
+   */
+
+  array_reverse($tags);
+  $seen= array();
+
+  foreach( $tags as $ind => $tag ) {
+    $tmp = array();
+    $t = $tag['tag'];
+    $c = $tag['code'];
+
+    $tmp = _cals_importer_xpath_value($xml, 'datafield', $t, $c);
+    if ( ! empty($tmp) ) {
+      //store value keyed by tag then code
+      $seen[$t][$c] = $tmp;
+    }
+  }
+
+  //Branching and using 533 as a backup
+  if ( in_array( 533, array_keys($seen) ) ) {
+    if ( ! in_array(264, array_keys($seen) ) ) {
+      //default keep
+    } else {
+      //Remove 533 tags if 264 available
+      unset($tags[$seen[533]]);
+    }
+  }
+
+  //As in _cals_importer_get_basic_values_from_marc()
+  foreach ($seen as $tag => $code) {
+    foreach ($code as $val) {
+      $map[$k]['values'][] = (isset($tag['qualifier']))
+        ? array(
+          $tag['qualifier'] => $tag['enum'],
+          'value' => $val
+        ) : $val;
+    }
+  }
 }
 
 function _cals_importer_get_basic_values_from_marc($xml, $k, &$map, $tags) {
