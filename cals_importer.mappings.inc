@@ -1379,11 +1379,13 @@ function _cals_importer_branch_on_publisher_tags($xml, $k, &$map, $tags) {
   //As in _cals_importer_get_basic_values_from_marc()
   foreach ($seen as $tag => $code) {
     foreach ($code as $val) {
+      $pval = _cals_importer_strip_trailing_periods_value($val[0], 'field_publisher_source');
+      if ($pval == 'Electronic reproduction') continue; //Discard this value
       $map[$k]['values'][] = (isset($tag['qualifier']))
         ? array(
           $tag['qualifier'] => $tag['enum'],
-          'value' => $val
-        ) : $val;
+          'value' => array($pval)
+        ) : array($pval);
     }
   }
 }
