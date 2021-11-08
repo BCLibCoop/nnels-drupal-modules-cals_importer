@@ -56,9 +56,12 @@ function _cals_importer_repo_field_callback($fieldname) {
         array('tag' => 540, 'code' => 'd'),
       )
     ),
-    'field_publisher_source' => array('function' => '_cals_importer_get_basic_values_from_marc',
+    'field_publisher_source' => array('function' => '_cals_importer_branch_on_publisher_tags',
       "tags" => array(
         array('tag' => 534, 'code' => 'c'),
+        array('tag' => 533, 'code' => 'a'),
+        array('tag' => 533, 'code' => 'b'),
+        array('tag' => 533, 'code' => 'c'),
         array('tag' => 264, 'code' => 'a'),
         array('tag' => 264, 'code' => 'b'),
         array('tag' => 260, 'code' => 'a'),
@@ -1332,6 +1335,61 @@ function _cals_importer_get_array_cataloging_agency() {
 
 }
 
+/**
+ * @param $xml
+ * @param $k
+ * @param $map
+ * @param $tags
+ */
+function _cals_importer_branch_on_publisher_tags($xml, $k, &$map, $tags) {
+
+  /**
+   * if a record has no 264 field or only 264 $c (date)
+   * then check if 533 field exists
+   * & then parse that data into Publisher Source field
+   * The 533 data that we need are subfields b (publisher location),
+   * c (publisher name), d (date of publication)
+   */
+
+  array_reverse($tags);
+  $seen= array();
+
+  foreach( $tags as $ind => $tag ) {
+    $tmp = array();
+    $t = $tag['tag'];
+    $c = $tag['code'];
+
+    $tmp = _cals_importer_xpath_value($xml, 'datafield', $t, $c);
+    if ( ! empty($tmp) ) {
+      //store value keyed by tag then code
+      $seen[$t][$c] = $tmp;
+    }
+  }
+
+  //Branching and using 533 as a backup
+  if ( in_array( 533, array_keys($seen) ) ) {
+    if ( ! in_array(264, array_keys($seen) ) ) {
+      //default keep
+    } else {
+      //Remove 533 tags if 264 available
+      unset($tags[$seen[533]]);
+    }
+  }
+
+  //As in _cals_importer_get_basic_values_from_marc()
+  foreach ($seen as $tag => $code) {
+    foreach ($code as $val) {
+      $pval = _cals_importer_strip_trailing_periods_value($val[0], 'field_publisher_source');
+      if ($pval == 'Electronic reproduction') continue; //Discard this value
+      $map[$k]['values'][] = (isset($tag['qualifier']))
+        ? array(
+          $tag['qualifier'] => $tag['enum'],
+          'value' => array($pval)
+        ) : array($pval);
+    }
+  }
+}
+
 function _cals_importer_get_basic_values_from_marc($xml, $k, &$map, $tags) {
   foreach($tags as $tag) {
     $t = $tag['tag'];
@@ -1401,13 +1459,11 @@ function _cals_importer_get_running_time_from_marcxml(&$arr, $xml) {
         //Drupal time-ready format match
       } elseif ( preg_match('/(\d{6})/', $val, $matches) ) {
         $arr['fc_files']['field_running_time'][]['value'] = $matches[1];
-      } elseif ( ! strpos( $val, "page" ) ) {
+      } elseif ( ! strpos( $val, "page" )
+        && preg_match('/\([ca. ]*(\d+.?[\d\s]?\/?\d*\s?[hr]*[min]*)\.*[\,\s]*([\w\s]*)\.*\)/',
+          $val, $matches) ) {
         //Otherwise warm up the regex...oy vey
         //Match possible running times with units in mixed format
-        preg_match("/\([ca. ]*(\d+.?[\d\s]?\/?\d*\s?[hr]*[min]*)\.*[\,\s]*([\w\s]*)\.*\)/",
-          $val, $matches);
-
-        if ( isset( $matches[1] ) ) {
 
           //Discard string counting files early
           if ( isset($matches[2] ) ) preg_match("/\(?[\s\w]+[files]\)?/",
@@ -1442,12 +1498,13 @@ function _cals_importer_get_running_time_from_marcxml(&$arr, $xml) {
           //Format in hhmmss for field
           $timestamp = sprintf('%02d%02d00', $hours, (int) $minutes);
           $arr['fc_files']['field_running_time'][]['value'] = $timestamp;
-        }
-      } //end non-numeric runtime parsing
+        } //end non-numeric runtime parsing
       else {
         /* No usable runtime value found.
          * Leaves $arr['fc_files'] empty for next field callback
          */
+        //drupal_set_message(t("No usable runtime found in
+        // {$tag}\${$subfield}. Check the runtime formats given."), 'warning');
       }
     } //end loop over instances
   } //end candidates
