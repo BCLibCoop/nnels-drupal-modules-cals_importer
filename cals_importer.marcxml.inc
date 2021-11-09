@@ -385,25 +385,27 @@ function _cals_recalc_file_running_time(&$node, $context) {
  */
 function _cals_reparse_accessibility_details(&$node, $context) {
   $node_wrap = entity_metadata_wrapper('node', $node->nid);
-  foreach ($node_wrap->field_file_resource->value() as $fc) {
-    $fc_wrap = entity_metadata_wrapper('field_collection_item', $fc);
+  if (isset($node_wrap->field_file_resource)) {
+    foreach ($node_wrap->field_file_resource->value() as $fc) {
+      $fc_wrap = entity_metadata_wrapper('field_collection_item', $fc);
 
-    // Pass off FC to accessibility callback.
-    $xml = _cals_get_marc_xml_string($node_wrap);
-    $ready = array();
-    _cals_importer_get_a11y_metadata($ready, $xml);
+      // Pass off FC to accessibility callback.
+      $xml = _cals_get_marc_xml_string($node_wrap);
+      $ready = array();
+      _cals_importer_get_a11y_metadata($ready, $xml);
 
-    // Set fields values.
-    $tags = $ready['fc_files']['field_accessibility_tags'];
-    $summary = $ready['fc_files']['field_accessibility_summary'][0]['value'];
-    $certified_by = $ready['fc_files']['field_certified_accessible_by'][0]['value'];
-    $fc_wrap->field_accessibility_tags->set($tags);
-    $fc_wrap->field_accessibility_summary->set($summary);
-    $fc_wrap->field_certified_accessible_by->set($certified_by);
+      // Set fields values.
+      $tags = $ready['fc_files']['field_accessibility_tags'];
+      $summary = $ready['fc_files']['field_accessibility_summary'][0]['value'];
+      $certified_by = $ready['fc_files']['field_certified_accessible_by'][0]['value'];
+      $fc_wrap->field_accessibility_tags->set($tags);
+      $fc_wrap->field_accessibility_summary->set($summary);
+      $fc_wrap->field_certified_accessible_by->set($certified_by);
 
-    // Save entities.
-    $fc_wrap->save();
-    $node_wrap->save();
+      // Save entities.
+      $fc_wrap->save();
+      $node_wrap->save();
+    }
   }
 }
 
