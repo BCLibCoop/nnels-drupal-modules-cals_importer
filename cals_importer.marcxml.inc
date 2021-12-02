@@ -389,22 +389,34 @@ function _cals_reparse_accessibility_details(&$node, $context) {
     foreach ($node_wrap->field_file_resource->value() as $fc) {
       $fc_wrap = entity_metadata_wrapper('field_collection_item', $fc);
 
-      // Pass off FC to accessibility callback.
-      $xml = _cals_get_marc_xml_string($node_wrap);
-      $ready = array();
-      _cals_importer_get_a11y_metadata($ready, $xml);
+      // limit to EPUB formats only (should be the first file):
+      //  7 - EPUB 2
+      //  8 - EPUB 3
+      //  10 - EPUB 3 - Full Text and Audio
+      //  18 - EPUB 2 - Fixed-Layout
+      //  19 - EPUB 3 - Fixed-Layout
+      if (in_array($fc_wrap->field_file_format->value(), [7, 8, 10, 18, 19])) {
 
-      // Set fields values.
-      $tags = $ready['fc_files']['field_accessibility_tags'];
-      $summary = $ready['fc_files']['field_accessibility_summary'][0]['value'];
-      $certified_by = $ready['fc_files']['field_certified_accessible_by'][0]['value'];
-      $fc_wrap->field_accessibility_tags->set($tags);
-      $fc_wrap->field_accessibility_summary->set($summary);
-      $fc_wrap->field_certified_accessible_by->set($certified_by);
+        // Pass off FC to accessibility callback.
+        $xml = _cals_get_marc_xml_string($node_wrap);
+        $ready = array();
+        _cals_importer_get_a11y_metadata($ready, $xml);
 
-      // Save entities.
-      $fc_wrap->save();
-      $node_wrap->save();
+        // Set fields values.
+        $tags = $ready['fc_files']['field_accessibility_tags'];
+        $summary = $ready['fc_files']['field_accessibility_summary'][0]['value'];
+        $certified_by = $ready['fc_files']['field_certified_accessible_by'][0]['value'];
+        $fc_wrap->field_accessibility_tags->set($tags);
+        $fc_wrap->field_accessibility_summary->set($summary);
+        $fc_wrap->field_certified_accessible_by->set($certified_by);
+
+        // Save entities.
+        $fc_wrap->save();
+        $node_wrap->save();
+
+        // Stop after the first file processed.
+        break;
+      }
     }
   }
 }
