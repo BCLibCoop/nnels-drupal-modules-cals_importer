@@ -56,9 +56,12 @@ function _cals_importer_repo_field_callback($fieldname) {
         array('tag' => 540, 'code' => 'd'),
       )
     ),
-    'field_publisher_source' => array('function' => '_cals_importer_get_basic_values_from_marc',
+    'field_publisher_source' => array('function' => '_cals_importer_branch_on_publisher_tags',
       "tags" => array(
         array('tag' => 534, 'code' => 'c'),
+        array('tag' => 533, 'code' => 'a'),
+        array('tag' => 533, 'code' => 'b'),
+        array('tag' => 533, 'code' => 'c'),
         array('tag' => 264, 'code' => 'a'),
         array('tag' => 264, 'code' => 'b'),
         array('tag' => 260, 'code' => 'a'),
@@ -210,14 +213,19 @@ function _cals_get_fields_repository_item() {
  *   the tag to parse
  * @param $code
  *   the optional code to parse*
+ * @param $ind1
+ *   The optional ind1 tag for the path.
  *
  * @return
  *   an array of values
  *
  */
-function _cals_importer_xpath_value($record_xml, $fieldname, $tag, $code = NULL) {
+function _cals_importer_xpath_value($record_xml, $fieldname, $tag, $code = NULL, $ind1 = NULL) {
   $arr = array();
   $path = ".//marc:{$fieldname}[@tag='" . $tag . "']";
+  if (!empty($ind1)) {
+    $path .= "[@ind1='" . $ind1 . "']";
+  }
   if(!empty($code) ) $path .= "/marc:subfield[@code='" . $code . "']";
   $tmp = $record_xml->xpath($path);
   //dpm(__FUNCTION__, $path, $tmp);
@@ -746,7 +754,12 @@ function _cals_get_literary_form_from_marc($xml, $k, &$map) {
     if(is_array($tmp) && count($tmp)) {
       foreach($tmp as $val) {
         $str = substr($val, $pos, 1);
-        if(!empty($str) && array_key_exists($str, $allowed_values)) {
+        //Careful here, string "0" is the MARC code.
+        //Fixes https://github.com/BCLibCoop/nnels/issues/201
+        if ($str === "0") $str = 'zero';
+        if(isset($str) && //substr() fails or finds empty char
+          $str !== '' &&
+          array_key_exists($str, $allowed_values)) {
           $litform = $str;
           break;
         }
@@ -1005,6 +1018,46 @@ function _cals_importer_get_performer_from_marcxml(&$arr, $xml) {
       $arr['fc_files']['field_performer'][]['value'] = trim( $prepared_value );
   }
 }
+
+/**
+ * Handles accessibility metadata fields.
+ * @param $arr
+ * @param $xml
+ */
+function _cals_importer_get_a11y_metadata(&$arr, $xml) {
+
+  $array_341_b = _cals_importer_xpath_value( $xml, "datafield", 341, "b" );
+  $array_532_1_a = _cals_importer_xpath_value( $xml, "datafield", 532, "a", "1" );
+  $array_532_8_a = _cals_importer_xpath_value( $xml, "datafield", 532, "a", "8" );
+
+  $tags_added = array();
+  foreach ($array_341_b as $tag) {
+    $tid = db_select('field_data_field_source', 's')
+      ->fields('s', ['entity_id'])
+      ->condition('s.field_source_value', $tag)
+      ->execute()
+      ->fetchField();
+
+    if (!empty($tid)) {
+      // Do not add duplicates.
+      if (!isset($tags_added[$tid])) {
+        $arr['fc_files']['field_accessibility_tags'][]['tid'] = $tid;
+        $tags_added[$tid] = TRUE;
+      }
+    }
+  }
+
+  foreach ($array_532_1_a as $value) {
+    //populate the text field
+    $arr['fc_files']['field_certified_accessible_by'][]['value'] = $value;
+  }
+
+  foreach ($array_532_8_a as $value) {
+    //populate the text field
+    $arr['fc_files']['field_accessibility_summary'][]['value'] = $value;
+  }
+}
+
 function xmlToArray($xml, $options = array()) {
   $defaults = array(
     'namespaceSeparator' => ':',//you may want this to be something other than a colon
@@ -1262,8 +1315,7 @@ function _cals_importer_get_cataloging_agency_from_marc($xml, $k, &$map, $tags) 
 /**
  * Get an array of cataloging agencies
  *
- * @return
- *   an array of cataloging agencies
+ * @return an array of cataloging agencies
  */
 
 function _cals_importer_get_array_cataloging_agency() {
@@ -1281,6 +1333,61 @@ function _cals_importer_get_array_cataloging_agency() {
   );
 
 
+}
+
+/**
+ * @param $xml
+ * @param $k
+ * @param $map
+ * @param $tags
+ */
+function _cals_importer_branch_on_publisher_tags($xml, $k, &$map, $tags) {
+
+  /**
+   * if a record has no 264 field or only 264 $c (date)
+   * then check if 533 field exists
+   * & then parse that data into Publisher Source field
+   * The 533 data that we need are subfields b (publisher location),
+   * c (publisher name), d (date of publication)
+   */
+
+  array_reverse($tags);
+  $seen= array();
+
+  foreach( $tags as $ind => $tag ) {
+    $tmp = array();
+    $t = $tag['tag'];
+    $c = $tag['code'];
+
+    $tmp = _cals_importer_xpath_value($xml, 'datafield', $t, $c);
+    if ( ! empty($tmp) ) {
+      //store value keyed by tag then code
+      $seen[$t][$c] = $tmp;
+    }
+  }
+
+  //Branching and using 533 as a backup
+  if ( in_array( 533, array_keys($seen) ) ) {
+    if ( ! in_array(264, array_keys($seen) ) ) {
+      //default keep
+    } else {
+      //Remove 533 tags if 264 available
+      unset($tags[$seen[533]]);
+    }
+  }
+
+  //As in _cals_importer_get_basic_values_from_marc()
+  foreach ($seen as $tag => $code) {
+    foreach ($code as $val) {
+      $pval = _cals_importer_strip_trailing_periods_value($val[0], 'field_publisher_source');
+      if ($pval == 'Electronic reproduction') continue; //Discard this value
+      $map[$k]['values'][] = (isset($tag['qualifier']))
+        ? array(
+          $tag['qualifier'] => $tag['enum'],
+          'value' => array($pval)
+        ) : array($pval);
+    }
+  }
 }
 
 function _cals_importer_get_basic_values_from_marc($xml, $k, &$map, $tags) {
@@ -1324,68 +1431,83 @@ function _cals_importer_get_normalized_performer($string) {
  *
  * see: http://www.loc.gov/marc/bibliographic/bd306.html
  */
-function _cals_importer_get_runningtime_from_marcxml(&$arr, $xml) {
+function _cals_importer_get_running_time_from_marcxml(&$arr, $xml) {
 
-  if (!isset($arr['fc_files'])) {
-    $arr['fc_files'] = array();
-  }
+  $candidates = array(
+    '306' => 'a',
+    '300' => 'a'
+  );
 
-  //look for 306 tag code a
-  $runtime_306a = _cals_importer_xpath_value($xml, "datafield", 306, 'a');
+  foreach ($candidates as $tag => $subfield) {
+    $parsed = _cals_importer_xpath_value($xml, "datafield", $tag, $subfield);
+    if ( empty($parsed) ) continue; //Try next candidate
 
-  if (!empty($runtime_306a)) { //empty array from xpath_value if not found
-    foreach ($runtime_306a as $val) {
-      $val = trim($val);
-      if (is_numeric(trim($val))) {
-        $arr['fc_files']['field_running_time'][]['value'] = trim($val);
+    foreach ($parsed as $val) {
+
+      preg_match("/\d+:\d{2}:\d{2}/", trim($val), $matches); //HH+:MM:SS
+      if ( isset( $matches[0] ) ) {
+        //Format total without colons
+        //fixes https://github.com/BCLibCoop/nnels/issues/203
+        $raw_runtime = explode(':', $matches[0]);
+        //Drupal time-ready format
+        $total_runtime = $raw_runtime[0] . $raw_runtime[1] . $raw_runtime[2];
+
+        //store
+        $arr['fc_files']['field_running_time'][]['value'] = $total_runtime;
+        unset($matches); //rest
+
+        //Drupal time-ready format match
+      } elseif ( preg_match('/(\d{6})/', $val, $matches) ) {
+        $arr['fc_files']['field_running_time'][]['value'] = $matches[1];
+      } elseif ( ! strpos( $val, "page" )
+        && preg_match('/\([ca. ]*(\d+.?[\d\s]?\/?\d*\s?[hr]*[min]*)\.*[\,\s]*([\w\s]*)\.*\)/',
+          $val, $matches) ) {
+        //Otherwise warm up the regex...oy vey
+        //Match possible running times with units in mixed format
+
+          //Discard string counting files early
+          if ( isset($matches[2] ) ) preg_match("/\(?[\s\w]+[files]\)?/",
+            $matches[2], $filter);
+          if ( isset($filter[0]) ) continue;
+
+          preg_match("/(\d+).*/",
+            $matches[1],
+            $whole_hour);
+          $hours = trim($whole_hour[1]);
+          $minutes = '00'; //may get replaced
+
+          //Check for a decimal number or fraction, should not be mixed
+          preg_match("/\d+\s(\d*\/?\d*)/", $matches[1], $fractional_min);
+          preg_match("/\d\.(\d*)/", $matches[1], $decimal_min);
+
+          if ((string) $fractional_min[1] == '1/2') $minutes = 30;
+          if ((string) $fractional_min[1] == '1/4') $minutes = 15;
+
+          if ($decimal_min[1]) {
+            //count digits
+            $count = strlen((string) $decimal_min[1]);
+            $divisor = pow(10, $count);
+            $minutes = (int) (60 * ($decimal_min[1] / $divisor) );
+          }
+          //otherwise whole minutes
+          if ($matches[2]) {
+            $min = explode(" ", $matches[2]);
+            $minutes = $min[0];
+          }
+
+          //Format in hhmmss for field
+          $timestamp = sprintf('%02d%02d00', $hours, (int) $minutes);
+          $arr['fc_files']['field_running_time'][]['value'] = $timestamp;
+        } //end non-numeric runtime parsing
+      else {
+        /* No usable runtime value found.
+         * Leaves $arr['fc_files'] empty for next field callback
+         */
+        //drupal_set_message(t("No usable runtime found in
+        // {$tag}\${$subfield}. Check the runtime formats given."), 'warning');
       }
-    }
-    return;
-  }
-
-  //Try 300 $a - more common?
-  $runtime_300a = _cals_importer_xpath_value($xml, "datafield", 300, 'a');
-
-  //If we have a runtime from 300$a and lacks "page as a substring"
-  if ( ! empty( $runtime_300a ) && ( ! strpos( $runtime_300a[0], "page" ) ) ) {
-
-    //Match possible running times with units...oy vey
-    preg_match("/\((\d+.?[\d\s]?\/?\d*\s?[hr]*[min]*)\.*[\,\s]*([\w\s]*)\.*\)/",
-      $runtime_300a[0], $matches);
-
-    if ($matches[1]) {
-      preg_match("/(\d+).*/", $matches[1], $whole_hour);
-      $hours = trim($whole_hour[1]);
-      $minutes = '00'; //may get replaced
-
-      //Check for a decimal number or fraction, should not be mixed
-      preg_match("/\d+\s(\d*\/?\d*)/", $matches[1], $fractional_min);
-      preg_match("/\d\.(\d*)/", $matches[1], $decimal_min);
-
-      if ((string) $fractional_min[1] == '1/2') $minutes = 30;
-      if ((string) $fractional_min[1] == '1/4') $minutes = 15;
-
-      if ($decimal_min[1]) {
-        //count digits
-        $count = strlen((string) $decimal_min[1]);
-        $divisor = pow(10, $count);
-        $minutes = (int) (60 * ($decimal_min[1] / $divisor) );
-      }
-      //otherwise whole minutes
-      if ($matches[2]) {
-        $min = explode(" ", $matches[2]);
-        $minutes = $min[0];
-      }
-    }
-    //Format in hhmmss for field
-    $timestamp = sprintf('%02d%02d00', $hours, (int) $minutes);
-    $arr['fc_files']['field_running_time'][]['value'] = $timestamp;
-  }
-  else {
-    /* No useable runtime value found.
-     * Leaves $arr['fc_files'] empty for next field callback
-     */
-  }
+    } //end loop over instances
+  } //end candidates
 }
 
 
