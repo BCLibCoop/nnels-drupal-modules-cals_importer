@@ -395,7 +395,9 @@ function _cals_reparse_accessibility_details(&$node, $context) {
       //  10 - EPUB 3 - Full Text and Audio
       //  18 - EPUB 2 - Fixed-Layout
       //  19 - EPUB 3 - Fixed-Layout
-      if (in_array($fc_wrap->field_file_format->value(), [7, 8, 10, 18, 19])) {
+      //
+      // Must also have an availability status of 1 (produced).
+      if (in_array($fc_wrap->field_file_format->value(), [7, 8, 10, 18, 19]) && $fc_wrap->field_availability_status->value() == 1) {
 
         // Pass off FC to accessibility callback.
         $xml = _cals_get_marc_xml_string($node_wrap);
