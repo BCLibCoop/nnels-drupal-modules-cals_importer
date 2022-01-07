@@ -280,16 +280,36 @@ function _cals_reparse_record_details(&$node, $context) {
   //Initialize the field map with target fields valid for RepositoryItems
   $reparse_field_map = array_intersect_key($arr_fields['map'], $context['fields_to_parse']);
 
-  //Reparse Mode 0 - default: use only the repo item's MARCXML record
+  //Reparse Mode 0 - default: use only the Repo Item's MARCXML field data
   if ( $context['scope_of_reparse'] == 0 ) {
     _cals_parse_record_details($node, $reparse_field_map, TRUE);
   }
-  //Reparse Mode 1 - Use the index built in submit handler to iterate
+  //Reparse Mode 1 - Use the Record Set MARCXML index built in submit handler
+  // to iterate
   elseif ( $context['scope_of_reparse'] == 1 ) {
-    $SCNs = entity_metadata_wrapper('node', $node)
-      ->field_system_control_number->value();
 
-    //Catch if we are dealing with an unparsed or node lacking any SCN
+    /** Setup a pass-through in case of initial mis-parse.
+     *  SCN might be elsewhere than Sys control field.
+     *  Fixes https://github.com/BCLibCoop/nnels/issues/212
+     **/
+
+    $key_fields = array(
+      'field_system_control_number',
+      'field_isbn',
+      'field_isbn_audio',
+    );
+
+    foreach ($key_fields as $field) {
+      try {
+        $SCNs = entity_metadata_wrapper('node', $node)
+          ->{$field}->value();
+      } catch (Exception $e) {
+        //ignore and move on
+      }
+      if (! empty($SCNs)) break;
+    }
+
+    //Error out if dealing with an unparsed or node lacking any SCN
     if (empty($SCNs)) {
       drupal_set_message("There were not any SCNs in the selected nodes to match on.");
       return FALSE;
