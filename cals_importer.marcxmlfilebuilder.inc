@@ -163,6 +163,14 @@ function _cals_importer_generate_marcxml_files_search_interface_form($settings, 
     'Partner Share Only' for only permitted records to other bodies (such as ABC)."),
   );
 
+  $form['extra_s3_901s_option'] = array(
+    '#type'=> 'checkbox',
+    '#title' => t('Add S3 paths in 901'),
+    '#description' => t("Inserts a 901 \$a entry for each record from the file resource path.\r\nFormat: s3://[object_path]/[filename.extension]"),
+    '#return_value' => 1,
+    '#default_value' => 0,
+    );
+
   return $form;
 }
 
@@ -205,11 +213,13 @@ function _cals_importer_generate_marcxml_files_search_interface_submit($form,
 
   //Cast $partner_share as boolean for easier handling downstream
   $partner_share_mode = (boolean) $form_state["values"]["export_mode"];
+  $extra_s3_901s_option = (boolean) $form_state['values']['extra_s3_901s_option'];
 
   $return['fields'] = array(
     "pnid" => $node->nid,
     "filename" => $filename,
     "mode" => $partner_share_mode,
+    "extra_option" => $extra_s3_901s_option,
   );
   return $return; //Note, return value here must be an array.
 }
@@ -232,6 +242,7 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
   $filename = $context['fields']['filename'];
   $pnode = node_load($context['fields']['pnid']); //get updated parent node$host
   $partner_share_mode = $context['fields']['mode'];
+  $extra_s3_901s_option = $context['fields']['extra_option'];
 
   /*if (!empty($host->field_nnels_856_tag) &&
     $host->field_nnels_856_tag[LANGUAGE_NONE][0]['value'] == 1 ) {*/
@@ -247,7 +258,8 @@ function _cals_importer_generate_marcxml_files_search_interface(&$entity, $conte
       $entity,
       $host_wrapped,
       $stub,
-      $partner_share_mode
+      $partner_share_mode,
+      $extra_s3_901s_option
       );
 
     //A record came out of the generator
@@ -349,11 +361,12 @@ function _cals_importer_build_marcxml($node) {
  * @return bool|mixed
  */
 function _cals_importer_exporter_snippet_generator(
-  $entity, $host_wrapped, $stub, $partner_share_mode = FALSE){
+  $entity, $host_wrapped, $stub, $partner_share_mode = FALSE,
+  $extra_s3_901s_option = FALSE){
 
   //Build snippet for each context
   $snippet = _cals_importer_exporter_build_file_resource_snippet($entity,
-    $partner_share_mode);
+    $partner_share_mode, $extra_s3_901s_option);
 
   //Back out & return if snippet falls afoul of partner share mode
   if (! reset($snippet)) return FALSE;

@@ -45,7 +45,8 @@ function _cals_importer_exporter_build_marcxml_file_vbo(&$entity, $context = arr
  * @return array $buildable_snippet_array
  */
 function _cals_importer_exporter_build_file_resource_snippet
-($field_collection_item, $partner_share = FALSE) {
+($field_collection_item, $partner_share = FALSE, $extra_s3_901s_option =
+FALSE) {
   //$tags = _cals_importer_get_tag_array_file_attach(); //tag mappings
 
   //Wrapper
@@ -73,6 +74,10 @@ function _cals_importer_exporter_build_file_resource_snippet
     '511',
     '506',
   );
+
+  if ($extra_s3_901s_option) {
+    array_push($per_file_tags, '901');
+  }
 
   $buildable_snippet_array = array();
 
@@ -743,6 +748,24 @@ function _cals_importer_exporter_snippet_callback_506($fc_wrapped) {
   }
 
   return $workable_array;
+}
+
+/**
+ * @param $fc_wrapped
+ * @return array
+ */
+function _cals_importer_exporter_snippet_callback_901($fc_wrapped) {
+
+  $returnable = array(
+    'ind1' => '',
+    'ind2' => '',
+  );
+
+  $returnable['subfields'][] = array(
+    'a' => $fc_wrapped->field_s3_file_upload->value()['uri'],
+  );
+
+  return $returnable;
 }
 
 /**
