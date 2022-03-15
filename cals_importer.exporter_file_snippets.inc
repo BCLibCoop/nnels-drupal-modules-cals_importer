@@ -227,7 +227,7 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   if (! empty($xml)) {
     $element_008 = $xml->xpath("//marc:controlfield[@tag='008']");
     if ($element_008) {
-      $original_008 = $element_008->__toString();
+      $original_008 = $element_008[0]->__toString();
     }
     else {
       $original_008 = '';
@@ -762,7 +762,7 @@ function _cals_importer_exporter_snippet_callback_901($fc_wrapped) {
   );
 
   $returnable['subfields'][] = array(
-    'a' => $fc_wrapped->field_s3_file_upload[0]->value()['uri'],
+    'a' => $fc_wrapped->field_s3_file_upload->value()['uri'],
   );
 
   return $returnable;
