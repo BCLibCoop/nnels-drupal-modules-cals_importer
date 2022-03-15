@@ -227,7 +227,7 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   if (! empty($xml)) {
     $element_008 = $xml->xpath("//marc:controlfield[@tag='008']");
     if ($element_008) {
-      $original_008 = $element_008[0]->__toString();
+      $original_008 = $element_008->__toString();
     }
     else {
       $original_008 = '';
@@ -247,7 +247,7 @@ function _cals_importer_exporter_snippet_callback_008($fc_wrapped) {
   //07-10 Date Created
 
   //default to timestamp of file creation
-  $created= date("Y", $fc_wrapped->field_s3_file_upload[0]->value()
+  $created= date("Y", $fc_wrapped->field_s3_file_upload->value()
   ['timestamp']);
 
   //Loop through all field_date instances and find an Created year
@@ -441,8 +441,8 @@ function _cals_importer_exporter_snippet_callback_300($fc_wrapped, $stubfields) 
   $format_label = $field['settings']['allowed_values'][$key];
   $extent_stanza = $stubfields['datafields']['300'][0]['a'] ?: NULL;
 
-  $size = $fc_wrapped->field_s3_file_upload[0]->value() ? format_size
-  ($fc_wrapped->field_s3_file_upload[0]->file->value()
+  $size = $fc_wrapped->field_s3_file_upload->value() ? format_size
+  ($fc_wrapped->field_s3_file_upload->file->value()
     ->filesize) : NULL ;
 
   $workable_array = array(
@@ -762,7 +762,7 @@ function _cals_importer_exporter_snippet_callback_901($fc_wrapped) {
   );
 
   $returnable['subfields'][] = array(
-    'a' => $fc_wrapped->field_s3_file_upload->value()['uri'],
+    'a' => $fc_wrapped->field_s3_file_upload[0]->value()['uri'],
   );
 
   return $returnable;
