@@ -517,7 +517,7 @@ function cals_importer_marcxml_all_exporter_form($form, &$form_state) {
   $queue_status = "<p>No All Export jobs in queue.</p>";
 
   //Get the current queue and count it
-  $queue = (DrupalQueue::get(ALL_EXPORT_QUEUE_NAME));
+  $queue = (Redis_Queue::get(ALL_EXPORT_QUEUE_NAME));
   $number = $queue->numberOfItems();
   if ($number > 0) {
 
@@ -629,7 +629,7 @@ function cals_importer_cron_queue_info() {
 
 function cals_importer_all_exporter_query_queue_setup($partner_share_mode = FALSE){
 
-  $queue = (DrupalQueue::get(ALL_EXPORT_QUEUE_NAME));
+  $queue = (Redis_Queue::get(ALL_EXPORT_QUEUE_NAME));
 
   variable_set(
     'latest_all_export_timestamp',
@@ -808,7 +808,7 @@ function cals_importer_all_exporter_process($items) {
   }
 
   // queue_notify
-  $queue = (DrupalQueue::get(ALL_EXPORT_QUEUE_NAME));
+  $queue = (Redis_Queue::get(ALL_EXPORT_QUEUE_NAME));
   //If this is the last item in the queue, notify user of completion.
   if ($queue->numberOfItems() == 1) {
     $notify_path = "{$s3_client->getBaseUrl()}/{$bucket}/{$s3_object_path}/";

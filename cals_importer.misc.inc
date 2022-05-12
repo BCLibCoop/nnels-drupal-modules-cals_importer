@@ -19,6 +19,8 @@
 
 function _cals_importer_update_admin_audit($node, $action) {
 
+  //@todo check that $node is not full object, marxml payload
+
   global $user;
   $value = array(
     'field_name' => 'field_admin_audit',
