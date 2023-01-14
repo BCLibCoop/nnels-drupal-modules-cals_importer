@@ -670,11 +670,11 @@ function _cals_get_mapped_genre_from_marc($xml, $k, &$map) {
   }
 
   // Convert from SimpleXMlElement objects to strings for searching.
-  $flattened_supplement_subjects = [];
+  $flattened_supplement_subjects = array();
   foreach ($supplement_tags as $tag => $code) {
     if (isset($supplement_subjects[$tag])) {
       foreach($supplement_subjects[$tag] as $key => $sxe) {
-        $flattened_supplement_subjects[$key] = preg_replace('/[^\w\s]*/', '', $sxe[0]->__toString());
+        $flattened_supplement_subjects[$key] = $sxe[0]->__toString();
       }
     }
   }
