@@ -202,6 +202,7 @@ function _cals_get_fields_repository_item() {
     }
   }
   $arr = array("types" => $types, "map" => $map);
+
   return $arr;
 }
 
@@ -656,26 +657,31 @@ function _cals_get_genre_from_marc($xml, $k, &$map) {
 function _cals_get_mapped_genre_from_marc($xml, $k, &$map) {
   $supplement_subjects = [];
 
+  // 655 is a takeover from field_genre (defunct).
   $supplement_tags = array(
-    655 => 'a', //takeover from field_genre (defunct).
+    655 => 'a',
     946 => 'a',
   );
 
   foreach ($supplement_tags as $tag => $code) {
-    $supplement_subjects[] = $xml->xpath("//marc:datafield[@tag='{$tag}'][@ind1=' ']/marc:subfield[@code='{$code}']
-    |//marc:datafield[@tag='{$tag}'][@ind2=' ']/marc:subfield[@code='{$code}']");
+    $supplement_subjects[$tag] = $xml->xpath(
+      "//marc:datafield[@tag='{$tag}'][@ind1=' ']/marc:subfield[@code='{$code}']|//marc:datafield[@tag='{$tag}'][@ind2=' ']/marc:subfield[@code='{$code}']"
+    );
   }
-  //Filter if only empties returned.
-  $supplement_subjects = array_filter($supplement_subjects);
 
-  //Convert from SimpleXMlElement objects to strings for searching.
-  foreach($supplement_subjects as $key => $sxe) {
-    $supplement_subjects[$key] = $sxe[0]->__toString();
+  // Convert from SimpleXMlElement objects to strings for searching.
+  $flattened_supplement_subjects = [];
+  foreach ($supplement_tags as $tag => $code) {
+    if (isset($supplement_subjects[$tag])) {
+      foreach($supplement_subjects[$tag] as $key => $sxe) {
+        $flattened_supplement_subjects[$key] = preg_replace('/[^\w\s]*/', '', $sxe[0]->__toString());
+      }
+    }
   }
 
   module_load_include('inc', 'cals_importer', 'cals_importer.term_parse');
   try {
-    cals_importer_find_mapped_genre($supplement_subjects, $k, $map);
+    cals_importer_find_mapped_genre($flattened_supplement_subjects, $k, $map);
   }
   catch (Exception $e){
     drupal_set_message(
