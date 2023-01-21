@@ -230,7 +230,7 @@ function determine_bisac_term($subject_term) {
  * Map harmonized genres using an exact match (case insensitive).
  *
  * @param array $supplement_subjects
- *   The list of 655/ values.
+ *   The list of 655/946 values.
  * @param string $field_name
  *   The name of the field to modify (field_genre_harmonized always).
  * @param array $map
