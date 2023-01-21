@@ -183,14 +183,13 @@ function _cals_get_fields_repository_item() {
         'type' => $t2,
         'required' => $req,
         'values' => array(),
-        'parser' => _cals_importer_repo_field_callback($k),
+        'parser' => $parser,
       );
       if($t2 == 'options')
         $map[$k]['allowed_values'] =
           list_allowed_values(field_info_field($k));
       if($t2 == 'taxonomy') {
         $info = field_info_field($k);
-        $vocab_keys = array();
         foreach ($info['settings']['allowed_values'] as $item) {
           if(!empty($item['vocabulary'])) $map[$k]['vid'] = $vocabularies[$item['vocabulary']];
         }
@@ -674,7 +673,8 @@ function _cals_get_mapped_genre_from_marc($xml, $k, &$map) {
   foreach ($supplement_tags as $tag => $code) {
     if (isset($supplement_subjects[$tag])) {
       foreach($supplement_subjects[$tag] as $key => $sxe) {
-        $flattened_supplement_subjects[$key] = $sxe[0]->__toString();
+        // Remove characters that do not exist in the harmonized genre terms.
+        $flattened_supplement_subjects[$key] = preg_replace('/[^a-zA-Z\s\(\)\-\,]/', '', $sxe[0]->__toString());
       }
     }
   }
