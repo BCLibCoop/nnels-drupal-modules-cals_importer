@@ -552,7 +552,7 @@ function _cals_move_defunct_genres_into_harmonized(&$entity, $context = array())
   $cid = 'terms:genre:harmonized:vbo:move';
   $cache = cache_get($cid);
   $term_mapping = [];
-  if ($term_mapping) {
+  if ($cache) {
     $term_mapping = $cache->data;
   }
   else {
