@@ -589,7 +589,7 @@ function _cals_move_defunct_genres_into_harmonized(&$entity, $context = array())
   if (isset($entity->nid)) {
     $node = node_load($entity->nid);
     $content_types = array('repository_item');
-    if (in_array($node->type, $content_types)  ) {
+    if (in_array($node->type, $content_types)) {
 
       // Pull genre field values from the node. Only proceed if there are
       // values in this field.
@@ -604,7 +604,7 @@ function _cals_move_defunct_genres_into_harmonized(&$entity, $context = array())
         }
 
         // Move terms to harmonized genres, based on mapping. Adding terms this
-        // way ensure the existing values in the field will remain in cases
+        // way ensures the existing values in the field will remain in cases
         // where there are more than 3 terms and it will also prevent dups.
         foreach ($genres as $tid) {
           if (isset($term_mapping[$tid])) {
