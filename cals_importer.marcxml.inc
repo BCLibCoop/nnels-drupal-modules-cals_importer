@@ -556,8 +556,20 @@ function _cals_move_defunct_genres_into_harmonized(&$entity, $context = array())
     $term_mapping = $cache->data;
   }
   else {
-    $genre_vid = 4;
-    $genre_harmonized_vid = 24;
+    $genre_machine_name = 'genre';
+    $genre_harmonized_machine_name = 'genre_harmonized';
+
+    // Look up vid's.
+    $genre_vid = db_select('taxonomy_vocabulary', 'v')
+      ->fields('v', ['vid'])
+      ->condition('v.machine_name', $genre_machine_name)
+      ->execute()
+      ->fetchField();
+    $genre_harmonized_vid = db_select('taxonomy_vocabulary', 'v')
+      ->fields('v', ['vid'])
+      ->condition('v.machine_name', $genre_harmonized_machine_name)
+      ->execute()
+      ->fetchField();
 
     // Fetch terms from the database for Genre and Genre Harmonized
     // vocabularies.
