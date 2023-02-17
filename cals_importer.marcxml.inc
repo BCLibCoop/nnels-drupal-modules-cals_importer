@@ -632,6 +632,14 @@ function _cals_move_defunct_genres_into_harmonized(&$entity, $context = array())
           }
         }
         node_save($node);
+
+        $message = t(
+          'Fixed genres on !node',
+          array(
+            '!node' => l($node->title, 'node/' . $node->nid),
+          )
+        );
+        drupal_set_message($message);
       }
     }
   }
