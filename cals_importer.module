@@ -374,7 +374,7 @@ function cals_importer_permission() {
 }
 
 /**
- * Implements action_info().
+ * Implements hook_action_info().
  */
 function cals_importer_action_info() {
   return array(
@@ -576,6 +576,14 @@ function cals_importer_action_info() {
       'label' => t('Mend Broken S3 paths'),
       'type' => 'entity',
       'configurable' => TRUE,
+      'triggers' => array('any'),
+    ),
+    // Batch copy defunct genres into the harmonized genres (if they exist in
+    // the taxonomy).
+    '_cals_move_defunct_genres_into_harmonized' => array(
+      'label' => t('CALS: Move defunct genres into harmonized'),
+      'type' => 'node',
+      'configurable' => FALSE,
       'triggers' => array('any'),
     ),
   );

@@ -25,7 +25,6 @@ function _cals_importer_update_repository_item($node) {
  *   the node passed to the parser
  *
  */
-
 function _cals_importer_update_repository_items(&$entity, $context = array()) {
   if (isset($entity->nid)) {
     $node = node_load($entity->nid);
@@ -119,6 +118,7 @@ function _cals_parse_record_details($node, $fields, $reparse_flag = FALSE) {
     unset($map);
     $map = $fields;
   }
+
   //loop thru map to populate node
   _cals_importer_iterate_field_map($node, $xml, $map, "parse");
   $atts = array("attributes" => array("target" => "_blank"));
@@ -536,4 +536,134 @@ function _cals_importer_iterate_field_map(&$node, $xml, $map, $op) {
 
   //populate the field collections
   if(count($fc_fields)) _cals_importer_populate_repos_item_fieldcollections($node, $fc_fields);
+}
+
+/**
+ * Invoked via batch api view.
+ *
+ * @param object $entity
+ *   The node passed to the parser
+ * @param array $context
+ *   Batch context for the operation.
+ */
+function _cals_move_defunct_genres_into_harmonized(&$entity, $context = array()) {
+
+  // Only proceed if this entity is a node or 'repository_item' type.
+  if (isset($entity->nid)) {
+    $node = node_load($entity->nid);
+    $content_types = array('repository_item');
+    if (in_array($node->type, $content_types)) {
+
+      // Pull genre field values from the node. Only proceed if there are
+      // values in this field.
+      $genres = field_get_items('node', $node, 'field_genre');
+      if ($genres) {
+        $genres = array_column($genres, 'tid', 'tid');
+
+        // Pull harmonized genre field values.
+        $harmonized_genres = field_get_items('node', $node, 'field_genre_harmonized');
+        if ($harmonized_genres) {
+          $harmonized_genres = array_column($harmonized_genres, 'tid', 'tid');
+        }
+
+        // Move terms to harmonized genres, based on mapping. Adding terms this
+        // way ensures the existing values in the field will remain in cases
+        // where there are more than 3 terms and it will also prevent dups.
+        $term_mapping = _cals_importer_build_term_map();
+        foreach ($genres as $tid) {
+          if (isset($term_mapping[$tid])) {
+            $harmonized_genres[$term_mapping[$tid]] = $term_mapping[$tid];
+          }
+        }
+
+        // Add values to field and save.
+        if (count($harmonized_genres)) {
+          $node->field_genre_harmonized[LANGUAGE_NONE] = [];
+          foreach ($harmonized_genres as $tid) {
+            $node->field_genre_harmonized[LANGUAGE_NONE][] = ['tid' => $tid];
+          }
+        }
+        node_save($node);
+
+        $message = t(
+          'Fixed genres on !node',
+          array(
+            '!node' => l($node->title, 'node/' . $node->nid),
+          )
+        );
+        drupal_set_message($message);
+      }
+    }
+  }
+}
+
+/**
+ * Build term map.
+ *
+ * Multi-step term mapping:
+ *  - map genre to genre harmonized by exact name matching (case insensitive).
+ *  - use the term reference field on the genre term.
+ *
+ * @return array
+ *   The term map for genre -> genre harmonized.
+ */
+function _cals_importer_build_term_map() {
+  $cid = 'terms:genre:harmonized:vbo:move';
+  $cache = cache_get($cid);
+  $term_mapping = [];
+  if ($cache) {
+    $term_mapping = $cache->data;
+  }
+  else {
+    $genre_machine_name = 'genre';
+    $genre_harmonized_machine_name = 'genre_harmonized';
+
+    // Look up vid's.
+    $genre_vid = db_select('taxonomy_vocabulary', 'v')
+      ->fields('v', ['vid'])
+      ->condition('v.machine_name', $genre_machine_name)
+      ->execute()
+      ->fetchField();
+    $genre_harmonized_vid = db_select('taxonomy_vocabulary', 'v')
+      ->fields('v', ['vid'])
+      ->condition('v.machine_name', $genre_harmonized_machine_name)
+      ->execute()
+      ->fetchField();
+
+    // Fetch terms from the database for Genre and Genre Harmonized
+    // vocabularies.
+    $terms = db_select('taxonomy_term_data', 't')
+      ->fields('t', ['tid', 'vid', 'name'])
+      ->condition('t.vid', [$genre_vid, $genre_harmonized_vid], 'IN')
+      ->execute()
+      ->fetchAll();
+
+    // Organize terms by vid.
+    $terms_by_vid = [];
+    foreach ($terms as $term) {
+      $terms_by_vid[$term->vid][strtolower($term->name)] = $term->tid;
+    }
+
+    // Map terms from Genre vocabulary to Genre Harmonized vocabulary only if the
+    // terms exist in both (by name).
+    foreach ($terms_by_vid[$genre_vid] as $name => $tid) {
+      if (isset($terms_by_vid[$genre_harmonized_vid][$name])) {
+        $term_mapping[$tid] = $terms_by_vid[$genre_harmonized_vid][$name];
+      }
+    }
+
+    // Fetch term mapping from the map table.
+    $terms = db_select('field_data_field_genre_harmonized_map', 'm')
+      ->fields('m', ['entity_id', 'field_genre_harmonized_map_tid'])
+      ->execute()
+      ->fetchAll();
+    foreach ($terms as $term) {
+      $term_mapping[$term->entity_id] = $term->field_genre_harmonized_map_tid;
+    }
+
+    // cache for 1 hour.
+    cache_set($cid, $term_mapping, 'cache', time() + 3600);
+  }
+
+  return $term_mapping;
 }

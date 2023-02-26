@@ -9,6 +9,7 @@
  */
 
 function cals_importer_find_mapped_genre($supplement_subjects, $field_name, &$map) {
+  $supplement_subjects = _cals_importer_map_harmonized_genres_exact_matches($supplement_subjects, $field_name, $map);
 
   $index = 'mapped_subject_stems'; //default
 
@@ -41,8 +42,9 @@ function cals_importer_find_mapped_genre($supplement_subjects, $field_name, &$ma
   }
 
   //Consider supplemental subjects from unparsed 655, 946 (BISAC)
-  if (! empty($supplement_subjects))
+  if (! empty($supplement_subjects)) {
     $simple_array_subjects = array_merge($supplement_subjects, $simple_array_subjects);
+  }
 
   foreach ($simple_array_subjects as &$subject) {
 
@@ -222,4 +224,38 @@ function determine_bisac_term($subject_term) {
   }
 
   return FALSE; //default
+}
+
+/**
+ * Map harmonized genres using an exact match (case insensitive).
+ *
+ * @param array $supplement_subjects
+ *   The list of 655/946 values.
+ * @param string $field_name
+ *   The name of the field to modify (field_genre_harmonized always).
+ * @param array $map
+ *   The field map with values.
+ *
+ * @return array
+ *   The modified supplement subjects.
+ */
+function _cals_importer_map_harmonized_genres_exact_matches($supplement_subjects, $field_name, &$map) {
+  foreach ($supplement_subjects as $index => $subject) {
+    drupal_set_message("For candidate term (exact match check): {$subject}");
+    $terms = taxonomy_get_term_by_name($subject, 'genre_harmonized');
+    if (count($terms)) {
+      $term_id = array_keys($terms)[0];
+      $map[$field_name]['values'][] = $term_id;
+      drupal_set_message("Applied harmonized genre: {$terms[$term_id]->name} ");
+
+      // Don't consider using any other methods if exact match.
+      unset($supplement_subjects[$index]);
+    }
+    else {
+      drupal_set_message("No result found.");
+    }
+    drupal_set_message("======\n");
+  }
+
+  return $supplement_subjects;
 }
