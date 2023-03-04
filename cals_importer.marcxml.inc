@@ -569,10 +569,12 @@ function _cals_move_defunct_genres_into_harmonized(&$entity, $context = array())
         // Move terms to harmonized genres, based on mapping. Adding terms this
         // way ensures the existing values in the field will remain in cases
         // where there are more than 3 terms and it will also prevent dups.
+        $moved = FALSE;
         $term_mapping = _cals_importer_build_term_map();
         foreach ($genres as $tid) {
           if (isset($term_mapping[$tid])) {
             $harmonized_genres[$term_mapping[$tid]] = $term_mapping[$tid];
+            $moved = TRUE;
           }
         }
 
@@ -583,14 +585,25 @@ function _cals_move_defunct_genres_into_harmonized(&$entity, $context = array())
             $node->field_genre_harmonized[LANGUAGE_NONE][] = ['tid' => $tid];
           }
         }
-        node_save($node);
 
-        $message = t(
-          'Fixed genres on !node',
-          array(
-            '!node' => l($node->title, 'node/' . $node->nid),
-          )
-        );
+        if ($moved) {
+          node_save($node);
+          $message = t(
+            'Fixed genres on !node',
+            array(
+              '!node' => l($node->title, 'node/' . $node->nid),
+            )
+          );
+        }
+        else {
+          $message = t(
+            '!message !node',
+            array(
+              '!message' => '<b>No genres were fixed for</b>',
+              '!node' => l($node->title, 'node/' . $node->nid),
+            )
+          );
+        }
         drupal_set_message($message);
       }
     }
