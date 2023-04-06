@@ -215,24 +215,34 @@ function _cals_get_fields_repository_item() {
  *   the optional code to parse*
  * @param $ind1
  *   The optional ind1 tag for the path.
+ * @param $ind2
+ *   The optional ind2 tag for the path.
  *
  * @return
  *   an array of values
  *
  */
-function _cals_importer_xpath_value($record_xml, $fieldname, $tag, $code = NULL, $ind1 = NULL) {
+function _cals_importer_xpath_value($record_xml, $fieldname, $tag, $code = NULL, $ind1 = NULL, $ind2 = NULL) {
   $arr = array();
   $path = ".//marc:{$fieldname}[@tag='" . $tag . "']";
   if (!empty($ind1)) {
     $path .= "[@ind1='" . $ind1 . "']";
   }
-  if(!empty($code) ) $path .= "/marc:subfield[@code='" . $code . "']";
+  if (isset($ind2)) {
+    $path .= "[@ind2='" . $ind2 . "']";
+  }
+  if (!empty($code)) {
+    $path .= "/marc:subfield[@code='" . $code . "']";
+  }
+
   $tmp = $record_xml->xpath($path);
   //dpm(__FUNCTION__, $path, $tmp);
   if (count($tmp) >= 1) {
     foreach ($tmp as $me){
-      $str = (string) strip_tags( trim($me[0]) );
-      if(!empty($str)) $arr[] = $str;
+      $str = (string) strip_tags(trim($me[0]));
+      if (!empty($str)) {
+        $arr[] = $str;
+      }
     }
   }
   return $arr;
@@ -1033,8 +1043,8 @@ function _cals_importer_get_performer_from_marcxml(&$arr, $xml) {
 function _cals_importer_get_a11y_metadata(&$arr, $xml) {
 
   $array_341_b = _cals_importer_xpath_value( $xml, "datafield", 341, "b" );
-  $array_532_1_a = _cals_importer_xpath_value( $xml, "datafield", 532, "a", "1" );
-  $array_532_8_a = _cals_importer_xpath_value( $xml, "datafield", 532, "a", "8" );
+  $array_532_8_8_a = _cals_importer_xpath_value( $xml, "datafield", 532, "a", "8", "8" );
+  $array_532_8_a = _cals_importer_xpath_value( $xml, "datafield", 532, "a", "8", " " );
 
   $tags_added = array();
   foreach ($array_341_b as $tag) {
@@ -1053,7 +1063,7 @@ function _cals_importer_get_a11y_metadata(&$arr, $xml) {
     }
   }
 
-  foreach ($array_532_1_a as $value) {
+  foreach ($array_532_8_8_a as $value) {
     //populate the text field
     $arr['fc_files']['field_certified_accessible_by'][]['value'] = $value;
   }
