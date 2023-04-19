@@ -310,9 +310,6 @@ function cals_importer_menu() {
   );
 
   return $items;
-
-
-
 }
 
 /**
@@ -592,7 +589,6 @@ function cals_importer_action_info() {
 /**
  * Implements hook_block_info().
  */
-
 function cals_importer_block_info() {
   $blocks = array();
 
@@ -629,23 +625,23 @@ function _cals_importer_get_block_items() {
 
   $items = array();
 
-//  $items['_cals_importer_update_repository_item'] = array(
-//    'access arguments' => array('administer site configuration'),
-//    'page callback' => '_cals_importer_update_repository_item',
-//    'title' => 'Parse MARC/XML',
-//    'file' => "cals_importer.marcxml.inc",
-//    'description' => "Item parsed",
-//  );
+  //  $items['_cals_importer_update_repository_item'] = array(
+  //    'access arguments' => array('administer site configuration'),
+  //    'page callback' => '_cals_importer_update_repository_item',
+  //    'title' => 'Parse MARC/XML',
+  //    'file' => "cals_importer.marcxml.inc",
+  //    'description' => "Item parsed",
+  //  );
 
 
-//  $items['_cals_reparse_titles_edition'] = array(
-//    'access arguments' => array('administer site configuration'),
-//    'page callback' => '_cals_reparse_title_edition',
-//    'file' => "cals_importer.marcxml.inc",
-//    'title' => 'Reparse Titles / Edition',
-//    'description' => 'Reparses title fields + dc relation field',
-//
-//  );
+  //  $items['_cals_reparse_titles_edition'] = array(
+  //    'access arguments' => array('administer site configuration'),
+  //    'page callback' => '_cals_reparse_title_edition',
+  //    'file' => "cals_importer.marcxml.inc",
+  //    'title' => 'Reparse Titles / Edition',
+  //    'description' => 'Reparses title fields + dc relation field',
+  //
+  //  );
 
 
   $items['_cals_normalize_record_value'] = array(
@@ -683,13 +679,13 @@ function _cals_importer_get_block_items() {
     'description' => 'Created the MARCXML stub',
   );
 
-//  $items['_cals_importer_exporter_build_marcxml_from_array'] = array(
-//    'access arguments' => array('parse s3 paths'),
-//    'page callback' => '_cals_importer_exporter_build_marcxml_from_array',
-//    'file' => "cals_importer.exporter.inc",
-//    'title' => "Build / Validate MARC-XML File",
-//    'description' => 'Added MARC-XML File',
-//  );
+  //  $items['_cals_importer_exporter_build_marcxml_from_array'] = array(
+  //    'access arguments' => array('parse s3 paths'),
+  //    'page callback' => '_cals_importer_exporter_build_marcxml_from_array',
+  //    'file' => "cals_importer.exporter.inc",
+  //    'title' => "Build / Validate MARC-XML File",
+  //    'description' => 'Added MARC-XML File',
+  //  );
 
 
   /*
@@ -899,7 +895,6 @@ function _cals_importer_generate_marcxml_files_submit($form, $form_state) {
   return $return;
 }
 
-
 function _cals_importer_tab_checker_xmlstub() {
   global $user;
   if (user_access('view marcxml stub') && arg(0) == 'node') {
@@ -908,6 +903,7 @@ function _cals_importer_tab_checker_xmlstub() {
   }
   return FALSE;
 }
+
 function _cals_importer_tab_checker_parse_record() {
   global $user;
   //todo - change to permission
@@ -938,7 +934,6 @@ function _cals_importer_tab_checker_parse_s3_paths() {
   return FALSE;
 
 }
-
 
 function cals_importer_form_alter(&$form, &$form_state, $form_id) {
   global $user;
@@ -982,7 +977,6 @@ function cals_importer_form_alter(&$form, &$form_state, $form_id) {
 
 }
 
-
 function _cals_importer_s3_cors_field_submit($form, &$form_state) {
   $filepath = "NO";
   if ($form_state['values']['field_s3_to_cors_update'][LANGUAGE_NONE][0]['value'] == 1) {
@@ -995,7 +989,6 @@ function _cals_importer_s3_cors_field_submit($form, &$form_state) {
   }
 
 }
-
 
 /**
  * Custom function to return node with duplicate S3 paths. Used in conjunction with
@@ -1033,7 +1026,6 @@ function _cals_get_node_with_duplicate_s3($data) {
   }
   return "NULL";
 }
-
 
 function _cals_importer_query_duplicate_titles($type) {
 
@@ -1381,40 +1373,36 @@ function cals_importer_views_query_alter(&$view, &$query) {
     case "feld_collection_view_repo_files_admin_vbo":
       $msg = TRUE;
       /*
-       *
-       *
-SELECT f1.entity_id FROM `field_data_field_s3_path` f1
-inner join field_data_field_s3_path f2
-on f1.field_s3_path_value = f2.field_s3_path_value
-where f1.bundle = 'field_file_resource' and f2.bundle = 'repository_item'
+  SELECT f1.entity_id FROM `field_data_field_s3_path` f1
+  inner join field_data_field_s3_path f2
+  on f1.field_s3_path_value = f2.field_s3_path_value
+  where f1.bundle = 'field_file_resource' and f2.bundle = 'repository_item'
 
       146 seconds
 
-SELECT distinct(entity_id) as id
-FROM `field_data_field_s3_path`
-where field_s3_path_value in (select field_s3_path_value from field_data_field_s3_path where bundle = 'repository_item')
-
+  SELECT distinct(entity_id) as id
+  FROM `field_data_field_s3_path`
+  where field_s3_path_value in (select field_s3_path_value from field_data_field_s3_path where bundle = 'repository_item')
 
       inner joi
- $rs = db_query(
+  $rs = db_query(
         "SELECT entity_id as nid FROM {field_data_field_s3_path} WHERE bundle =  :b ", array(':b' => 'repository_item') )->fetchCol();
-
-*/
+  */
       $rs = db_query(
         "SELECT f1.entity_id as nid FROM  {field_data_field_s3_path} f1 INNER JOIN {field_data_field_s3_path} f2
-ON f1.field_s3_path_value = f2.field_s3_path_value
-WHERE f1.bundle =  :b1 AND  f2.bundle = :b2 ", array(":b1" => 'repository_item', ":b2" => 'repository_item')
+  ON f1.field_s3_path_value = f2.field_s3_path_value
+  WHERE f1.bundle =  :b1 AND  f2.bundle = :b2 ", array(":b1" => 'repository_item', ":b2" => 'repository_item')
       )->fetchCol();
 
      //printAndDie($rs);
 
-//      $sub_query = db_select('foo', 'f')
-//        ->fields('f', array('nid'))
-//        ->condition('f.bar', 'baz');
+  //      $sub_query = db_select('foo', 'f')
+  //        ->fields('f', array('nid'))
+  //        ->condition('f.bar', 'baz');
       $view->query->add_where(0, 'field_file_resource_field_collection_item.nid', $rs, 'IN');
-//
-//      $query->where[1]['conditions'][2]['value'] = $rs;
-//      $query->where[1]['conditions'][2]['operator'] = "IN";
+
+  //      $query->where[1]['conditions'][2]['value'] = $rs;
+  //      $query->where[1]['conditions'][2]['operator'] = "IN";
 
       //dpm($query->where);
 
@@ -1475,7 +1463,6 @@ WHERE f1.bundle =  :b1 AND  f2.bundle = :b2 ", array(":b1" => 'repository_item',
  * @param $node
  *   the node passed to the parser
  */
-
 function cals_importer_node_view($node, $view_mode, $langcode) {
   switch ($node->type) {
     case "record_set":
@@ -1504,6 +1491,7 @@ function cals_importer_node_view($node, $view_mode, $langcode) {
 
   }
 }
+
 /**
  * Implements hook_custom_theme()
  * Switch theme for a mobile browser
@@ -1520,6 +1508,7 @@ function cals_importer_custom_theme()  {
   }
 
 }
+
 /**
  * initializes new item repos node
  *
@@ -1527,7 +1516,6 @@ function cals_importer_custom_theme()  {
  *   the new skeletal node passed to the parser
  */
 function _cals_prepare_new_item_repos() {
-
   $node = new StdClass();
   $node->type = 'repository_item';
   $node->language = LANGUAGE_NONE;
@@ -1674,7 +1662,6 @@ function _cals_import_skeletal_records($node) {
 
 }
 
-
 /**
  * fixes single node oclc number.
  *
@@ -1682,7 +1669,6 @@ function _cals_import_skeletal_records($node) {
  *   the node passed to the parser
  */
 function _cals_importer_update_oclc_numbers_single_node($node) {
-
   printAndDie($node);
   _cals_importer_update_oclc_numbers_query($node);
   drupal_goto("node/" . $node->nid);
@@ -1733,7 +1719,6 @@ function _cals_importer_update_oclc_numbers_query($node) {
   node_save($node);
 }
 
-
 /**
  * checks validity of oclc number
  *
@@ -1754,7 +1739,6 @@ function _cals_isvalid_oclc_number($string) {
  * @param $node
  *   the node, passed by reference
  */
-
 function _cals_delete_duplicate_oclc_numbers(&$node) {
   if (!empty($node->field_oclc_number)) {
     $arr = array();
@@ -1774,7 +1758,6 @@ function _cals_delete_duplicate_oclc_numbers(&$node) {
     }
   }
 }
-
 
 /**
  * update / add system control numbers
@@ -1801,7 +1784,6 @@ function _cals_importer_update_system_control_numbers(&$entity, $context = array
 /**
  * load node, pull out system control numbers, save node
  */
-
 function _cals_parse_system_control_number($node) {
   $xml = _cals_get_marc_xml_string($node);
   if ($xml === 0) return;
@@ -1821,7 +1803,6 @@ function _cals_parse_system_control_number($node) {
   node_save($node);
   return '';
 }
-
 
 /**
  * update Access Restrictions, i.e., 506 field
@@ -1845,7 +1826,6 @@ function _cals_importer_update_licensed_access(&$entity, $context = array()) {
   return "";
 }
 
-
 /**
  * load node, pull out "restrictions". Separating it this way allows us to also include
  * this as part of the node/%node/parse-rights-access pattern.
@@ -1857,15 +1837,15 @@ function _cals_importer_update_licensed_access(&$entity, $context = array()) {
 function _cals_parse_licensed_access($node) {
   $xml = _cals_get_marc_xml_string($node);
   if ($xml === 0) return;
-//  $str = 'xyz';//placeholder string
-//  $tmp = $xml->xpath("//marc:datafield[@tag='506']/marc:subfield[@code='a']");
-//  if (!count($tmp)) {
-//    drupal_set_message(t('%string  Access Restriction not updated (no 506 element).'), array('%string' => $node->title));
-//    return '';
-//  }
-//  $str = (string) $tmp[0];
-//  $tmp = strpos(strtolower($str), "restricted");
-//  $node->field_access_restrictions[LANGUAGE_NONE][0]['value'] = (is_numeric($tmp)) ? 1 : 0;
+  //  $str = 'xyz';//placeholder string
+  //  $tmp = $xml->xpath("//marc:datafield[@tag='506']/marc:subfield[@code='a']");
+  //  if (!count($tmp)) {
+  //    drupal_set_message(t('%string  Access Restriction not updated (no 506 element).'), array('%string' => $node->title));
+  //    return '';
+  //  }
+  //  $str = (string) $tmp[0];
+  //  $tmp = strpos(strtolower($str), "restricted");
+  //  $node->field_access_restrictions[LANGUAGE_NONE][0]['value'] = (is_numeric($tmp)) ? 1 : 0;
 
   //Default Requires Login see: https://github.com/BCLibCoop/nnels/issues/187
   $node->field_access_restrictions[LANGUAGE_NONE][0]['value'] = 1;
@@ -1875,7 +1855,6 @@ function _cals_parse_licensed_access($node) {
   return '';
 
 }
-
 
 /**
  * grabs the title from the record
