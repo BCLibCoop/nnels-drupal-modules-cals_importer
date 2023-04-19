@@ -1915,3 +1915,76 @@ function _cals_importer_get_string($arr) {
   $val = (string) $arr[0];
   return htmlspecialchars(trim($val));
 }
+
+/**
+ * Implements hook_field_widget_info_alter().
+ */
+function cals_importer_field_widget_info_alter(&$info) {
+
+  // Add a setting for validating new terms.
+  $info['taxonomy_autocomplete']['settings']['autocomplete_new_terms'] = 'allow';
+}
+
+/**
+ * Implements hook_form_ID_alter().
+ */
+function cals_importer_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id) {
+  $instance = $form['#instance'];
+  if ($instance['widget']['type'] == 'taxonomy_autocomplete') {
+
+    // Add a setting form for validating new terms.
+    $options = array(
+      'allow' => t('Allow and insert new terms'),
+      'deny' => t('Deny any new terms'),
+    );
+    $form['instance']['widget']['settings']['autocomplete_new_terms'] = array(
+      '#type' => 'radios',
+      '#title' => t('Autocomplete settings'),
+      '#options' => $options,
+      '#default_value' => isset($instance['widget']['settings']['autocomplete_new_terms']) ? $instance['widget']['settings']['autocomplete_new_terms'] : 'allow',
+    );
+  }
+}
+
+/**
+ * Implements hook_field_attach_form().
+ */
+function cals_importer_field_attach_form($entity_type, $entity, &$form, &$form_state, $langcode) {
+
+  // Add validation function to taxonomy_autocomplete, if necessary.
+  $instances = field_info_instances($form['#entity_type'], $form['#bundle']);
+  foreach ($instances as $instance) {
+    if (
+      $instance['widget']['type'] == 'taxonomy_autocomplete' &&
+      isset($form[$instance['field_name']]) &&
+      isset($instance['widget']['settings']['autocomplete_new_terms']) &&
+      $instance['widget']['settings']['autocomplete_new_terms'] == 'deny'
+     ) {
+      $form[$instance['field_name']][$lang_key]['#element_validate'][] = '_cals_importer_autocomplete_validate_deny_new_terms';
+    }
+  }
+}
+
+/**
+ * Form element validate handler for taxonomy term autocomplete element, which denies any new terms.
+ */
+function _cals_importer_autocomplete_validate_deny_new_terms($element, &$form_state, $form) {
+
+  // Pull the form value for the element only.
+  $values = $form_state['values'];
+  if (!empty(array_filter($element['#array_parents']))) {
+    foreach (array_filter($element['#array_parents']) as $parent) {
+      foreach ($values[$parent][$form[$parent]['#language']] as $delta => $value) {
+        if (isset($value['tid']) && $value['tid'] == 'autocreate') {
+          form_error(
+            $element,
+            t(
+              '%name: new terms are not allowed. Please choose from the existing options.',
+              array('%name' => $form[$parent][$form[$parent]['#language']]['#title'])
+            )
+          );
+        }
+      }
+    }
+  }
+}
