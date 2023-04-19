@@ -621,61 +621,50 @@ function _cals_move_defunct_genres_into_harmonized(&$entity, $context = array())
  *   The term map for genre -> genre harmonized.
  */
 function _cals_importer_build_term_map() {
-  $cid = 'terms:genre:harmonized:vbo:move';
-  $cache = cache_get($cid);
-  $term_mapping = [];
-  if ($cache) {
-    $term_mapping = $cache->data;
+  $genre_machine_name = 'genre';
+  $genre_harmonized_machine_name = 'genre_harmonized';
+
+  // Look up vid's.
+  $genre_vid = db_select('taxonomy_vocabulary', 'v')
+    ->fields('v', ['vid'])
+    ->condition('v.machine_name', $genre_machine_name)
+    ->execute()
+    ->fetchField();
+  $genre_harmonized_vid = db_select('taxonomy_vocabulary', 'v')
+    ->fields('v', ['vid'])
+    ->condition('v.machine_name', $genre_harmonized_machine_name)
+    ->execute()
+    ->fetchField();
+
+  // Fetch terms from the database for Genre and Genre Harmonized
+  // vocabularies.
+  $terms = db_select('taxonomy_term_data', 't')
+    ->fields('t', ['tid', 'vid', 'name'])
+    ->condition('t.vid', [$genre_vid, $genre_harmonized_vid], 'IN')
+    ->execute()
+    ->fetchAll();
+
+  // Organize terms by vid.
+  $terms_by_vid = [];
+  foreach ($terms as $term) {
+    $terms_by_vid[$term->vid][strtolower($term->name)] = $term->tid;
   }
-  else {
-    $genre_machine_name = 'genre';
-    $genre_harmonized_machine_name = 'genre_harmonized';
 
-    // Look up vid's.
-    $genre_vid = db_select('taxonomy_vocabulary', 'v')
-      ->fields('v', ['vid'])
-      ->condition('v.machine_name', $genre_machine_name)
-      ->execute()
-      ->fetchField();
-    $genre_harmonized_vid = db_select('taxonomy_vocabulary', 'v')
-      ->fields('v', ['vid'])
-      ->condition('v.machine_name', $genre_harmonized_machine_name)
-      ->execute()
-      ->fetchField();
-
-    // Fetch terms from the database for Genre and Genre Harmonized
-    // vocabularies.
-    $terms = db_select('taxonomy_term_data', 't')
-      ->fields('t', ['tid', 'vid', 'name'])
-      ->condition('t.vid', [$genre_vid, $genre_harmonized_vid], 'IN')
-      ->execute()
-      ->fetchAll();
-
-    // Organize terms by vid.
-    $terms_by_vid = [];
-    foreach ($terms as $term) {
-      $terms_by_vid[$term->vid][strtolower($term->name)] = $term->tid;
+  // Map terms from Genre vocabulary to Genre Harmonized vocabulary only if the
+  // terms exist in both (by name).
+  foreach ($terms_by_vid[$genre_vid] as $name => $tid) {
+    if (isset($terms_by_vid[$genre_harmonized_vid][$name])) {
+      $term_mapping[$tid] = $terms_by_vid[$genre_harmonized_vid][$name];
     }
+  }
 
-    // Map terms from Genre vocabulary to Genre Harmonized vocabulary only if the
-    // terms exist in both (by name).
-    foreach ($terms_by_vid[$genre_vid] as $name => $tid) {
-      if (isset($terms_by_vid[$genre_harmonized_vid][$name])) {
-        $term_mapping[$tid] = $terms_by_vid[$genre_harmonized_vid][$name];
-      }
-    }
-
-    // Fetch term mapping from the map table.
-    $terms = db_select('field_data_field_genre_harmonized_map', 'm')
-      ->fields('m', ['entity_id', 'field_genre_harmonized_map_tid'])
-      ->execute()
-      ->fetchAll();
-    foreach ($terms as $term) {
-      $term_mapping[$term->entity_id] = $term->field_genre_harmonized_map_tid;
-    }
-
-    // cache for 1 hour.
-    cache_set($cid, $term_mapping, 'cache', time() + 3600);
+  // Fetch term mapping from the map table.
+  $terms = db_select('field_data_field_genre_harmonized_map', 'm')
+    ->fields('m', ['entity_id', 'field_genre_harmonized_map_tid'])
+    ->execute()
+    ->fetchAll();
+  foreach ($terms as $term) {
+    $term_mapping[$term->entity_id] = $term->field_genre_harmonized_map_tid;
   }
 
   return $term_mapping;
