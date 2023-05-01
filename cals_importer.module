@@ -401,8 +401,14 @@ function cals_importer_action_info() {
 
     //Reparse accessibility fields on file_resource field collection.
     '_cals_reparse_accessibility_details' => array(
-      'label' => t('CALS: Re-parse Accessibility Fields'),
+      'label' => t('CALS: Re-parse Accessibility Fields (Node)'),
       'type' => 'node',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),
+    '_cals_reparse_accessibility_details_resource' => array(
+      'label' => t('CALS: Re-parse Accessibility Fields (File Resource)'),
+      'type' => 'entity',
       'configurable' => FALSE,
       'triggers' => array('any'),
     ),
