@@ -398,7 +398,7 @@ function _cals_recalc_file_running_time(&$node, $context) {
 }
 
 /**
- * Reparse Accessibility.
+ * Reparse Accessibility (Node).
  *
  * @param $node
  * @param $context
@@ -441,6 +441,26 @@ function _cals_reparse_accessibility_details(&$node, $context) {
       }
     }
   }
+}
+
+/**
+ * Reparse Accessibility (Field Collection).
+ *
+ * @param $node
+ * @param $context
+ */
+function _cals_reparse_accessibility_details_resource(&$entity, $context = array()) {
+
+  // Work backwards to find the node that this file resource is attached to.
+  $nid = db_select('field_data_field_file_resource', 'fr')
+    ->fields('fr', ['entity_id'])
+    ->condition('fr.field_file_resource_value', $entity->item_id)
+    ->execute()
+    ->fetchField();
+  $node = node_load($nid);
+
+  // Run the node level process now that the node has been found.
+  _cals_reparse_accessibility_details($node, $context);
 }
 
 /**
