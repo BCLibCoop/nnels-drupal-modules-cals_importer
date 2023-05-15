@@ -9,6 +9,7 @@
  */
 
 function cals_importer_find_mapped_genre($supplement_subjects, $field_name, &$map) {
+  $supplement_subjects = _cals_importer_prepare_subjects($supplement_subjects, $field_name, $map);
   $supplement_subjects = _cals_importer_map_harmonized_genres_exact_matches($supplement_subjects, $field_name, $map);
 
   $index = 'mapped_subject_stems'; //default
@@ -123,6 +124,8 @@ function cals_importer_find_mapped_genre($supplement_subjects, $field_name, &$ma
         $map[$field_name]['values'][] = $mapped_term_id;
     }
   } //end foreach
+
+// Scott @todo - Sub-matching should be used if full matching fails (Sports == "Sports and recreation").
 }
 
 /**
@@ -162,6 +165,8 @@ function map_harmonized_terms($results, $simple_array_subjects) {
   // flip if any intersect call fails
   $must = TRUE;
   $exclude = FALSE;
+
+// Scott @todo - Must have items should be a full line search (Must have "Fiction" in "Humor(fiction)", "Romance", "Young Adult Fiction" is true // even though "Fiction" is not by itself)
 
   foreach ($must_haves as $mh) {
     //In multi-value runs, presence of the last MustHave can flip the whole
@@ -254,6 +259,51 @@ function _cals_importer_map_harmonized_genres_exact_matches($supplement_subjects
     else {
       drupal_set_message("No result found.");
     }
+    drupal_set_message("======\n");
+  }
+
+  return $supplement_subjects;
+}
+
+/**
+ * Prepare subjects for exact matches and mapped subject stems searching.
+ *
+ * @param array $supplement_subjects
+ *   The list of 655/946 values.
+ * @param string $field_name
+ *   The name of the field to modify (field_genre_harmonized always).
+ * @param array $map
+ *   The field map with values.
+ *
+ * @return array
+ *   The modified supplement subjects.
+ */
+function _cals_importer_prepare_subjects($supplement_subjects, $field_name, &$map) {
+
+  // Map for symbol conversion.
+  $symbol_map = array(
+    '&' => 'and',
+  );
+
+  // Special characters to remove.
+  $remove_characters = array('-', '/', ',', '.', ';', '_');
+
+  foreach ($supplement_subjects as $index => $subject) {
+    drupal_set_message("Prepare subject: {$subject}");
+
+    // 1. Convert symbols.
+    $subject = str_replace(array_keys($symbol_map), array_values($symbol_map), $subject);
+
+    // 2. Remove special characters.
+    $subject = str_replace($remove_characters, '', $subject);
+
+    // 3. Convert plural to singular.
+// Scott @todo
+
+    // 4. Convert to lower case.
+    $subject = strtolower($subject);
+
+    drupal_set_message("Subject prepared: {$subject}");
     drupal_set_message("======\n");
   }
 
