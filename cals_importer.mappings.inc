@@ -11,7 +11,6 @@
  *   an array of fieldname to functions and params
  *
  */
-
 function _cals_importer_repo_field_callback($fieldname) {
 
   $arr = array(
@@ -141,6 +140,18 @@ function _cals_importer_repo_field_callback($fieldname) {
 }
 
 /**
+ * Maps fieldnames to parser functions for file resources.
+ *
+ * @return array
+ *   An array of fieldnames to functions.
+ */
+function _cals_importer_file_resource_field_callback() {
+  return array(
+    "field_performer" => '_cals_reparse_performer_field',
+  );
+}
+
+/**
  * Returns fields for repository item
  *
  * @return array
@@ -206,6 +217,29 @@ function _cals_get_fields_repository_item() {
 }
 
 /**
+ * Returns fields for file resource.
+ *
+ * @return array
+ *   An array of fields that can be re-parsed.
+ */
+function _cals_get_fields_file_resource() {
+  $fields = field_info_instances('field_collection_item', 'field_file_resource');
+  $configured_fields = _cals_importer_file_resource_field_callback();
+  $fields = array_intersect_key($fields, $configured_fields);
+
+  $reparse_fields = array();
+  foreach ($fields as $field_name => $data) {
+    $reparse_fields[$field_name] = [
+      'name' => $data['label'],
+      'field_name' => $field_name,
+      'callback' => $configured_fields[$field_name],
+    ];
+  }
+
+  return $reparse_fields;
+}
+
+/**
  * helper function to parse xml path
  * @param $record_xml
  *   the original xml string
@@ -247,10 +281,9 @@ function _cals_importer_xpath_value($record_xml, $fieldname, $tag, $code = NULL,
   }
   return $arr;
 }
-function _get_tmp($xml) {
 
+function _get_tmp($xml) {}
 
-}
 function _cals_importer_xpath_control_field_value($xml, $tag, $code = NULL) {
   $arr = array();
   $path = "//marc:controlfield[@tag='" . $tag . "']";
@@ -265,7 +298,6 @@ function _cals_importer_xpath_control_field_value($xml, $tag, $code = NULL) {
   return $arr;
 
 }
-
 
 /**
  * returns the title
@@ -331,6 +363,7 @@ function _cals_get_alternate_title_from_marc($xml, $k, &$map) {
 
 
 }
+
 /*
  * @see https://github.com/BCLibCoop/nnels/issues/99
  *
@@ -382,7 +415,6 @@ function _cals_get_uniform_title_from_marc($xml, $k, &$map) {
  *
  * @see https://github.com/BCLibCoop/nnels/issues/117
  */
-
 function _cals_importer_get_audience_from_marc($xml, $k, &$map) {
   $allowed_values = $map[$k]['allowed_values'];
   $audience = '';
@@ -481,7 +513,6 @@ function _cals_importer_get_coverage_marc($xml, $k, &$map){
   }
 }
 
-
 function _cals_get_date_issued_from_marc($xml, $k, &$map) {
 
   $dates_dupes = array();
@@ -545,7 +576,6 @@ function _cals_get_date_issued_from_marc($xml, $k, &$map) {
       ),
     );
 }
-
 
 /**
  * @param $str
@@ -657,6 +687,7 @@ function _cals_get_taxonomy_terms_from_xpath($xpathvalue, $fieldname, &$map) {
   foreach($terms as $term) $map[$fieldname]['values'][] = _cals_get_tid_by_name($vid, $term);
 
 }
+
 //function _cals_get_genre_from_marc(&$arr, $xml) {
 function _cals_get_genre_from_marc($xml, $k, &$map) {
   $xpathvalue = $xml->xpath("//marc:datafield[@tag='655'][@ind1=' ']/marc:subfield[@code='a']|//marc:datafield[@tag='655'][@ind2=' ']/marc:subfield[@code='a']");
@@ -843,6 +874,7 @@ function _cals_importer_get_contents_from_marc($xml, $k, &$map) {
     $map[$k]['values'][] = theme("item_list", $vars);
   }
 }
+
 /*
  * to deprecate??
  *
@@ -901,7 +933,6 @@ function _cals_importer_get_system_numbers_from_marc($xml, $k, &$map) {
   }
 }
 
-
 function _cals_importer_get_oclc_number_from_marc($xml, $k, &$map) {
   $arr = _cals_importer_xpath_value($xml, "datafield", '035', 'a');
   foreach($arr as $value) {
@@ -921,24 +952,21 @@ function _cals_importer_get_access_restrictions($xml, $k, &$map) {
 
   //Obsolete processing based on restricted string in MARCXML 506 a,d subfields
 
-//  $codes = array("a", "d");
-//  $title = array();
-//  $vals = array();
-//  foreach($codes as $code) {
-//    $tmp = _cals_importer_xpath_value($xml, "datafield", '506', $code);
-//    if (count($tmp) >= 1) {
-//      $vals[] = (string) trim($tmp[0]);
-//      if(count($vals)) {
-//        $str = implode(" ", $vals);
-//        $pos = strpos(strtolower($str),"restricted");
-//        $map[$k]['values'][] = (is_numeric($pos)) ? 1 : 0;
-//      }
-//    }
-//  }
+  //  $codes = array("a", "d");
+  //  $title = array();
+  //  $vals = array();
+  //  foreach($codes as $code) {
+  //    $tmp = _cals_importer_xpath_value($xml, "datafield", '506', $code);
+  //    if (count($tmp) >= 1) {
+  //      $vals[] = (string) trim($tmp[0]);
+  //      if(count($vals)) {
+  //        $str = implode(" ", $vals);
+  //        $pos = strpos(strtolower($str),"restricted");
+  //        $map[$k]['values'][] = (is_numeric($pos)) ? 1 : 0;
+  //      }
+  //    }
+  //  }
 }
-
-
-
 
 function _cals_get_description_type($tag) {
 
@@ -964,7 +992,6 @@ function _cals_get_description_type($tag) {
   if (array_key_exists($tag, $tmp)) return $tmp[$tag];
   return "";
 }
-
 
 //function _cals_importer_get_isbn_sysnums_from_marc(&$arr, $xml) {
 function _cals_importer_get_isbn_sysnums_from_marc($xml, $k, &$map) {
@@ -1224,6 +1251,7 @@ function _cals_importer_get_contributor_from_marc($xml, $k, &$map, $tags) {
     }
   }
 }
+
 /**
  * Parses DC Contributor values
  * @param $xml
@@ -1301,7 +1329,6 @@ function _cals_importer_get_dc_relations_from_marc($xml, $k, &$map, $tags) {
  * @return
  *   $map is returned by reference with values appended
  */
-
 function _cals_importer_get_cataloging_agency_from_marc($xml, $k, &$map, $tags) {
   $tags = array("003", "040");
   foreach($tags as $tag) {
@@ -1333,7 +1360,6 @@ function _cals_importer_get_cataloging_agency_from_marc($xml, $k, &$map, $tags) 
  *
  * @return an array of cataloging agencies
  */
-
 function _cals_importer_get_array_cataloging_agency() {
   /*
   1|Original Cataloguing agency (NR)
@@ -1526,7 +1552,6 @@ function _cals_importer_get_running_time_from_marcxml(&$arr, $xml) {
   } //end candidates
 }
 
-
 /**
  *
  * @param $record
@@ -1557,6 +1582,7 @@ function _cals_importer_get_controlfield_values_from_marc($record, &$arr) {
     if ($tag == '008') _cals_get_value_from_tag($tags, $arr);
   }
 }
+
 /**
  *
  * @param $record
@@ -1796,4 +1822,48 @@ function _cals_get_value_from_tag($tags, &$arr) {
     */
   } //end switch
 
-}// end function
+}
+
+/**
+ * Re-parse performer field on file resources.
+ *
+ * @param stdClass $node
+ *   The parent repository item node.
+ * @param array $context
+ *   The batch context.
+ */
+function _cals_reparse_performer_field($node, $context) {
+  $xml = _cals_get_marc_xml_string($node);
+  if ($xml) {
+    $raw_511_a = _cals_importer_xpath_value($xml, 'datafield', 511, 'a');
+
+    $prepared_narrator_values = array();
+    foreach ($raw_511_a as $value) {
+
+      // Transform raw string and obtain normalized Performer value(s).
+      $value = _cals_importer_strip_trailing_periods_value(str_replace('Narrated by ', '', $value));
+      $normalized_value = _cals_importer_get_normalized_performer($value);
+
+      // Loop through our normalized values and breakdown any lists.
+      foreach ($normalized_value as $candidate ) {
+        $exploded = explode(',', $candidate);
+        $de_listed_values = array_values(($exploded ? $exploded : $candidate));
+        $prepared_narrator_values = array_merge($prepared_narrator_values, $de_listed_values);
+      }
+    }
+
+    if (count($prepared_narrator_values)) {
+      $node_wrap = entity_metadata_wrapper('node', $node->nid);
+      if (isset($node_wrap->field_file_resource)) {
+        foreach ($node_wrap->field_file_resource->value() as $fc) {
+          $fc_wrap = entity_metadata_wrapper('field_collection_item', $fc);
+          $fc_wrap->field_performer->set($prepared_narrator_values);
+
+          // Save entities.
+          $fc_wrap->save();
+          $node_wrap->save();
+        }
+      }
+    }
+  }
+}

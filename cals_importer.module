@@ -391,6 +391,13 @@ function cals_importer_action_info() {
       'triggers' => array('any'),
     ),
 
+    '_cals_reparse_file_resource_details' => array(
+      'label' => t('CALS: Re-parse Selected Fields for File Resource'),
+      'type' => 'node',
+      'configurable' => TRUE,
+      'triggers' => array('any'),
+    ),
+
     //Recalculate fields: hooks into main parser
     '_cals_recalc_file_running_time' => array(
       'label' => t('CALS: Re-calc File Runtime'),

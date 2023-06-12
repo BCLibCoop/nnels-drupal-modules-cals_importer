@@ -17,7 +17,6 @@ function _cals_importer_update_repository_item($node) {
   drupal_goto("node/" . $node->nid);
 }
 
-
 /**
  * invoked via batch api view
  *
@@ -44,8 +43,6 @@ function _cals_importer_update_repository_items(&$entity, $context = array()) {
   return "";
 
 }
-
-
 
 /**
  * Normalizes title, creator, contributor and other fields
@@ -191,7 +188,6 @@ function _cals_reparse_record_details_form($settings, &$form_state) {
  * @param $form_state
  * @return array
  */
-
 function _cals_reparse_record_details_submit($form, $form_state) {
 
   //Pass along our settings
@@ -273,7 +269,6 @@ function _cals_reparse_record_details_submit($form, $form_state) {
  * @param $context
  * @return bool
  */
-
 function _cals_reparse_record_details(&$node, $context) {
   $arr_fields = _cals_get_fields_repository_item();
 
@@ -688,4 +683,76 @@ function _cals_importer_build_term_map() {
   }
 
   return $term_mapping;
+}
+
+/**
+ * Re-parse file resource fields.
+ *
+ * @param stdClass $node
+ *   The node to process.
+ * @param array $context
+ *   The operation context.
+ *
+ * @return bool
+ */
+function _cals_reparse_file_resource_details($node, $context) {
+  $configured_fields = _cals_importer_file_resource_field_callback();
+
+  foreach ($context['fields_to_parse'] as $field_name) {
+    call_user_func($configured_fields[$field_name], $node, $context);
+  }
+
+  $message = t('Reparsed File Resources: (%fields) on Title: "%title"',
+    array(
+      '%title' => $node->title,
+      '%fields' => implode(", ", $context['fields_to_parse']),
+    )
+  );
+  drupal_set_message($message);
+}
+
+/**
+ * Re-parse file resource fields form callback.
+ *
+ * @param array $settings
+ *   The view settings.
+ * @param array $form_state
+ *   The form state.
+ *
+ * @return array
+ *   The form array.
+ */
+function _cals_reparse_file_resource_details_form($settings, &$form_state) {
+  $form = array();
+  $fields = _cals_get_fields_file_resource();
+  $options = array_column($fields, 'name', 'field_name');
+
+  $form['fields_to_parse'] = array(
+    '#type' => 'select',
+    '#title' => t('Select the Field(s) to reparse'),
+    '#options' => $options,
+    '#required' => TRUE,
+    '#multiple' => TRUE,
+    '#size' => count($options),
+    '#description' => t("NB: this action will overwrite any edits added to the selected fields following the original parsing. Please exercise caution."),
+  );
+
+  return $form;
+}
+
+/**
+ * Re-parse file resource fields form submit callback.
+ *
+ * @param array $form
+ *   The form array.
+ * @param array $form_state
+ *   The form state array
+ *
+ * @return array
+ *   An array of data to pass to the batch context.
+ */
+function _cals_reparse_file_resource_details_submit($form, $form_state) {
+  return array(
+    'fields_to_parse' => $form_state['values']['fields_to_parse'],
+  );
 }
