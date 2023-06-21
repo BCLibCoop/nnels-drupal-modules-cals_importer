@@ -1862,6 +1862,9 @@ function _cals_reparse_performer_field($node, $context) {
           // Save entities.
           $fc_wrap->save();
           $node_wrap->save();
+
+          // Only apply the XML data to the first file.
+          break;
         }
       }
     }
