@@ -334,7 +334,6 @@ function _cals_get_title_from_marc($xml, $k, &$map) {
  * "Similarly, Alternate Title should pull from 246 if the first indicator is 0, 1 or 3, subfields $abnp
  *
  */
-
 function _cals_get_alternate_title_from_marc($xml, $k, &$map) {
   $title = array();
   $codes = array("a", "b", "n", "p");
