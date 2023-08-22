@@ -334,7 +334,6 @@ function _cals_get_title_from_marc($xml, $k, &$map) {
  * "Similarly, Alternate Title should pull from 246 if the first indicator is 0, 1 or 3, subfields $abnp
  *
  */
-
 function _cals_get_alternate_title_from_marc($xml, $k, &$map) {
   $title = array();
   $codes = array("a", "b", "n", "p");
@@ -1825,6 +1824,58 @@ function _cals_get_value_from_tag($tags, &$arr) {
 }
 
 /**
+ * Update the XML String field of the repository item.
+ *
+ * @param $node
+ *   The marc export set node.
+ * @param $node
+ *   The repository item node.
+ */
+function _cals_update_xml_string($parent_node, $node) {
+
+  // Increase the limit for the operation.
+  ini_set('memory_limit', '1024M');
+  ini_set('max_execution_time', '600');
+
+  // Load the XML file and handle errors.
+  $xml_file = field_get_items('node', $parent_node, 'field_marc_xml_file');
+  $file_error = TRUE;
+  $xml = NULL;
+  if ($xml_file) {
+    $file = drupal_realpath($xml_file[0]['uri']);
+    libxml_use_internal_errors(TRUE);
+    $xml = simplexml_load_file($file);
+    if ($xml !== FALSE) {
+      $file_error = FALSE;
+    }
+  }
+  if ($file_error) {
+    drupal_set_message(t("Oops, could not parse the file. Might not be valid xml?"), "error");
+    foreach (libxml_get_errors() as $error) {
+      drupal_set_message($error->message, "error");
+    }
+    return FALSE;
+  }
+
+  $node_xml = _cals_get_marc_xml_string($node);
+  if (!$node_xml) {
+    drupal_set_message(t("Oops, could not retrieve XML from the repository item."), "error");
+    return FALSE;
+  }
+
+  // Loop XML and update the node in question.
+  foreach ($xml->children(NAME_SPACE) as $record) {
+    if (trim($record->leader) == trim($node_xml->record->leader[0])) {
+      // node_save($node);
+      $node->field_xml_string[$node->language][0]['value'] = $record->saveXML();
+      node_save($node);
+    }
+  }
+
+  return TRUE;
+}
+
+/**
  * Re-parse performer field on file resources.
  *
  * @param stdClass $node
@@ -1833,38 +1884,40 @@ function _cals_get_value_from_tag($tags, &$arr) {
  *   The batch context.
  */
 function _cals_reparse_performer_field($node, $context) {
-  $xml = _cals_get_marc_xml_string($node);
-  if ($xml) {
-    $raw_511_a = _cals_importer_xpath_value($xml, 'datafield', 511, 'a');
+  if (_cals_update_xml_string($context['parent_node'], $node)) {
+    $xml = _cals_get_marc_xml_string($node);
+    if ($xml) {
+      $raw_511_a = _cals_importer_xpath_value($xml, 'datafield', 511, 'a');
 
-    $prepared_narrator_values = array();
-    foreach ($raw_511_a as $value) {
+      $prepared_narrator_values = array();
+      foreach ($raw_511_a as $value) {
 
-      // Transform raw string and obtain normalized Performer value(s).
-      $value = _cals_importer_strip_trailing_periods_value(str_replace('Narrated by ', '', $value));
-      $normalized_value = _cals_importer_get_normalized_performer($value);
+        // Transform raw string and obtain normalized Performer value(s).
+        $value = _cals_importer_strip_trailing_periods_value(str_replace('Narrated by ', '', $value));
+        $normalized_value = _cals_importer_get_normalized_performer($value);
 
-      // Loop through our normalized values and breakdown any lists.
-      foreach ($normalized_value as $candidate ) {
-        $exploded = explode(',', $candidate);
-        $de_listed_values = array_values(($exploded ? $exploded : $candidate));
-        $prepared_narrator_values = array_merge($prepared_narrator_values, $de_listed_values);
+        // Loop through our normalized values and breakdown any lists.
+        foreach ($normalized_value as $candidate ) {
+          $exploded = explode(',', $candidate);
+          $de_listed_values = array_values(($exploded ? $exploded : $candidate));
+          $prepared_narrator_values = array_merge($prepared_narrator_values, $de_listed_values);
+        }
       }
-    }
 
-    if (count($prepared_narrator_values)) {
-      $node_wrap = entity_metadata_wrapper('node', $node->nid);
-      if (isset($node_wrap->field_file_resource)) {
-        foreach ($node_wrap->field_file_resource->value() as $fc) {
-          $fc_wrap = entity_metadata_wrapper('field_collection_item', $fc);
-          $fc_wrap->field_performer->set($prepared_narrator_values);
+      if (count($prepared_narrator_values)) {
+        $node_wrap = entity_metadata_wrapper('node', $node->nid);
+        if (isset($node_wrap->field_file_resource)) {
+          foreach ($node_wrap->field_file_resource->value() as $fc) {
+            $fc_wrap = entity_metadata_wrapper('field_collection_item', $fc);
+            $fc_wrap->field_performer->set($prepared_narrator_values);
 
-          // Save entities.
-          $fc_wrap->save();
-          $node_wrap->save();
+            // Save entities.
+            $fc_wrap->save();
+            $node_wrap->save();
 
-          // Only apply the XML data to the first file.
-          break;
+            // Only apply the XML data to the first file.
+            break;
+          }
         }
       }
     }

@@ -754,5 +754,6 @@ function _cals_reparse_file_resource_details_form($settings, &$form_state) {
 function _cals_reparse_file_resource_details_submit($form, $form_state) {
   return array(
     'fields_to_parse' => $form_state['values']['fields_to_parse'],
+    'parent_node' => menu_get_object(),
   );
 }
