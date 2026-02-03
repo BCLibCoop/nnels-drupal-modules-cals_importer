@@ -408,17 +408,24 @@ function _cals_importer_exporter_snippet_generator(
     if( count( $check_result ) ) {
       $wrapped = entity_metadata_wrapper('field_collection_item', $entity);
       $url = url(drupal_get_path_alias('node/' . $wrapped->getIdentifier()));
+      $errors = print_r($check_result, TRUE);
+      $leader = method_exists($record, 'getLeader') ? $record->getLeader() : '';
+      $xml = $record->toXML("UTF-8", FALSE, FALSE);
       $formatted_message = sprintf(
-        "Linter found a problem in exported record for the following item: %s - (%s). Check XML components at %s",
+        "MARC Lint errors in exported record: %s - (%s). Check XML components at %s",
         $host_wrapped->title->value(),
         $wrapped->field_file_format->label(),
         $url
       );
-      watchdog('
-            cals_importer_exporter_FileMARC_Linter',
-        $formatted_message,
-        array(),
-        WATCHDOG_WARNING
+      watchdog(
+        'cals_importer_exporter_FileMARC_Linter',
+        $formatted_message . " leader=@leader xml_len=@xml_len errors=@errors",
+        array(
+          '@leader' => $leader,
+          '@xml_len' => strlen($xml),
+          '@errors' => $errors,
+        ),
+        WATCHDOG_ERROR
       );
     }
   }

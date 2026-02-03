@@ -75,14 +75,23 @@ function _cals_importer_create_marc_stub($node) {
 
     $valid = $lint->checkRecord($record);
     if(count($valid)) {
-      //NO - error log these, do not spam the message for each record
-      $message = "XML Stub Created with following errors: @errors";
-      $variables = array('@errors' => $valid);
-      watchdog('cals_importer_exporter_FileMARC_Linter',
+      $errors = print_r($valid, TRUE);
+      $leader = method_exists($record, 'getLeader') ? $record->getLeader() : '';
+      $xml = $record->toXML("UTF-8", FALSE, FALSE);
+      $message = "MARC Lint errors while creating XML stub: nid=@nid leader=@leader xml_len=@xml_len errors=@errors";
+      $variables = array(
+        '@nid' => isset($node->nid) ? $node->nid : 'unknown',
+        '@leader' => $leader,
+        '@xml_len' => strlen($xml),
+        '@errors' => $errors,
+      );
+      watchdog(
+        'cals_importer_exporter_FileMARC_Linter',
         $message,
         $variables,
-        $severity = WATCHDOG_NOTICE,
-        $link = NULL);
+        $severity = WATCHDOG_ERROR,
+        $link = NULL
+      );
     }
 
     //Do not save XML
@@ -769,13 +778,23 @@ function _cals_importer_exporter_build_marcxml_from_array($node) {
 
   $valid = $lint->checkRecord($record);
   if(count($valid)) {
-    $message = "XML Stub Created with following errors: @errors";
-    $variables = array('@errors' => $valid);
-    watchdog('cals_importer_exporter_FileMARC_Linter',
+    $errors = print_r($valid, TRUE);
+    $leader = method_exists($record, 'getLeader') ? $record->getLeader() : '';
+    $xml = $record->toXML("UTF-8", FALSE, FALSE);
+    $message = "MARC Lint errors while rebuilding XML from array: nid=@nid leader=@leader xml_len=@xml_len errors=@errors";
+    $variables = array(
+      '@nid' => isset($node->nid) ? $node->nid : 'unknown',
+      '@leader' => $leader,
+      '@xml_len' => strlen($xml),
+      '@errors' => $errors,
+    );
+    watchdog(
+      'cals_importer_exporter_FileMARC_Linter',
       $message,
       $variables,
-      $severity = WATCHDOG_NOTICE,
-      $link = NULL);
+      $severity = WATCHDOG_ERROR,
+      $link = NULL
+    );
   }
   return $record->__toString();
   //drupal_goto("node/{$node->nid}/build-validate-marcxml-output");
