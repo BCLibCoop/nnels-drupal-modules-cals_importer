@@ -1800,18 +1800,46 @@ function _cals_parse_system_control_number($node) {
   $xml = _cals_get_marc_xml_string($node);
   if ($xml === 0) return;
   $tmp = $xml->xpath("//marc:datafield[@tag='035']/marc:subfield[@code='a']");
-  unset($node->field_system_control_number);
-  if (count($tmp)) {
-    foreach ($tmp as $me) {
-      $val = (string) $me;
-      $node->field_system_control_number[LANGUAGE_NONE][]['value'] = $val;
-      drupal_set_message(t('%string System Control Numbers updated', array('%string' => $node->title)));
+
+  $existing = array();
+  if (!empty($node->field_system_control_number[LANGUAGE_NONE])) {
+    foreach ($node->field_system_control_number[LANGUAGE_NONE] as $item) {
+      if (array_key_exists('value', $item) && $item['value'] !== NULL) {
+        $val = trim((string) $item['value']);
+        if ($val !== '') {
+          $existing[] = $val;
+        }
+      }
     }
   }
-  else {
-    $node->field_system_control_number[LANGUAGE_NONE][0]['value'] = 0;
-    drupal_set_message(t('%string System Control Numbers updated', array('%string' => $node->title)));
+
+  $updated = array();
+  if (count($tmp)) {
+    foreach ($tmp as $me) {
+      $val = trim((string) $me);
+      if ($val !== '') {
+        $updated[] = $val;
+      }
+    }
   }
+  if (empty($updated)) {
+    $updated[] = '0';
+  }
+
+  $existing = array_values(array_unique($existing));
+  $updated = array_values(array_unique($updated));
+  sort($existing, SORT_STRING);
+  sort($updated, SORT_STRING);
+
+  if ($existing === $updated) {
+    return '';
+  }
+
+  unset($node->field_system_control_number);
+  foreach ($updated as $val) {
+    $node->field_system_control_number[LANGUAGE_NONE][]['value'] = $val;
+  }
+  drupal_set_message(t('%string System Control Numbers updated', array('%string' => $node->title)));
   node_save($node);
   return '';
 }
