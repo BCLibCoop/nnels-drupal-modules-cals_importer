@@ -1,0 +1,26 @@
+<?php
+
+/**
+ * @file
+ * Install and update functions for cals_importer.
+ */
+
+/**
+ * Remove orphaned field_s3_mapping field collection items.
+ */
+function cals_importer_update_7000() {
+  $ids = db_select('field_collection_item', 'fci')
+    ->fields('fci', array('item_id'))
+    ->condition('field_name', 'field_s3_mapping')
+    ->condition('archived', 0)
+    ->leftJoin('field_data_field_s3_mapping', 'field', 'field.field_s3_mapping_value = fci.item_id')
+    ->isNull('field.entity_id')
+    ->execute()
+    ->fetchCol();
+
+  if (!empty($ids)) {
+    entity_delete_multiple('field_collection_item', $ids);
+  }
+
+  return t('Deleted @count orphaned field_s3_mapping items.', array('@count' => count($ids)));
+}
