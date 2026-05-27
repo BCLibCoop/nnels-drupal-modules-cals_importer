@@ -106,8 +106,10 @@ function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
     $context['sandbox']['arr'] = $arr;
     $context['sandbox']['current'] = 0;
     $context['sandbox']['node'] = node_load($nid);
-   
-    //_cals_delete_s3_mapping($context['sandbox']['node']);
+
+    // Prune only orphaned rows so valid mappings can survive repeat parsing
+    // while the admin iterates on unresolved entries.
+    _cals_delete_s3_mapping($context['sandbox']['node']);
     
     //watchdog('import', 'update s3 paths');
     //dpm($arr);
@@ -149,7 +151,15 @@ function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
     else {
       drupal_set_message(t("%c. could not find %s"), array('%c' => $current_row, '%s' => $sysnum));
     }
-    _cals_populate_s3_mapping($context['sandbox']['node'], $nid2, $path, $sysnum);
+  if ($nid2 > 0) {
+      _cals_populate_s3_mapping($context['sandbox']['node'], $nid2, $path, $sysnum);
+    }
+    else {
+      watchdog('cals_importer_s3paths', 'Skipping unresolved system control number @sysnum for record set @nid.', array(
+        '@sysnum' => $sysnum,
+        '@nid' => $context['sandbox']['node']->nid,
+      ), WATCHDOG_NOTICE);
+    }
     
     $context['sandbox']['progress']++; // Used to keep track of rows processed
     //array_shift($context['sandbox']['arr']);
@@ -177,22 +187,109 @@ function _cals_run_batch_update_s3_path($nid, $arr, &$context) {
  */
 
 function _cals_populate_s3_mapping($node, $nid, $path, $sysnum) {
+  $existing = _cals_get_s3_mapping_by_sysnum($node, $sysnum);
 
-  // Create new field collection item.
-  $fc_item = entity_create('field_collection_item', array('field_name' => 'field_s3_mapping')); 
-
-  // Attach it to the node.
-  $fc_item->setHostEntity('node', $node); 
+  if ($existing) {
+    $fc_item = $existing;
+  }
+  else {
+    // Create new field collection item only when this sysnum has no mapping yet.
+    $fc_item = entity_create('field_collection_item', array('field_name' => 'field_s3_mapping'));
+    $fc_item->setHostEntity('node', $node);
+  }
 
   $fc_item->field_system_control_number[LANGUAGE_NONE][0]['value'] = $sysnum;
   $fc_item->field_s3_path[LANGUAGE_NONE][0]['value'] = $path;
-  if($nid > 0) $fc_item->field_nid_s3[LANGUAGE_NONE][0]['nid'] = $nid;
+  $fc_item->field_nid_s3[LANGUAGE_NONE] = array();
+  $fc_item->field_nid_s3[LANGUAGE_NONE][0]['nid'] = $nid;
 
   $fc_item->save(); // Save field-collection item.
   node_save($node);
   drupal_set_message( t("updated field collection: sysnum = @sysnum | nid = @nid", 
     array('@sysnum' => $sysnum, '@nid' => $nid) ) );
 
+}
+
+/**
+ * Deletes all existing S3 mapping field collection items for a record set node.
+ *
+ * This keeps field_s3_mapping as a rebuilt projection of the current CSV.
+ *
+ * @param stdClass $node
+ *   The s3_record_set node.
+ */
+function _cals_delete_s3_mapping($node) {
+  if (empty($node->field_s3_mapping[LANGUAGE_NONE])) {
+    return;
+  }
+
+  $deleted = FALSE;
+  foreach ($node->field_s3_mapping[LANGUAGE_NONE] as $delta => $value) {
+    if (empty($value['value'])) {
+      continue;
+    }
+    $fci = field_collection_item_load($value['value']);
+    if ($fci && _cals_s3_mapping_is_orphaned($fci)) {
+      $fci->delete();
+      $deleted = TRUE;
+    }
+  }
+  if ($deleted) {
+    node_save($node);
+  }
+}
+
+/**
+ * Returns the first S3 mapping field collection item for a given sysnum.
+ *
+ * @param stdClass $node
+ *   The s3_record_set node.
+ * @param string $sysnum
+ *   The system control number to match.
+ *
+ * @return FieldCollectionItemEntity|null
+ *   The existing field collection item when found.
+ */
+function _cals_get_s3_mapping_by_sysnum($node, $sysnum) {
+  if (empty($node->field_s3_mapping[LANGUAGE_NONE])) {
+    return NULL;
+  }
+
+  foreach ($node->field_s3_mapping[LANGUAGE_NONE] as $value) {
+    if (empty($value['value'])) {
+      continue;
+    }
+    $fci = field_collection_item_load($value['value']);
+    if (!$fci || !$fci->hostEntity()) {
+      continue;
+    }
+    if (!empty($fci->field_system_control_number[LANGUAGE_NONE][0]['value']) &&
+      $fci->field_system_control_number[LANGUAGE_NONE][0]['value'] == $sysnum) {
+      return $fci;
+    }
+  }
+
+  return NULL;
+}
+
+/**
+ * Determines whether an S3 mapping field collection item is orphaned.
+ *
+ * A mapping is considered orphaned when it does not point at a live repository
+ * item nid, which makes it safe to prune on rebuild.
+ *
+ * @param FieldCollectionItemEntity $fci
+ *   The field collection item to inspect.
+ *
+ * @return bool
+ *   TRUE when the mapping should be pruned.
+ */
+function _cals_s3_mapping_is_orphaned($fci) {
+  if (empty($fci->field_nid_s3[LANGUAGE_NONE][0]['nid'])) {
+    return TRUE;
+  }
+
+  return !node_load($fci->field_nid_s3[LANGUAGE_NONE][0]['nid']);
 }
 /**
  * Finish batch
