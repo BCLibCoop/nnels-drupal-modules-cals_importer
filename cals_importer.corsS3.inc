@@ -274,8 +274,7 @@ function _cals_update_filecollection_file($node, $item_id) {
 		$file2['display'] = 1; //set file to display
     try {
 		  $ent->field_s3_file_upload[LANGUAGE_NONE][0] = $file2;
-		  entity_save('field_collection_item', $ent);
-      node_save($node);  //not certain if this is necessary?
+		  $ent->save();
     } catch (Exception $e) {
       drupal_set_message($e->getMessage());
       //watchdog('my_error', $e->getMessage());
